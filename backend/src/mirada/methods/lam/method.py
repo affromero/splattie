@@ -11,7 +11,9 @@ import uuid
 from pathlib import Path
 
 import numpy as np
-from numpy.typing import NDArray
+import numpy.typing as npt
+from beartype import beartype
+from jaxtyping import Bool, UInt8, jaxtyped
 
 from mirada.methods.registry import registry
 from mirada.types import GenerationResult, MethodCapabilities, MethodInfo
@@ -47,10 +49,11 @@ class LAMMethod:
     def load(self) -> None:
         logger.info("LAM model loading (stub — GPU required for real inference)")
 
+    @jaxtyped(typechecker=beartype)
     def generate(
         self,
-        image: NDArray[np.uint8],
-        mask: NDArray[np.bool_],
+        image: UInt8[npt.NDArray[np.uint8], "h w 3"],
+        mask: Bool[npt.NDArray[np.bool_], "h w"],
     ) -> GenerationResult:
         model_id = uuid.uuid4().hex[:12]
         output_dir = STORAGE_DIR / model_id

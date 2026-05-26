@@ -15,7 +15,9 @@ dev = [
 [project]
 authors = [{name = "Andrés Romero", email = "me@afromero.co"}]
 dependencies = [
+  "beartype>=0.19.0",
   "fastapi>=0.115.0",
+  "jaxtyping>=0.2.34",
   "numpy>=2.0",
   "pillow>=11.0",
   "pydantic>=2.10",
@@ -45,19 +47,36 @@ target-version = "py311"
 [tool.ruff.lint]
 ignore = [
   "ANN401",
+  "BLE001",
   "COM812",
+  "D100",
+  "D102",
+  "D104",
+  "D107",
+  "ARG002",
   "D203",
   "D211",
   "D213",
   "E501",
   "ERA001",
+  "F722",
+  "F821",
   "FIX002",
   "G004",
   "ISC001",
+  "PLC0415",
   "PLR0913",
+  "PLR2004",
   "S603",
   "S607",
   "T201",
+  "TC001",
+  "TC002",
+  "TC003",
   "TD003",
+  "UP037",
 ]
 select = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D103", "S101"]

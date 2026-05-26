@@ -8,10 +8,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from mirada.api.routes import generate, health, models, segment
-
 # Force LAM method registration on import
 import mirada.methods.lam.method  # noqa: F401
+from mirada.api.routes import generate, health, models, segment
 
 
 def create_app() -> FastAPI:

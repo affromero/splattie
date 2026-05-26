@@ -5,12 +5,17 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-from numpy.typing import NDArray
+import numpy.typing as npt
+from beartype import beartype
+from jaxtyping import Bool, UInt8, jaxtyped
 
 logger = logging.getLogger(__name__)
 
 
-def segment_head(image: NDArray[np.uint8]) -> NDArray[np.bool_]:
+@jaxtyped(typechecker=beartype)
+def segment_head(
+    image: UInt8[npt.NDArray[np.uint8], "h w 3"],
+) -> Bool[npt.NDArray[np.bool_], "h w"]:
     """Segment the head from an image using SAM 3.
 
     This is the server-side fallback for browsers without WebGPU.

@@ -1,0 +1,72 @@
+---
+default_install_hook_types:
+    - pre-commit
+repos:
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v6.0.0
+      hooks:
+          - id: trailing-whitespace
+          - id: end-of-file-fixer
+          - id: mixed-line-ending
+            args: [--fix, lf]
+          - id: check-yaml
+          - id: check-added-large-files
+            args: [--maxkb=2000]
+          - id: check-merge-conflict
+          - id: check-case-conflict
+          - id: check-json
+          - id: check-toml
+            exclude: uv\.lock
+          - id: pretty-format-json
+            args: [--autofix, --no-ensure-ascii, --no-sort-keys]
+
+    - repo: local
+      hooks:
+          - id: toml-sort-fix
+            name: toml-sort-fix
+            entry: toml-sort
+            args: [--in-place]
+            language: python
+            exclude: uv\.lock
+            types: [toml]
+            additional_dependencies: [toml-sort>=0.23.1]
+
+          - id: toml-sort
+            name: toml-sort
+            entry: toml-sort
+            args: [--check]
+            language: python
+            exclude: uv\.lock
+            types: [toml]
+            additional_dependencies: [toml-sort>=0.23.1]
+
+    - repo: https://github.com/astral-sh/ruff-pre-commit
+      rev: v0.14.9
+      hooks:
+          - id: ruff
+            args: [
+              --fix,
+              --unsafe-fixes,
+              --select, ALL,
+              --ignore, ANN401,
+              --ignore, BLE001,
+              --ignore, COM812,
+              --ignore, D203,
+              --ignore, D211,
+              --ignore, D213,
+              --ignore, E501,
+              --ignore, ERA001,
+              --ignore, FIX002,
+              --ignore, F722,
+              --ignore, F821,
+              --ignore, G004,
+              --ignore, ISC001,
+              --ignore, PLR0913,
+              --ignore, PLR2004,
+              --ignore, S603,
+              --ignore, S607,
+              --ignore, T201,
+              --ignore, TD003,
+              --ignore, UP037,
+            ]
+          - id: ruff-format

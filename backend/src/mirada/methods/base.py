@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 import numpy as np
-from numpy.typing import NDArray
+import numpy.typing as npt
+from jaxtyping import Bool, UInt8
 
 from mirada.types import GenerationResult, MethodCapabilities, MethodInfo
 
@@ -29,8 +30,8 @@ class HeadGenerationMethod(Protocol):
 
     def generate(
         self,
-        image: NDArray[np.uint8],
-        mask: NDArray[np.bool_],
+        image: UInt8[npt.NDArray[np.uint8], "h w 3"],
+        mask: Bool[npt.NDArray[np.bool_], "h w"],
     ) -> GenerationResult:
         """Generate a 3DGS head from a segmented image."""
         ...
