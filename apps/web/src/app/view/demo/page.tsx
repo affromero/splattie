@@ -7,15 +7,14 @@ export default function DemoPage() {
   return (
     <main className={styles.page}>
       <div className={styles.viewerContainer}>
-        <SplatViewer proceduralCount={40000} />
+        <SplatViewer spzUrl="/demo/head.spz" />
       </div>
       <aside className={styles.aside}>
         <p className={styles.hint}>
-          Move your cursor over the viewport. The head follows your gaze and reacts
-          when the cursor enters the face region.
+          Move your cursor over the viewport. The head rotates to follow your gaze.
         </p>
         <p className={styles.meta}>
-          40k gaussians · FLAME LBS · 60fps client-side
+          .spz format · Spark 2.0 · FLAME LBS · client-side rendering
         </p>
       </aside>
     </main>

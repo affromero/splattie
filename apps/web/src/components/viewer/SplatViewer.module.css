@@ -48,3 +48,30 @@
 .url {
   opacity: 0.5;
 }
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+}
+
+.loadingText {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+.errorText {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-error);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}

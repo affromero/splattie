@@ -12,15 +12,8 @@ export default function ViewPage() {
 
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Your 3D Head</h1>
-        <p className={styles.subtitle}>Move your cursor to control eye gaze.</p>
-      </header>
       <div className={styles.viewerContainer}>
-        <SplatViewer
-          spzUrl={`${API_URL}/storage/${modelId}/head.spz`}
-          flameParamsUrl={`${API_URL}/storage/${modelId}/flame.json`}
-        />
+        <SplatViewer spzUrl={`${API_URL}/storage/${modelId}/head.spz`} />
       </div>
     </main>
   );

@@ -33,7 +33,7 @@ describe('screenToGaze', () => {
   it('clamps at extremes', () => {
     const maxYaw = Math.PI / 4;
     const maxPitch = Math.PI / 6;
-    const pose = screenToGaze({ x: 10, y: -10 });
+    const pose = screenToGaze({ x: 10, y: 10 });
     expect(pose.left.yaw).toBeCloseTo(maxYaw);
     expect(pose.left.pitch).toBeCloseTo(maxPitch);
   });

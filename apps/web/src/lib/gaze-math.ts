@@ -8,7 +8,7 @@ const FACE_RADIUS = 0.35;
 
 export function screenToHeadPose(mouseNDC: { x: number; y: number }): HeadPose {
   const yaw = clamp(mouseNDC.x * MAX_YAW, -MAX_YAW, MAX_YAW);
-  const pitch = clamp(-mouseNDC.y * MAX_PITCH, -MAX_PITCH, MAX_PITCH);
+  const pitch = clamp(mouseNDC.y * MAX_PITCH, -MAX_PITCH, MAX_PITCH);
 
   const cursorOnFace =
     mouseNDC.x * mouseNDC.x + mouseNDC.y * mouseNDC.y < FACE_RADIUS * FACE_RADIUS;
