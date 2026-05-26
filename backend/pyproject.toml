@@ -1,0 +1,63 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28.0",
+  "pre-commit>=4.0",
+  "pytest-asyncio>=0.25.0",
+  "pytest>=8.0",
+  "ruff>=0.14",
+  "toml-sort>=0.24",
+]
+
+[project]
+authors = [{name = "Andrés Romero", email = "me@afromero.co"}]
+dependencies = [
+  "fastapi>=0.115.0",
+  "numpy>=2.0",
+  "pillow>=11.0",
+  "pydantic>=2.10",
+  "python-multipart>=0.0.9",
+  "uvicorn[standard]>=0.30.0",
+]
+name = "mirada"
+requires-python = ">=3.11"
+version = "0.1.0"
+
+[project.optional-dependencies]
+cuda = [
+  "torch>=2.4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mirada"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+ignore = [
+  "ANN401",
+  "COM812",
+  "D203",
+  "D211",
+  "D213",
+  "E501",
+  "ERA001",
+  "FIX002",
+  "G004",
+  "ISC001",
+  "PLR0913",
+  "S603",
+  "S607",
+  "T201",
+  "TD003",
+]
+select = ["ALL"]

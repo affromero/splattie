@@ -1,0 +1,15 @@
+{
+  "name": "mirada",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "lint": "npm run lint -w apps/web",
+    "type-check": "npm run type-check -w apps/web",
+    "test": "npm run test -w apps/web",
+    "ci": "npm run ci -w apps/web"
+  }
+}
