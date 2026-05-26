@@ -6,15 +6,18 @@ import styles from './page.module.css';
 export default function DemoPage() {
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Demo Viewer</h1>
-        <p className={styles.subtitle}>
-          Move your cursor over the 3D head to see the eyes follow.
-        </p>
-      </header>
       <div className={styles.viewerContainer}>
-        <SplatViewer proceduralCount={30000} />
+        <SplatViewer proceduralCount={40000} />
       </div>
+      <aside className={styles.aside}>
+        <p className={styles.hint}>
+          Move your cursor over the viewport. The head follows your gaze and reacts
+          when the cursor enters the face region.
+        </p>
+        <p className={styles.meta}>
+          40k gaussians · FLAME LBS · 60fps client-side
+        </p>
+      </aside>
     </main>
   );
 }

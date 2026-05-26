@@ -1,21 +1,20 @@
 :root {
-  --color-bg: #0a0a0f;
-  --color-surface: #12121a;
-  --color-elevated: #1e1e2a;
-  --color-border: #2a2a3a;
-  --color-text: #e4e4e7;
-  --color-text-muted: #a1a1aa;
-  --color-primary: #60a5fa;
-  --color-primary-hover: #93c5fd;
-  --color-accent: #f59e0b;
-  --color-error: #ef4444;
-  --color-success: #22c55e;
+  --color-bg: #08080c;
+  --color-surface: #0e0e14;
+  --color-elevated: #16161f;
+  --color-border: #1e1e2a;
+  --color-border-active: #3a3a52;
+  --color-text: #c8c8d0;
+  --color-text-muted: #6b6b7b;
+  --color-text-dim: #3a3a4a;
+  --color-primary: #7eb8f0;
+  --color-primary-hover: #a6d0f8;
+  --color-accent: #c4a0f0;
+  --color-error: #f06060;
+  --color-success: #60d080;
   --font-heading: var(--font-space-grotesk), system-ui, sans-serif;
   --font-body: var(--font-space-grotesk), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), monospace;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
 }
 
 *,
@@ -35,7 +34,7 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   line-height: 1.6;
-  padding-top: 3.5rem;
+  padding-top: 3rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -49,18 +48,16 @@ a:hover {
   color: var(--color-primary-hover);
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
 }
 
-code,
-pre {
+code, pre {
   font-family: var(--font-mono);
+}
+
+::selection {
+  background: rgba(126, 184, 240, 0.2);
 }

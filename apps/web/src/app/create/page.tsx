@@ -71,32 +71,44 @@ export default function CreatePage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Create your 3D head</h1>
-        <p className={styles.subtitle}>Upload a photo with a clear face to get started.</p>
+        <h1 className={styles.title}>Create</h1>
+        <p className={styles.subtitle}>
+          Upload a photo with a clear, front-facing head.
+        </p>
       </header>
 
       <div className={styles.steps}>
-        <span className={step === 'upload' ? styles.stepActive : styles.step}>Upload</span>
-        <span className={step === 'segment' ? styles.stepActive : styles.step}>Segment</span>
-        <span className={step === 'generate' ? styles.stepActive : styles.step}>Generate</span>
-        <span className={step === 'view' ? styles.stepActive : styles.step}>View</span>
+        <span className={step === 'upload' ? styles.stepActive : styles.step}>upload</span>
+        <span className={step === 'segment' ? styles.stepActive : styles.step}>segment</span>
+        <span className={step === 'generate' ? styles.stepActive : styles.step}>generate</span>
+        <span className={step === 'view' ? styles.stepActive : styles.step}>view</span>
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
 
       {step === 'upload' && (
-        <div className={styles.dropzone} onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-          <p>Drag and drop a photo here, or</p>
-          <label className={styles.fileLabel}>
-            Browse files
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className={styles.fileInput}
-            />
-          </label>
-        </div>
+        <>
+          <div
+            className={styles.dropzone}
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+          >
+            <p>Drop an image here, or</p>
+            <label className={styles.fileLabel}>
+              Choose file
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className={styles.fileInput}
+              />
+            </label>
+          </div>
+          <p className={styles.privacy}>
+            Your images are processed in-browser and deleted immediately from the server
+            after model generation. Nothing is stored.
+          </p>
+        </>
       )}
 
       {step === 'segment' && imagePreview && (
@@ -104,7 +116,7 @@ export default function CreatePage() {
           <SegmentationCanvas imageUrl={imagePreview} onSegmented={handleSegmented} />
           {segResult && (
             <button className={styles.button} onClick={handleGenerate}>
-              Generate 3D Head
+              Generate 3D head
             </button>
           )}
         </div>
@@ -113,12 +125,16 @@ export default function CreatePage() {
       {step === 'generate' && (
         <div className={styles.generating}>
           <div className={styles.spinner} />
-          <p>Generating your 3D head...</p>
+          <p>Reconstructing head model...</p>
           {progress && (
-            <div className={styles.progressContainer}>
-              <div className={styles.progressBar} style={{ width: `${progress.pct}%` }} />
-              <span className={styles.progressText}>{progress.stage} ({progress.pct}%)</span>
-            </div>
+            <>
+              <div className={styles.progressContainer}>
+                <div className={styles.progressBar} style={{ width: `${progress.pct}%` }} />
+              </div>
+              <span className={styles.progressText}>
+                {progress.stage} — {progress.pct}%
+              </span>
+            </>
           )}
         </div>
       )}
