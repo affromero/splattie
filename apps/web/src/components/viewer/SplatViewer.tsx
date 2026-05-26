@@ -125,14 +125,6 @@ export function SplatViewer({ spzUrl = '/demo/head.spz' }: SplatViewerProps) {
           <span className={styles.errorText}>{errorMsg}</span>
         </div>
       )}
-      <div className={styles.info}>
-        <span className={styles.badge}>3DGS</span>
-        <span className={styles.gazeInfo}>
-          yaw: {headPose.neckYaw.toFixed(2)} pitch: {headPose.neckPitch.toFixed(2)} jaw:{' '}
-          {headPose.jawOpen.toFixed(2)}
-        </span>
-        <span className={styles.url}>{spzUrl.split('/').pop()}</span>
-      </div>
     </div>
   );
 }

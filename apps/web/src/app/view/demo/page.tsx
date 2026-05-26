@@ -9,14 +9,6 @@ export default function DemoPage() {
       <div className={styles.viewerContainer}>
         <SplatViewer spzUrl="/demo/head.spz" />
       </div>
-      <aside className={styles.aside}>
-        <p className={styles.hint}>
-          Move your cursor over the viewport. The head rotates to follow your gaze.
-        </p>
-        <p className={styles.meta}>
-          .spz format · Spark 2.0 · FLAME LBS · client-side rendering
-        </p>
-      </aside>
     </main>
   );
 }
