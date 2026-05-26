@@ -1,0 +1,80 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ci
+
+  deploy:
+    name: Deploy to Production
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd ~/Code/mirada
+
+            echo "Pulling latest code..."
+            git pull origin main
+
+            echo "Building containers..."
+            docker compose -f docker-compose.prod.yml build
+
+            echo "Restarting services..."
+            docker compose -f docker-compose.prod.yml up -d
+
+            echo "Pruning old images..."
+            docker image prune -a --filter "until=24h" --force
+
+            echo "Waiting for health check..."
+            for i in $(seq 1 12); do
+              sleep 5
+              if curl -sf http://localhost:4001/api/health > /dev/null 2>&1; then
+                echo "Frontend health check passed (attempt $i)"
+                break
+              fi
+              if [ $i -eq 12 ]; then
+                echo "Health check failed after 12 attempts"
+                exit 1
+              fi
+            done
+
+            for i in $(seq 1 12); do
+              sleep 5
+              if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+                echo "Backend health check passed (attempt $i)"
+                break
+              fi
+              if [ $i -eq 12 ]; then
+                echo "Backend health check failed after 12 attempts"
+                exit 1
+              fi
+            done

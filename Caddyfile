@@ -1,0 +1,7 @@
+mirada.afromero.co {
+    reverse_proxy localhost:4001
+}
+
+api.mirada.afromero.co {
+    reverse_proxy localhost:8000
+}

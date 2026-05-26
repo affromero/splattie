@@ -1,0 +1,31 @@
+FROM nvidia/cuda:12.1.1-devel-ubuntu22.04 AS base
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3.11 python3.11-dev python3.11-venv \
+    curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+WORKDIR /app/backend
+
+FROM base AS deps
+COPY backend/pyproject.toml backend/.python-version ./
+RUN uv sync --extra cuda --inexact --no-install-project
+
+FROM base AS runner
+COPY --from=deps /app/backend/.venv ./.venv
+COPY backend/ .
+
+ENV PATH="/app/backend/.venv/bin:$PATH"
+ENV VIRTUAL_ENV="/app/backend/.venv"
+
+RUN mkdir -p /app/backend/data/uploads /app/backend/data/generations
+
+EXPOSE 8000
+CMD ["uvicorn", "mirada.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

@@ -35,6 +35,9 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# generated data
+backend/data/
+
 # python
 __pycache__/
 *.py[cod]

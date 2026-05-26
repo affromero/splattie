@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useGazeTracker } from '@/hooks/useGazeTracker';
-import { applyEyePose, generateProceduralHead } from '@/lib/flame-animator';
+import { applyHeadPose, generateProceduralHead } from '@/lib/flame-animator';
 import type { FlameParams } from '@/types/gaze';
 import styles from './SplatViewer.module.css';
 
@@ -13,9 +13,7 @@ interface SplatViewerProps {
   proceduralCount?: number;
 }
 
-export function SplatViewer({
-  proceduralCount = 30_000,
-}: SplatViewerProps) {
+export function SplatViewer({ proceduralCount = 30_000 }: SplatViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -29,7 +27,7 @@ export function SplatViewer({
   } | null>(null);
   const [ready, setReady] = useState(false);
 
-  const eyePose = useGazeTracker(containerRef);
+  const headPose = useGazeTracker(containerRef);
 
   const initScene = useCallback(() => {
     const canvas = canvasRef.current;
@@ -63,15 +61,6 @@ export function SplatViewer({
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute(
-      'color',
-      new THREE.BufferAttribute(
-        new Float32Array(
-          Array.from(colors).map((v, i) => (i % 4 === 3 ? 1 : v / 255))
-        ).filter((_, i) => i % 4 !== 3 || false),
-        3
-      )
-    );
 
     const colorArray = new Float32Array(proceduralCount * 3);
     for (let i = 0; i < proceduralCount; i++) {
@@ -82,7 +71,7 @@ export function SplatViewer({
     geometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 0.002,
+      size: 0.003,
       vertexColors: true,
       sizeAttenuation: true,
     });
@@ -125,11 +114,11 @@ export function SplatViewer({
       const camera = cameraRef.current;
 
       if (points && headData && renderer && scene && camera) {
-        const deformed = applyEyePose(
+        const deformed = applyHeadPose(
           headData.canonical,
           headData.lbsWeights,
           headData.flameParams,
-          eyePose
+          headPose
         );
 
         const posAttr = points.geometry.getAttribute('position') as THREE.BufferAttribute;
@@ -144,7 +133,7 @@ export function SplatViewer({
 
     let rafId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafId);
-  }, [ready, eyePose]);
+  }, [ready, headPose]);
 
   return (
     <div ref={containerRef} className={styles.container}>
@@ -152,8 +141,8 @@ export function SplatViewer({
       <div className={styles.info}>
         <span className={styles.badge}>3DGS</span>
         <span className={styles.gazeInfo}>
-          L: {eyePose.left.yaw.toFixed(2)}, {eyePose.left.pitch.toFixed(2)} | R:{' '}
-          {eyePose.right.yaw.toFixed(2)}, {eyePose.right.pitch.toFixed(2)}
+          gaze: {headPose.eyes.left.yaw.toFixed(2)},{headPose.eyes.left.pitch.toFixed(2)} | neck:{' '}
+          {headPose.neckYaw.toFixed(2)} | jaw: {headPose.jawOpen.toFixed(2)}
         </span>
         <span className={styles.url}>{proceduralCount.toLocaleString()} gaussians</span>
       </div>
