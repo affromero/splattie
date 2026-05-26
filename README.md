@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="apps/web/public/logo.svg" alt="Mirada" width="120" />
+
 # Mirada
 
 **Upload a photo. Get a 3D head whose eyes follow you.**

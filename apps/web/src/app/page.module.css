@@ -9,6 +9,10 @@
   gap: 1.5rem;
 }
 
+.logo {
+  filter: drop-shadow(0 0 40px rgba(96, 165, 250, 0.3));
+}
+
 .title {
   font-size: 3.5rem;
   font-weight: 700;
