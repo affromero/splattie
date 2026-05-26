@@ -107,6 +107,43 @@
   background: var(--color-primary-hover);
 }
 
+.error {
+  color: var(--color-error);
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-sm);
+}
+
+.segmentSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.progressContainer {
+  width: 300px;
+  height: 8px;
+  background: var(--color-elevated);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+}
+
+.progressBar {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-sm);
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+}
+
 .generating {
   display: flex;
   flex-direction: column;
