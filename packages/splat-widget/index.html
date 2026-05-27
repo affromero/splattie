@@ -1,11 +1,44 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
-  * { margin: 0; }
-  body { background: #0e0e14; display: flex; align-items: center; justify-content: center; height: 100vh; }
-  splat-widget { width: 800px; height: 600px; }
+  * { margin: 0; box-sizing: border-box; }
+  body { background: #0e0e14; display: flex; height: 100vh; font-family: monospace; color: #888; }
+
+  splat-widget { flex: 1; }
+
+  .panel {
+    width: 280px;
+    background: #12121a;
+    border-left: 1px solid #1e1e2a;
+    overflow-y: auto;
+    padding: 0.75rem;
+    font-size: 0.7rem;
+  }
+
+  .panel h2 { font-size: 0.75rem; color: #aaa; margin: 0.75rem 0 0.25rem; font-weight: 500; }
+  .panel h2:first-child { margin-top: 0; }
+
+  .states { display: flex; gap: 2px; margin-bottom: 0.5rem; }
+  .state-btn {
+    flex: 1; padding: 0.35rem; background: #1e1e2a; border: 1px solid #2a2a3a;
+    color: #888; font: inherit; cursor: pointer; text-align: center;
+  }
+  .state-btn.active { color: #7eb8f0; border-color: #7eb8f0; }
+
+  .slider-row { display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0; }
+  .slider-row label { width: 70px; color: #666; flex-shrink: 0; }
+  .slider-row input[type=range] { flex: 1; accent-color: #7eb8f0; }
+  .slider-row .val { width: 35px; text-align: right; color: #555; }
+
+  .export-btn {
+    width: 100%; margin-top: 0.75rem; padding: 0.4rem;
+    background: #1e1e2a; border: 1px solid #7eb8f0; color: #7eb8f0;
+    font: inherit; cursor: pointer;
+  }
+  .export-btn:hover { background: #252535; }
 </style></head>
 <body>
   <splat-widget
+    id="widget"
     src="/andres.ply"
     bones="/bone_tree.json"
     weights="/lbs_weight_20k.json"
@@ -13,14 +46,138 @@
     background="#0e0e14"
   ></splat-widget>
 
+  <div class="panel" id="panel"></div>
+
   <script type="module">
     import './src/index.ts';
 
-    const widget = document.querySelector('splat-widget');
-    widget.addEventListener('splatload', () => console.log('splatload'));
-    widget.addEventListener('splathover', () => console.log('splathover'));
-    widget.addEventListener('splatleave', () => console.log('splatleave'));
-    widget.addEventListener('splatclick', () => console.log('splatclick'));
+    const widget = document.getElementById('widget');
+    const panel = document.getElementById('panel');
+
+    // Wait for config to load
+    let config = null;
+    let currentState = 'idle';
+
+    widget.addEventListener('splatload', async () => {
+      config = await fetch('/states.json').then(r => r.json());
+      buildPanel();
+    });
+
+    function buildPanel() {
+      panel.innerHTML = '';
+
+      // State selector
+      const statesDiv = document.createElement('div');
+      statesDiv.className = 'states';
+      for (const name of Object.keys(config.states)) {
+        const btn = document.createElement('button');
+        btn.className = 'state-btn' + (name === currentState ? ' active' : '');
+        btn.textContent = name;
+        btn.onclick = () => { currentState = name; buildPanel(); };
+        statesDiv.appendChild(btn);
+      }
+      panel.appendChild(statesDiv);
+
+      const state = config.states[currentState];
+
+      // Ghost
+      addSection('Ghost');
+      addSlider('amplitude', state.ghost, 'amplitude', 0, 0.02, 0.001);
+      addSlider('frequency', state.ghost, 'frequency', 0, 2, 0.1);
+      addSlider('wobble', state.ghost, 'wobble', 0, 1, 0.05);
+
+      // Camera
+      addSection('Camera');
+      addSlider('theta', state.camera, 'theta', -90, 90, 1);
+      addSlider('phi', state.camera, 'phi', 0, 180, 1);
+      addSlider('radius', state.camera, 'radius', 0.1, 3, 0.05);
+      addSlider('fov', state.camera, 'fov', 20, 120, 1);
+
+      // Rotation
+      addSection('Rotation');
+      addSlider('pitch', state, 'rotation', -30, 30, 0.5, 0);
+      addSlider('yaw', state, 'rotation', -30, 30, 0.5, 1);
+      addSlider('roll', state, 'rotation', -30, 30, 0.5, 2);
+
+      // Tracking
+      addSection('Tracking');
+      addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.05);
+      addSlider('head', state.tracking, 'head', 0, 1, 0.05);
+
+      // Transitions
+      addSection('Transition');
+      const transKey = Object.keys(config.transitions).find(k =>
+        k.includes(currentState) || k.startsWith('*')
+      );
+      if (transKey && config.transitions[transKey]) {
+        addSlider('duration', config.transitions[transKey], 'duration', 0.05, 2, 0.05);
+      }
+
+      // Export
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'export-btn';
+      exportBtn.textContent = 'Export states.json';
+      exportBtn.onclick = () => {
+        const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'states.json';
+        a.click();
+      };
+      panel.appendChild(exportBtn);
+    }
+
+    function addSection(title) {
+      const h = document.createElement('h2');
+      h.textContent = title;
+      panel.appendChild(h);
+    }
+
+    function addSlider(label, obj, key, min, max, step, arrayIdx) {
+      const row = document.createElement('div');
+      row.className = 'slider-row';
+
+      const lbl = document.createElement('label');
+      lbl.textContent = label;
+
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.min = min;
+      input.max = max;
+      input.step = step;
+
+      const val = document.createElement('span');
+      val.className = 'val';
+
+      const getValue = () => arrayIdx !== undefined ? obj[key][arrayIdx] : obj[key];
+      const setValue = (v) => {
+        if (arrayIdx !== undefined) { obj[key][arrayIdx] = v; }
+        else { obj[key] = v; }
+      };
+
+      input.value = getValue();
+      val.textContent = Number(getValue()).toFixed(2);
+
+      input.oninput = () => {
+        const v = parseFloat(input.value);
+        setValue(v);
+        val.textContent = v.toFixed(2);
+        applyConfig();
+      };
+
+      row.appendChild(lbl);
+      row.appendChild(input);
+      row.appendChild(val);
+      panel.appendChild(row);
+    }
+
+    function applyConfig() {
+      // Force the widget to reload config by transitioning to current state
+      if (widget._stateMachine) {
+        const state = config.states[currentState];
+        Object.assign(widget._stateMachine.currentFrame, state);
+      }
+    }
   </script>
 </body>
 </html>

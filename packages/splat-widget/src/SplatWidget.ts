@@ -16,7 +16,8 @@ import type { WidgetConfig } from './types';
 
 export class SplatWidget extends HTMLElement {
   private spark: SparkInstance | null = null;
-  private stateMachine: StateMachine | null = null;
+  _stateMachine: StateMachine | null = null;
+  private get stateMachine() { return this._stateMachine; }
   private ghost = new GhostEffect();
   private cameraSphere = new CameraSphere();
   private objectRotation = new ObjectRotation();
@@ -48,7 +49,7 @@ export class SplatWidget extends HTMLElement {
 
       const configUrl = this.getAttribute('config');
       this.config = configUrl ? await loadConfig(configUrl) : createDefaultConfig();
-      this.stateMachine = new StateMachine(this.config);
+      this._stateMachine = new StateMachine(this.config);
 
       if (this.config.defaults.autoBlink) {
         this.autoBlink = new AutoBlink(this.config.defaults.autoBlink);
