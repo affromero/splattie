@@ -2,7 +2,8 @@
   "name": "mirada",
   "private": true,
   "workspaces": [
-    "apps/web"
+    "apps/web",
+    "packages/splat-widget"
   ],
   "scripts": {
     "dev": "npm run dev -w apps/web",
