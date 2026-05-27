@@ -1,23 +1,29 @@
-"""PLY → SPZ compression."""
+"""PLY → SPZ compression via splat-transform (npm CLI)."""
 
 from __future__ import annotations
 
 import logging
+import subprocess
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-def compress_ply_to_spz(ply_bytes: bytes) -> bytes:
-    """Compress a PLY file to SPZ format.
+def compress_ply_to_spz(ply_path: Path, spz_path: Path) -> Path:
+    """Compress a PLY file to SPZ using @playcanvas/splat-transform.
 
-    When the spz package is available (GPU environment), uses Niantic's
-    SPZ encoder for ~10x compression. Falls back to passthrough in dev.
+    Falls back to returning the PLY path if splat-transform is not available.
     """
     try:
-        import spz
-
-        gaussians = spz.load_ply(ply_bytes)
-        return spz.save_spz(gaussians)
-    except ImportError:
-        logger.warning("spz package not available — returning raw bytes (dev mode)")
-        return ply_bytes
+        subprocess.run(
+            ["npx", "@playcanvas/splat-transform", str(ply_path), str(spz_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        logger.warning("splat-transform not available, returning raw PLY")
+        return ply_path
+    else:
+        logger.info("Compressed %s → %s (%d KB)", ply_path.name, spz_path.name, spz_path.stat().st_size // 1024)
+        return spz_path

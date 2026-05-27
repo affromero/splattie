@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@mkkellogg/gaussian-splats-3d": "^0.4.7",
+    "@playcanvas/splat-transform": "^2.2.0",
     "@sparkjsdev/spark": "^2.0.0",
     "next": "^15.3.0",
     "onnxruntime-web": "^1.26.0",
