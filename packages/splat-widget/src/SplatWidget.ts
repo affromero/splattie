@@ -202,9 +202,10 @@ export class SplatWidget extends HTMLElement {
       sk.setBoneQuatPos(eyeIdx, q, new THREE.Vector3(...bones[eyeIdx].pos));
     }
 
-    // Neck (bone 1) — head follow
+    // Neck (bone 1) — head follow + expression tilt
+    const exprNeckTilt = frame.expression.neckTilt ?? 0;
     const neckYaw = this.cursor.ndcX * 0.08 * tracking.head;
-    const neckPitch = this.cursor.ndcY * 0.05 * tracking.head;
+    const neckPitch = this.cursor.ndcY * 0.05 * tracking.head + exprNeckTilt;
     if (bones.length > 1) {
       const nq = new THREE.Quaternion();
       nq.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), neckYaw));
@@ -212,9 +213,10 @@ export class SplatWidget extends HTMLElement {
       sk.setBoneQuatPos(1, nq, new THREE.Vector3(...bones[1].pos));
     }
 
-    // Jaw (bone 2) — fly reaction
+    // Jaw (bone 2) — expression jawOpen + fly reaction
     if (bones.length > 2) {
-      const jawAngle = this.flyReaction * 0.15;
+      const exprJaw = frame.expression.jawOpen ?? 0;
+      const jawAngle = exprJaw + this.flyReaction * 0.15;
       const jq = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), jawAngle);
       sk.setBoneQuatPos(2, jq, new THREE.Vector3(...bones[2].pos));
     }

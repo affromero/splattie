@@ -6,7 +6,7 @@
   splat-widget { flex: 1; }
 
   .panel {
-    width: 280px;
+    width: 260px;
     background: #12121a;
     border-left: 1px solid #1e1e2a;
     overflow-y: auto;
@@ -14,27 +14,30 @@
     font-size: 0.7rem;
   }
 
-  .panel h2 { font-size: 0.75rem; color: #aaa; margin: 0.75rem 0 0.25rem; font-weight: 500; }
-  .panel h2:first-child { margin-top: 0; }
-
-  .states { display: flex; gap: 2px; margin-bottom: 0.5rem; }
+  .states { display: flex; gap: 2px; margin-bottom: 0.75rem; }
   .state-btn {
     flex: 1; padding: 0.35rem; background: #1e1e2a; border: 1px solid #2a2a3a;
-    color: #888; font: inherit; cursor: pointer; text-align: center;
+    color: #555; font: inherit; cursor: pointer; text-align: center; position: relative;
   }
   .state-btn.active { color: #7eb8f0; border-color: #7eb8f0; }
+  .state-btn.configured::after {
+    content: ''; position: absolute; top: 3px; right: 3px;
+    width: 5px; height: 5px; border-radius: 50%; background: #60d080;
+  }
 
-  .slider-row { display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0; }
-  .slider-row label { width: 70px; color: #666; flex-shrink: 0; }
-  .slider-row input[type=range] { flex: 1; accent-color: #7eb8f0; }
-  .slider-row .val { width: 35px; text-align: right; color: #555; }
+  .section { margin: 0.5rem 0 0.2rem; color: #555; font-size: 0.6rem; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  .slider-row { display: flex; align-items: center; gap: 0.4rem; margin: 0.2rem 0; }
+  .slider-row label { width: 55px; color: #666; flex-shrink: 0; font-size: 0.65rem; }
+  .slider-row input[type=range] { flex: 1; accent-color: #7eb8f0; height: 14px; }
+  .slider-row .val { width: 32px; text-align: right; color: #555; font-size: 0.6rem; }
 
   .export-btn {
-    width: 100%; margin-top: 0.75rem; padding: 0.4rem;
-    background: #1e1e2a; border: 1px solid #7eb8f0; color: #7eb8f0;
-    font: inherit; cursor: pointer;
+    width: 100%; margin-top: 1rem; padding: 0.5rem;
+    background: #7eb8f0; border: none; color: #0e0e14;
+    font: inherit; font-weight: bold; cursor: pointer; font-size: 0.75rem;
   }
-  .export-btn:hover { background: #252535; }
+  .export-btn:hover { opacity: 0.9; }
 </style></head>
 <body>
   <splat-widget
@@ -50,28 +53,31 @@
 
   <script type="module">
     import './src/index.ts';
+    import * as JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
     const widget = document.getElementById('widget');
     const panel = document.getElementById('panel');
 
-    // Wait for config to load
     let config = null;
+    let defaults = null;
     let currentState = 'idle';
+    const configured = new Set();
 
     widget.addEventListener('splatload', async () => {
       config = await fetch('/states.json').then(r => r.json());
+      defaults = JSON.parse(JSON.stringify(config));
       buildPanel();
     });
 
     function buildPanel() {
       panel.innerHTML = '';
 
-      // State selector
+      // State tabs with color indicators
       const statesDiv = document.createElement('div');
       statesDiv.className = 'states';
       for (const name of Object.keys(config.states)) {
         const btn = document.createElement('button');
-        btn.className = 'state-btn' + (name === currentState ? ' active' : '');
+        btn.className = 'state-btn' + (name === currentState ? ' active' : '') + (configured.has(name) ? ' configured' : '');
         btn.textContent = name;
         btn.onclick = () => { currentState = name; buildPanel(); };
         statesDiv.appendChild(btn);
@@ -79,61 +85,65 @@
       panel.appendChild(statesDiv);
 
       const state = config.states[currentState];
+      const def = defaults.states[currentState];
 
       // Ghost
-      addSection('Ghost');
-      addSlider('amplitude', state.ghost, 'amplitude', 0, 0.02, 0.001);
-      addSlider('frequency', state.ghost, 'frequency', 0, 2, 0.1);
-      addSlider('wobble', state.ghost, 'wobble', 0, 1, 0.05);
+      addSection('ghost');
+      addSlider('amplitude', state.ghost, 'amplitude', 0, 0.02, 0.001, undefined, def.ghost.amplitude);
+      addSlider('frequency', state.ghost, 'frequency', 0, 2, 0.1, undefined, def.ghost.frequency);
+      addSlider('wobble', state.ghost, 'wobble', 0, 1, 0.05, undefined, def.ghost.wobble);
+
+      // Expression (bone-driven)
+      if (!state.expression) state.expression = {};
+      if (!def.expression) def.expression = {};
+      addSection('expression');
+      addSlider('jawOpen', state.expression, 'jawOpen', 0, 0.3, 0.01, undefined, def.expression.jawOpen || 0);
+      addSlider('neckTilt', state.expression, 'neckTilt', -0.2, 0.2, 0.01, undefined, def.expression.neckTilt || 0);
 
       // Camera
-      addSection('Camera');
-      addSlider('theta', state.camera, 'theta', -90, 90, 1);
-      addSlider('phi', state.camera, 'phi', 0, 180, 1);
-      addSlider('radius', state.camera, 'radius', 0.1, 3, 0.05);
-      addSlider('fov', state.camera, 'fov', 20, 120, 1);
+      addSection('camera');
+      addSlider('theta', state.camera, 'theta', -90, 90, 1, undefined, def.camera.theta);
+      addSlider('phi', state.camera, 'phi', 0, 180, 1, undefined, def.camera.phi);
+      addSlider('radius', state.camera, 'radius', 0.1, 3, 0.05, undefined, def.camera.radius);
+      addSlider('fov', state.camera, 'fov', 20, 120, 1, undefined, def.camera.fov);
 
       // Rotation
-      addSection('Rotation');
-      addSlider('pitch', state, 'rotation', -30, 30, 0.5, 0);
-      addSlider('yaw', state, 'rotation', -30, 30, 0.5, 1);
-      addSlider('roll', state, 'rotation', -30, 30, 0.5, 2);
+      addSection('rotation');
+      addSlider('pitch', state, 'rotation', -30, 30, 0.5, 0, def.rotation[0]);
+      addSlider('yaw', state, 'rotation', -30, 30, 0.5, 1, def.rotation[1]);
+      addSlider('roll', state, 'rotation', -30, 30, 0.5, 2, def.rotation[2]);
 
       // Tracking
-      addSection('Tracking');
-      addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.05);
-      addSlider('head', state.tracking, 'head', 0, 1, 0.05);
+      addSection('tracking');
+      addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.05, undefined, def.tracking.eyes);
+      addSlider('head', state.tracking, 'head', 0, 1, 0.05, undefined, def.tracking.head);
 
-      // Transitions
-      addSection('Transition');
+      // Transition
+      addSection('transition');
       const transKey = Object.keys(config.transitions).find(k =>
-        k.includes(currentState) || k.startsWith('*')
-      );
+        k.includes('->' + currentState) || k.startsWith('*->' + currentState)
+      ) || Object.keys(config.transitions).find(k => k.startsWith('*'));
       if (transKey && config.transitions[transKey]) {
-        addSlider('duration', config.transitions[transKey], 'duration', 0.05, 2, 0.05);
+        const defTrans = defaults.transitions[transKey];
+        addSlider('duration', config.transitions[transKey], 'duration', 0.05, 2, 0.05, undefined, defTrans?.duration);
       }
 
-      // Export
+      // Export .splattie
       const exportBtn = document.createElement('button');
       exportBtn.className = 'export-btn';
-      exportBtn.textContent = 'Export states.json';
-      exportBtn.onclick = () => {
-        const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'states.json';
-        a.click();
-      };
+      exportBtn.textContent = 'Download .splattie';
+      exportBtn.onclick = exportSplattie;
       panel.appendChild(exportBtn);
     }
 
     function addSection(title) {
-      const h = document.createElement('h2');
-      h.textContent = title;
-      panel.appendChild(h);
+      const s = document.createElement('div');
+      s.className = 'section';
+      s.textContent = title;
+      panel.appendChild(s);
     }
 
-    function addSlider(label, obj, key, min, max, step, arrayIdx) {
+    function addSlider(label, obj, key, min, max, step, arrayIdx, defaultVal) {
       const row = document.createElement('div');
       row.className = 'slider-row';
 
@@ -151,8 +161,9 @@
 
       const getValue = () => arrayIdx !== undefined ? obj[key][arrayIdx] : obj[key];
       const setValue = (v) => {
-        if (arrayIdx !== undefined) { obj[key][arrayIdx] = v; }
-        else { obj[key] = v; }
+        if (arrayIdx !== undefined) obj[key][arrayIdx] = v;
+        else obj[key] = v;
+        configured.add(currentState);
       };
 
       input.value = getValue();
@@ -165,6 +176,16 @@
         applyConfig();
       };
 
+      // Double click resets to default
+      input.ondblclick = () => {
+        if (defaultVal !== undefined) {
+          setValue(defaultVal);
+          input.value = defaultVal;
+          val.textContent = Number(defaultVal).toFixed(2);
+          applyConfig();
+        }
+      };
+
       row.appendChild(lbl);
       row.appendChild(input);
       row.appendChild(val);
@@ -172,11 +193,39 @@
     }
 
     function applyConfig() {
-      // Force the widget to reload config by transitioning to current state
-      if (widget._stateMachine) {
-        const state = config.states[currentState];
-        Object.assign(widget._stateMachine.currentFrame, state);
-      }
+      if (!widget._stateMachine) return;
+      const state = config.states[currentState];
+      const frame = widget._stateMachine.currentFrame;
+      Object.assign(frame.ghost, state.ghost);
+      Object.assign(frame.camera, state.camera);
+      frame.rotation = [...state.rotation];
+      Object.assign(frame.tracking, state.tracking);
+      buildPanel(); // refresh configured indicators
+    }
+
+    async function exportSplattie() {
+      const zip = new JSZip.default();
+
+      // Fetch the splat PLY
+      const plyRes = await fetch('/andres.ply');
+      zip.file('andres.ply', await plyRes.blob());
+
+      // Fetch bone data
+      const bonesRes = await fetch('/bone_tree.json');
+      zip.file('bone_tree.json', await bonesRes.text());
+
+      const weightsRes = await fetch('/lbs_weight_20k.json');
+      zip.file('lbs_weight_20k.json', await weightsRes.text());
+
+      // Add the states config
+      zip.file('states.json', JSON.stringify(config, null, 2));
+
+      // Generate and download
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'avatar.splattie';
+      a.click();
     }
   </script>
 </body>
