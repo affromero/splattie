@@ -472,6 +472,8 @@
       zip.file('bone_tree.json', await fetch('/bone_tree.json').then(r => r.text()));
       zip.file('lbs_weight_20k.json', await fetch('/lbs_weight_20k.json').then(r => r.text()));
       zip.file('states.json', JSON.stringify(config, null, 2));
+      const basisRes = await fetch('/expression_basis.bin');
+      if (basisRes.ok) zip.file('expression_basis.bin', await basisRes.blob());
       const blob = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);

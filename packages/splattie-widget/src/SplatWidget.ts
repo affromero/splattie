@@ -35,7 +35,7 @@ export class SplatWidget extends HTMLElement {
   private exprBasis: ExpressionBasisApplier | null = null;
 
   static get observedAttributes(): string[] {
-    return ['src', 'config', 'background', 'width', 'height', 'bones', 'weights', 'expression-basis'];
+    return ['src', 'background', 'width', 'height'];
   }
 
   async connectedCallback(): Promise<void> {
@@ -49,14 +49,6 @@ export class SplatWidget extends HTMLElement {
       const bgAttr = this.getAttribute('background');
       const bgColor = bgAttr ? parseInt(bgAttr.replace('#', ''), 16) : 0x0e0e14;
 
-      const configUrl = this.getAttribute('config');
-      this.config = configUrl ? await loadConfig(configUrl) : createDefaultConfig();
-      this._stateMachine = new StateMachine(this.config);
-
-      if (this.config.defaults.autoBlink) {
-        this.autoBlink = new AutoBlink(this.config.defaults.autoBlink);
-      }
-
       this.hitDetector.setBackgroundColor(bgColor);
       this.events = new SplatEvents(this);
       this.cursor.attach(this);
@@ -65,45 +57,42 @@ export class SplatWidget extends HTMLElement {
       if (!src) return;
 
       let splatUrl = src;
-      let bonesUrl = this.getAttribute('bones') ?? undefined;
-      let weightsUrl = this.getAttribute('weights') ?? undefined;
+      let bonesUrl: string | undefined;
+      let weightsUrl: string | undefined;
+      let basisBlobUrl: string | undefined;
       let statesConfig: Partial<WidgetConfig> | undefined;
 
-      // Load .splattie bundle (ZIP with ply + bones + weights + states)
       if (src.endsWith('.splattie')) {
         const { default: JSZip } = await import('jszip');
         const res = await fetch(src);
         const zip = await JSZip.loadAsync(await res.arrayBuffer());
+        const files = Object.keys(zip.files);
 
-        const plyFile = Object.keys(zip.files).find(f => f.endsWith('.ply'));
-        if (plyFile) {
-          const blob = await zip.file(plyFile)!.async('blob');
-          splatUrl = URL.createObjectURL(blob);
-        }
+        const find = (pattern: string) => files.find(f => f.includes(pattern));
+        const blobUrl = async (name: string | undefined) =>
+          name ? URL.createObjectURL(await zip.file(name)!.async('blob')) : undefined;
 
-        const bonesFile = Object.keys(zip.files).find(f => f.includes('bone_tree'));
-        if (bonesFile) {
-          const blob = await zip.file(bonesFile)!.async('blob');
-          bonesUrl = URL.createObjectURL(blob);
-        }
+        splatUrl = await blobUrl(find('.ply') ?? find('.spz')) ?? src;
+        bonesUrl = await blobUrl(find('bone_tree'));
+        weightsUrl = await blobUrl(find('lbs_weight'));
+        basisBlobUrl = await blobUrl(find('expression_basis'));
 
-        const weightsFile = Object.keys(zip.files).find(f => f.includes('lbs_weight'));
-        if (weightsFile) {
-          const blob = await zip.file(weightsFile)!.async('blob');
-          weightsUrl = URL.createObjectURL(blob);
-        }
-
-        const statesFile = Object.keys(zip.files).find(f => f.includes('states.json'));
-        if (statesFile) {
-          const text = await zip.file(statesFile)!.async('text');
-          statesConfig = JSON.parse(text);
-        }
+        const statesFile = find('states.json');
+        if (statesFile) statesConfig = JSON.parse(await zip.file(statesFile)!.async('text'));
+      } else {
+        bonesUrl = this.getAttribute('bones') ?? undefined;
+        weightsUrl = this.getAttribute('weights') ?? undefined;
+        basisBlobUrl = this.getAttribute('expression-basis') ?? undefined;
+        const configUrl = this.getAttribute('config');
+        if (configUrl) statesConfig = await fetch(configUrl).then(r => r.json());
       }
 
-      if (statesConfig) {
-        const { mergeWithDefaults } = await import('./state/StateConfig');
-        this.config = mergeWithDefaults(statesConfig);
-        this._stateMachine = new StateMachine(this.config);
+      this.config = statesConfig
+        ? (await import('./state/StateConfig')).mergeWithDefaults(statesConfig)
+        : createDefaultConfig();
+      this._stateMachine = new StateMachine(this.config);
+      if (this.config.defaults.autoBlink) {
+        this.autoBlink = new AutoBlink(this.config.defaults.autoBlink);
       }
 
       this.spark = await createSparkInstance(this, splatUrl, bgColor, bonesUrl, weightsUrl);
@@ -116,9 +105,8 @@ export class SplatWidget extends HTMLElement {
       });
       this.setupBlinkEdits();
 
-      const basisUrl = this.getAttribute('expression-basis');
-      if (basisUrl && this.spark.baselinePositions && this.spark.packedArray) {
-        const basisData = await loadExpressionBasis(basisUrl);
+      if (basisBlobUrl && this.spark.baselinePositions && this.spark.packedArray) {
+        const basisData = await loadExpressionBasis(basisBlobUrl);
         const jawY = this.spark.bones.length > 2 ? this.spark.bones[2].pos[1] : undefined;
         this.exprBasis = new ExpressionBasisApplier(basisData, this.spark.baselinePositions, jawY);
       }

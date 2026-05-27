@@ -37,14 +37,10 @@ Splattie turns a single photograph into an interactive 3D gaussian splatting hea
 The core rendering is packaged as a standalone web component that makes gaussian splats reactive — like Rive or Lottie but for 3D.
 
 ```html
-<splattie-widget
-  src="avatar.ply"
-  bones="bone_tree.json"
-  weights="lbs_weight_20k.json"
-  config="states.json"
-  expression-basis="expression_basis.bin"
-></splattie-widget>
+<splattie-widget src="avatar.splattie"></splattie-widget>
 ```
+
+A `.splattie` file bundles everything: splats (PLY/SPZ), FLAME bones, LBS weights, expression basis, and interaction states. One file, one tag.
 
 ### Five Dimensions of State
 
@@ -205,4 +201,25 @@ Both submodules are forked under `affromero`:
 |-----------|------|------|
 | LAM | `backend/vendor/LAM` | [affromero/LAM](https://github.com/affromero/LAM) |
 
-Model weights (`model_zoo/`) are not in git — download them into the submodule path on the GPU server.
+Model weights (`model_zoo/`) are not in git — download them into the submodule path on the GPU server via `bash scripts/setup-gpu.sh`.
+
+## Acknowledgements
+
+Splattie builds on outstanding open-source research:
+
+- **[LAM](https://github.com/aigc3d/LAM)** (SIGGRAPH 2025) — Large Avatar Model for single-image 3DGS head generation. By Zixuan Zeng, Jiahui Lei, Zhiwen Fan, Yinda Zhang, Kostas Daniilidis, Hao Su, Zhangyang Wang, and the AIGC3D team.
+- **[FLAME](https://flame.is.tue.mpg.de/)** (2017) — A learned model of 3D face shape, expression, and pose. By Tianye Li, Timo Bolkart, Michael J. Black, Hao Li, and Javier Romero. FLAME 2023 used here requires attribution per its license.
+- **[Spark 2.0](https://github.com/sparkjsdev/spark)** — MIT-licensed 3D Gaussian Splatting renderer for Three.js, by World Labs (Fei-Fei Li et al.). Provides SplatSkinning, SplatEdit, SPZ support, and LoD streaming.
+- **[Three.js](https://threejs.org/)** — 3D graphics library for the web.
+- **[3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/)** — Real-time radiance field rendering. By Bernhard Kerbl, Georgios Kopanas, Thomas Leimkühler, and George Drettakis (INRIA).
+
+## License
+
+The `@affromero/splattie-widget` package is released under the **MIT License**.
+
+The full Splattie application (this repo) includes dependencies with their own licenses:
+- **FLAME** — Non-commercial research license (requires attribution, no commercial use without separate agreement)
+- **LAM** — See [LAM LICENSE](https://github.com/aigc3d/LAM/blob/master/LICENSE)
+- **diff-gaussian-rasterization** (INRIA) — Non-commercial. Replace with [gsplat](https://github.com/nerfstudio-project/gsplat) (Apache 2.0) before commercial launch.
+- **Spark 2.0** — MIT
+- **Three.js** — MIT
