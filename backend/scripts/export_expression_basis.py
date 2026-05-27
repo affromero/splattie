@@ -75,7 +75,7 @@ def load_flame_head(device: str = "cuda") -> object:
         flame_parts_path=f"{human_model_path}/flame_assets/flame/FLAME_masks.pkl",
         shape_params=cfg.model.get("shape_param_dim", 10),
         expr_params=cfg.model.get("expr_param_dim", 10),
-        subdivide_num=2,
+        subdivide_num=1,
     ).to(device)
     flame.eval()
     return flame
