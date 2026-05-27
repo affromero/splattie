@@ -28,17 +28,17 @@
   <img src="demo.gif" alt="Splattie Demo" width="600" />
 </p>
 
-Splattie turns a single photograph into an interactive 3D gaussian splatting head. The eyes follow your cursor, the face blinks naturally, and reacts when you hover over it — all rendered client-side at 60fps.
+Splattie turns a single photograph into an interactive 3D gaussian splatting head. The eyes follow your cursor, the face blinks naturally, and reacts when you hover over it - all rendered client-side at 60fps.
 
 ## How It Works
 
 1. **Upload** a photo with a visible face
 2. **Generate** a 3D head on the GPU backend using LAM (~30s on H100)
-3. **View** the interactive head — eyes follow your cursor, face reacts to hover
+3. **View** the interactive head - eyes follow your cursor, face reacts to hover
 
-## `<splattie-widget>` — Interactive 3DGS as a Web Component
+## `<splattie-widget>` - Interactive 3DGS as a Web Component
 
-The core rendering is packaged as a standalone web component that makes gaussian splats reactive — like Rive or Lottie but for 3D.
+The core rendering is packaged as a standalone web component that makes gaussian splats reactive - like Rive or Lottie but for 3D.
 
 ```html
 <splattie-widget src="avatar.splattie"></splattie-widget>
@@ -62,8 +62,8 @@ Each interaction state (idle, hover, click) defines all five:
 
 Two layers work together:
 
-- **SplatSkinning** (5 FLAME bones) — jaw open, neck pitch/yaw/roll, eye gaze, brow raise (virtual bones)
-- **Expression basis** (10 FLAME PCA coefficients) — smile, lip shapes, jaw movement, deforming all 20K splats coherently via per-splat position offsets
+- **SplatSkinning** (5 FLAME bones) - jaw open, neck pitch/yaw/roll, eye gaze, brow raise (virtual bones)
+- **Expression basis** (10 FLAME PCA coefficients) - smile, lip shapes, jaw movement, deforming all 20K splats coherently via per-splat position offsets
 
 ### Visual State Editor
 
@@ -154,7 +154,7 @@ splattie/
 | Animation | SplatSkinning (FLAME bones, dual quaternion) |
 | Blendshapes | FLAME expression basis (20K vertices, 10 PCA coefficients) |
 | Backend | FastAPI, Python 3.10, uv |
-| Head Generation | LAM (SIGGRAPH 2025) — swappable via HeadGenerationMethod protocol |
+| Head Generation | LAM (SIGGRAPH 2025) - swappable via HeadGenerationMethod protocol |
 | Face Detection | readPixels after WebGL render (pixel-perfect) |
 | Deploy | Docker + Caddy + GitHub Actions SSH |
 
@@ -205,25 +205,25 @@ Both submodules are forked under `affromero`:
 |-----------|------|------|
 | LAM | `backend/vendor/LAM` | [affromero/LAM](https://github.com/affromero/LAM) |
 
-Model weights (`model_zoo/`) are not in git — download them into the submodule path on the GPU server via `bash scripts/setup-gpu.sh`.
+Model weights (`model_zoo/`) are not in git - download them into the submodule path on the GPU server via `bash scripts/setup-gpu.sh`.
 
 ## Acknowledgements
 
 Splattie builds on outstanding open-source research:
 
-- **[LAM](https://github.com/aigc3d/LAM)** (SIGGRAPH 2025) — Large Avatar Model for single-image 3DGS head generation. By Zixuan Zeng, Jiahui Lei, Zhiwen Fan, Yinda Zhang, Kostas Daniilidis, Hao Su, Zhangyang Wang, and the AIGC3D team.
-- **[FLAME](https://flame.is.tue.mpg.de/)** (2017) — A learned model of 3D face shape, expression, and pose. By Tianye Li, Timo Bolkart, Michael J. Black, Hao Li, and Javier Romero. FLAME 2023 used here requires attribution per its license.
-- **[Spark 2.0](https://github.com/sparkjsdev/spark)** — MIT-licensed 3D Gaussian Splatting renderer for Three.js, by World Labs (Fei-Fei Li et al.). Provides SplatSkinning, SplatEdit, SPZ support, and LoD streaming.
-- **[Three.js](https://threejs.org/)** — 3D graphics library for the web.
-- **[3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/)** — Real-time radiance field rendering. By Bernhard Kerbl, Georgios Kopanas, Thomas Leimkühler, and George Drettakis (INRIA).
+- **[LAM](https://github.com/aigc3d/LAM)** (SIGGRAPH 2025) - Large Avatar Model for single-image 3DGS head generation. By Zixuan Zeng, Jiahui Lei, Zhiwen Fan, Yinda Zhang, Kostas Daniilidis, Hao Su, Zhangyang Wang, and the AIGC3D team.
+- **[FLAME](https://flame.is.tue.mpg.de/)** (2017) - A learned model of 3D face shape, expression, and pose. By Tianye Li, Timo Bolkart, Michael J. Black, Hao Li, and Javier Romero. FLAME 2023 used here requires attribution per its license.
+- **[Spark 2.0](https://github.com/sparkjsdev/spark)** - MIT-licensed 3D Gaussian Splatting renderer for Three.js, by World Labs (Fei-Fei Li et al.). Provides SplatSkinning, SplatEdit, SPZ support, and LoD streaming.
+- **[Three.js](https://threejs.org/)** - 3D graphics library for the web.
+- **[3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/)** - Real-time radiance field rendering. By Bernhard Kerbl, Georgios Kopanas, Thomas Leimkühler, and George Drettakis (INRIA).
 
 ## License
 
 The `@affromero/splattie-widget` package is released under the **MIT License**.
 
 The full Splattie application (this repo) includes dependencies with their own licenses:
-- **FLAME** — Non-commercial research license (requires attribution, no commercial use without separate agreement)
-- **LAM** — See [LAM LICENSE](https://github.com/aigc3d/LAM/blob/master/LICENSE)
-- **diff-gaussian-rasterization** (INRIA) — Non-commercial. Replace with [gsplat](https://github.com/nerfstudio-project/gsplat) (Apache 2.0) before commercial launch.
-- **Spark 2.0** — MIT
-- **Three.js** — MIT
+- **FLAME** - Non-commercial research license (requires attribution, no commercial use without separate agreement)
+- **LAM** - See [LAM LICENSE](https://github.com/aigc3d/LAM/blob/master/LICENSE)
+- **diff-gaussian-rasterization** (INRIA) - Non-commercial. Replace with [gsplat](https://github.com/nerfstudio-project/gsplat) (Apache 2.0) before commercial launch.
+- **Spark 2.0** - MIT
+- **Three.js** - MIT
