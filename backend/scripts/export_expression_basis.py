@@ -73,8 +73,8 @@ def load_flame_head(device: str = "cuda") -> object:
         flame_lmk_embedding_path=f"{human_model_path}/flame_assets/flame/landmark_embedding_with_eyes.npy",
         flame_template_mesh_path=f"{human_model_path}/flame_assets/flame/head_template_mesh_mouth.obj",
         flame_parts_path=f"{human_model_path}/flame_assets/flame/FLAME_masks.pkl",
-        n_shape=cfg.model.get("shape_param_dim", 10),
-        n_expr=cfg.model.get("expr_param_dim", 10),
+        shape_params=cfg.model.get("shape_param_dim", 10),
+        expr_params=cfg.model.get("expr_param_dim", 10),
     ).to(device)
     flame.eval()
     return flame
