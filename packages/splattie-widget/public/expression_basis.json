@@ -1,0 +1,18 @@
+{
+  "num_vertices": 20426,
+  "num_expressions": 10,
+  "bytes": 2451132,
+  "format": "float32_le, shape (num_vertices, num_expressions, 3)",
+  "labels": [
+    "expr_0",
+    "expr_1",
+    "expr_2",
+    "expr_3",
+    "expr_4",
+    "expr_5",
+    "expr_6",
+    "expr_7",
+    "expr_8",
+    "expr_9"
+  ]
+}

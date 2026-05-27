@@ -14,7 +14,7 @@ export type {
   WidgetConfig,
 } from './types';
 
-export function register(tagName = 'splat-widget'): void {
+export function register(tagName = 'splattie-widget'): void {
   if (!customElements.get(tagName)) {
     customElements.define(tagName, SplatWidget);
   }

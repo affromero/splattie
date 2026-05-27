@@ -32,18 +32,18 @@ Mirada turns a single photograph into an interactive 3D gaussian splatting head.
 2. **Generate** a 3D head on the GPU backend using LAM (~30s on H100)
 3. **View** the interactive head — eyes follow your cursor, face reacts to hover
 
-## `<splat-widget>` — Interactive 3DGS as a Web Component
+## `<splattie-widget>` — Interactive 3DGS as a Web Component
 
 The core rendering is packaged as a standalone web component that makes gaussian splats reactive — like Rive or Lottie but for 3D.
 
 ```html
-<splat-widget
+<splattie-widget
   src="avatar.ply"
   bones="bone_tree.json"
   weights="lbs_weight_20k.json"
   config="states.json"
   expression-basis="expression_basis.bin"
-></splat-widget>
+></splattie-widget>
 ```
 
 ### Five Dimensions of State
@@ -96,7 +96,7 @@ Open [http://localhost:4001](http://localhost:4001).
 ### Splat Widget Editor
 
 ```bash
-cd packages/splat-widget
+cd packages/splattie-widget
 npm run dev
 ```
 
@@ -115,7 +115,7 @@ uv run uvicorn mirada.api.app:create_app --factory --port 8000
 ```bash
 cd backend
 python3 scripts/export_expression_basis.py \
-  --output ../packages/splat-widget/public/expression_basis.bin \
+  --output ../packages/splattie-widget/public/expression_basis.bin \
   --num-expressions 10
 ```
 
@@ -130,7 +130,7 @@ mirada/
 │   └── scripts/
 │       ├── setup-gpu.sh          # GPU environment setup
 │       └── export_expression_basis.py  # FLAME blendshape export
-├── packages/splat-widget/        # <splat-widget> web component
+├── packages/splattie-widget/        # <splattie-widget> web component
 │   ├── src/
 │   │   ├── SplatWidget.ts        # Custom element, render loop
 │   │   ├── renderer/SparkSetup.ts # Spark 2.0 + SplatSkinning init
@@ -176,7 +176,7 @@ mirada/
 npm run ci                     # lint + type-check + test + build
 
 # Splat Widget
-cd packages/splat-widget
+cd packages/splattie-widget
 npm run dev                    # dev server on port 4002
 npx vitest run                 # 25 tests
 

@@ -8,9 +8,9 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'SplatWidget',
+      name: 'SplattieWidget',
       formats: ['es', 'umd'],
-      fileName: 'splat-widget',
+      fileName: 'splattie-widget',
     },
     rollupOptions: {
       external: ['three'],

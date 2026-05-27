@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": [
     "apps/web",
-    "packages/splat-widget"
+    "packages/splattie-widget"
   ],
   "scripts": {
     "dev": "npm run dev -w apps/web",

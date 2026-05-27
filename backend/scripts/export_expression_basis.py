@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export FLAME expression blendshape basis for the splat-widget.
+"""Export FLAME expression blendshape basis for the splattie-widget.
 
 Extracts the per-vertex expression displacement basis from LAM's upsampled
 FLAME model (20K vertices × 3 × N_expr). The output is a compact binary
@@ -11,12 +11,12 @@ Usage:
     # From the backend directory, with uv:
     uv run python scripts/export_expression_basis.py \
         --shape-param data/generations/<id>/shape_param.pt \
-        --output ../packages/splat-widget/public/expression_basis.bin \
+        --output ../packages/splattie-widget/public/expression_basis.bin \
         --num-expressions 20
 
     # Without a specific shape (uses zero/mean shape):
     uv run python scripts/export_expression_basis.py \
-        --output ../packages/splat-widget/public/expression_basis.bin
+        --output ../packages/splattie-widget/public/expression_basis.bin
 
 Binary format:
     bytes 0-3:   magic "EXPR" (4 bytes)
