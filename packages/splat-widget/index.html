@@ -65,6 +65,23 @@
     width: 100%; accent-color: #7eb8f0; height: 12px; margin-top: 2px;
   }
 
+  .cam-sphere {
+    width: 100%; height: 80px; position: relative; margin: 4px 0;
+    background: #1a1a24; border-radius: 4px; overflow: hidden; cursor: crosshair;
+  }
+  .cam-sphere canvas { width: 100%; height: 100%; }
+  .cam-sphere-label {
+    position: absolute; bottom: 2px; right: 4px; font-size: 0.5rem; color: #444;
+  }
+
+  .easing-group { margin: 0.3rem 0; }
+  .easing-group label { color: #666; font-size: 0.65rem; }
+  .easing-group select {
+    width: 100%; margin-top: 2px; background: #1a1a24; border: 1px solid #2a2a3a;
+    color: #7eb8f0; font: inherit; font-size: 0.65rem; padding: 2px 4px;
+    cursor: pointer;
+  }
+
   .export-btn {
     width: 100%; margin-top: 1rem; padding: 0.5rem;
     background: #7eb8f0; border: none; color: #0e0e14;
@@ -132,8 +149,19 @@
       addSection('expression', () => {
         if (!state.expression) state.expression = {};
         if (!def.expression) def.expression = {};
-        addSlider('jawOpen', state.expression, 'jawOpen', 0, 0.3, 0.005, undefined, def.expression.jawOpen || 0);
-        addSlider('neckTilt', state.expression, 'neckTilt', -0.2, 0.2, 0.005, undefined, def.expression.neckTilt || 0);
+        const d = def.expression;
+        const exprKeys = ['jawOpen', 'neckTilt', 'neckYaw', 'neckRoll', 'gazeX', 'gazeY', 'eyeSquint'];
+        for (const k of exprKeys) {
+          if (state.expression[k] === undefined) state.expression[k] = d[k] || 0;
+          if (d[k] === undefined) d[k] = 0;
+        }
+        addSlider('jawOpen', state.expression, 'jawOpen', 0, 0.3, 0.005, undefined, d.jawOpen);
+        addSlider('neckPitch', state.expression, 'neckTilt', -0.3, 0.3, 0.005, undefined, d.neckTilt);
+        addSlider('neckYaw', state.expression, 'neckYaw', -0.3, 0.3, 0.005, undefined, d.neckYaw);
+        addSlider('neckRoll', state.expression, 'neckRoll', -0.3, 0.3, 0.005, undefined, d.neckRoll);
+        addSlider('gazeX', state.expression, 'gazeX', -0.1, 0.1, 0.002, undefined, d.gazeX);
+        addSlider('gazeY', state.expression, 'gazeY', -0.05, 0.05, 0.001, undefined, d.gazeY);
+        addSlider('eyeSquint', state.expression, 'eyeSquint', 0, 1, 0.01, undefined, d.eyeSquint);
       });
 
       addSection('ghost', () => {
@@ -143,8 +171,8 @@
       });
 
       addSection('camera', () => {
-        addSlider('theta', state.camera, 'theta', -90, 90, 0.5, undefined, def.camera.theta);
-        addSlider('phi', state.camera, 'phi', 0, 180, 0.5, undefined, def.camera.phi);
+        // Camera sphere visual — drag to set theta/phi
+        addCameraSphere(state.camera, def.camera);
         addSlider('radius', state.camera, 'radius', 0.1, 3, 0.01, undefined, def.camera.radius);
         addSlider('fov', state.camera, 'fov', 20, 120, 0.5, undefined, def.camera.fov);
       });
@@ -165,7 +193,9 @@
           k.includes('->' + currentState) || k.startsWith('*->' + currentState)
         ) || Object.keys(config.transitions).find(k => k.startsWith('*'));
         if (transKey && config.transitions[transKey]) {
-          addSlider('duration', config.transitions[transKey], 'duration', 0.05, 2, 0.01, undefined, defaults.transitions[transKey]?.duration);
+          const t = config.transitions[transKey];
+          addSlider('duration', t, 'duration', 0.05, 2, 0.01, undefined, defaults.transitions[transKey]?.duration);
+          addEasingSelect(t);
         }
       });
 
@@ -205,6 +235,107 @@
 
     function getContainer() {
       return panel._currentBody || panel;
+    }
+
+    function addCameraSphere(cam, defCam) {
+      const wrap = document.createElement('div');
+      wrap.className = 'cam-sphere';
+
+      const cvs = document.createElement('canvas');
+      cvs.width = 220; cvs.height = 80;
+      wrap.appendChild(cvs);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'cam-sphere-label';
+      wrap.appendChild(lbl);
+
+      function draw() {
+        const ctx = cvs.getContext('2d');
+        const w = cvs.width, h = cvs.height;
+        const cx = w / 2, cy = h / 2;
+        const r = Math.min(cx, cy) - 8;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw sphere outline
+        ctx.strokeStyle = '#2a2a3a';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Draw grid lines
+        ctx.strokeStyle = '#1e1e2a';
+        ctx.beginPath();
+        ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
+        ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r);
+        ctx.stroke();
+
+        // Draw camera dot
+        const thetaNorm = cam.theta / 90; // -1 to 1
+        const phiNorm = (cam.phi - 90) / 90; // -1 to 1 (90=center)
+        const dotX = cx + thetaNorm * r;
+        const dotY = cy - phiNorm * r;
+
+        ctx.fillStyle = '#7eb8f0';
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        lbl.textContent = `θ ${cam.theta.toFixed(0)}° φ ${cam.phi.toFixed(0)}°`;
+      }
+
+      let dragging = false;
+
+      function updateFromMouse(e) {
+        const rect = cvs.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) / rect.width;
+        const my = (e.clientY - rect.top) / rect.height;
+        cam.theta = (mx - 0.5) * 180;
+        cam.phi = (0.5 - my) * 180 + 90;
+        cam.theta = Math.max(-90, Math.min(90, cam.theta));
+        cam.phi = Math.max(0, Math.min(180, cam.phi));
+        configured.add(currentState);
+        draw();
+        applyConfig();
+      }
+
+      cvs.onpointerdown = (e) => { dragging = true; cvs.setPointerCapture(e.pointerId); updateFromMouse(e); };
+      cvs.onpointermove = (e) => { if (dragging) updateFromMouse(e); };
+      cvs.onpointerup = () => { dragging = false; };
+      cvs.ondblclick = () => {
+        cam.theta = defCam.theta;
+        cam.phi = defCam.phi;
+        configured.add(currentState);
+        draw();
+        applyConfig();
+      };
+
+      draw();
+      getContainer().appendChild(wrap);
+    }
+
+    function addEasingSelect(transObj) {
+      const group = document.createElement('div');
+      group.className = 'easing-group';
+      const lbl = document.createElement('label');
+      lbl.textContent = 'easing';
+      const sel = document.createElement('select');
+      for (const e of ['linear', 'ease-in', 'ease-out', 'ease-in-out', 'snap']) {
+        const opt = document.createElement('option');
+        opt.value = e; opt.textContent = e;
+        if (transObj.easing === e) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.onchange = () => { transObj.easing = sel.value; configured.add(currentState); };
+      group.appendChild(lbl);
+      group.appendChild(sel);
+      getContainer().appendChild(group);
     }
 
     function addSlider(label, obj, key, min, max, step, arrayIdx, defaultVal) {

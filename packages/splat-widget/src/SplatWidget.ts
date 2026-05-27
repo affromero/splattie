@@ -184,13 +184,14 @@ export class SplatWidget extends HTMLElement {
         this.applySkinning(this.spark.skinning, this.spark.bones, frame);
       }
 
-      // Blink via SplatEdit — fade eye splats to transparent
+      // Blink + squint via SplatEdit
       if (this.blinkEdit) {
         const blink = this.autoBlink.getWeights();
         const blinkVal = blink.eyeBlinkLeft ?? 0;
-        // opacity = 1 means fully visible (no blink), 0 means invisible (full blink)
-        this.blinkEdit.left.opacity = 1 - blinkVal;
-        this.blinkEdit.right.opacity = 1 - blinkVal;
+        const squint = frame.expression.eyeSquint ?? 0;
+        const combined = Math.min(1, blinkVal + squint);
+        this.blinkEdit.left.opacity = 1 - combined;
+        this.blinkEdit.right.opacity = 1 - combined;
       }
 
       // Render
@@ -228,11 +229,13 @@ export class SplatWidget extends HTMLElement {
     // Fly reaction smooth in/out
     this.flyReaction += ((this.isOnSplat ? 1 : 0) - this.flyReaction) * 0.1;
 
-    // Eyes (bones 3, 4) — cursor tracking, clamp NDC to ±1 then scale
+    // Eyes (bones 3, 4) — cursor tracking + gaze offset from expression
+    const gazeX = frame.expression.gazeX ?? 0;
+    const gazeY = frame.expression.gazeY ?? 0;
     const clampedX = Math.max(-1, Math.min(1, this.cursor.ndcX));
     const clampedY = Math.max(-1, Math.min(1, this.cursor.ndcY));
-    const eyeYaw = clampedX * 0.09 * tracking.eyes;
-    const eyePitch = clampedY * 0.04 * tracking.eyes;
+    const eyeYaw = clampedX * 0.09 * tracking.eyes + gazeX;
+    const eyePitch = clampedY * 0.04 * tracking.eyes + gazeY;
     for (const eyeIdx of [3, 4]) {
       if (eyeIdx >= bones.length) continue;
       const q = new THREE.Quaternion();
@@ -241,12 +244,15 @@ export class SplatWidget extends HTMLElement {
       sk.setBoneQuatPos(eyeIdx, q, new THREE.Vector3(...bones[eyeIdx].pos));
     }
 
-    // Neck (bone 1) — head follow + expression tilt
-    const exprNeckTilt = frame.expression.neckTilt ?? 0;
-    const neckYaw = this.cursor.ndcX * 0.08 * tracking.head;
-    const neckPitch = this.cursor.ndcY * 0.05 * tracking.head + exprNeckTilt;
+    // Neck (bone 1) — cursor follow + expression pitch/yaw/roll
+    const exprNeckPitch = frame.expression.neckTilt ?? 0;
+    const exprNeckYaw = frame.expression.neckYaw ?? 0;
+    const exprNeckRoll = frame.expression.neckRoll ?? 0;
+    const neckYaw = this.cursor.ndcX * 0.08 * tracking.head + exprNeckYaw;
+    const neckPitch = this.cursor.ndcY * 0.05 * tracking.head + exprNeckPitch;
     if (bones.length > 1) {
       const nq = new THREE.Quaternion();
+      nq.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), exprNeckRoll));
       nq.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), neckYaw));
       nq.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -neckPitch));
       sk.setBoneQuatPos(1, nq, new THREE.Vector3(...bones[1].pos));
