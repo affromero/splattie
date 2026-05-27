@@ -24,6 +24,10 @@
 
 ---
 
+<p align="center">
+  <img src="demo.gif" alt="Splattie Demo" width="600" />
+</p>
+
 Splattie turns a single photograph into an interactive 3D gaussian splatting head. The eyes follow your cursor, the face blinks naturally, and reacts when you hover over it — all rendered client-side at 60fps.
 
 ## How It Works
