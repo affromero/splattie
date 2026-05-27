@@ -37,6 +37,10 @@ document.addEventListener('mousemove', (e) => {
 });
 document.addEventListener('mouseleave', () => { isOnPage = false; mouseNdcX = 0; mouseNdcY = 0; });
 
+// Press J to force jaw open (debug)
+
+
+
 // Hit detection
 const pixel = new Uint8Array(4);
 const bgR = (BG >> 16) & 0xff, bgG = (BG >> 8) & 0xff, bgB = BG & 0xff;
@@ -129,11 +133,6 @@ renderer.setAnimationLoop(() => {
   if (skinning) {
     updateBlink();
 
-    // Hit detection every 3rd frame (after render)
-    if (frameCount % 3 === 0) {
-      onHead = isOnSplat();
-    }
-
     // Fly reaction smooth
     const flyTarget = onHead ? 1 : 0;
     flyReaction += (flyTarget - flyReaction) * 0.1;
@@ -157,8 +156,8 @@ renderer.setAnimationLoop(() => {
     neckQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -neckPitch));
     skinning.setBoneQuatPos(1, neckQ, new THREE.Vector3(...boneList[1].pos));
 
-    // Jaw — blink closes eyes slightly, fly reaction opens jaw
-    const jawAngle = flyReaction * 0.1;
+    // Jaw — fly reaction opens jaw when hovering on face
+    const jawAngle = flyReaction * 0.15;
     const jawQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), jawAngle);
     skinning.setBoneQuatPos(2, jawQ, new THREE.Vector3(...boneList[2].pos));
 
@@ -166,6 +165,14 @@ renderer.setAnimationLoop(() => {
   }
 
   renderer.render(scene, camera);
+
+  // Hit detection AFTER render — framebuffer is valid
+  if (skinning && frameCount % 3 === 0) {
+    onHead = isOnSplat();
+    if (frameCount % 60 === 0 && isOnPage) {
+      console.log('pixel:', pixel[0], pixel[1], pixel[2], 'bg:', bgR, bgG, bgB, 'onHead:', onHead);
+    }
+  }
 });
 </script>
 </body></html>
