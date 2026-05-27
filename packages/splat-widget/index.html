@@ -25,12 +25,27 @@
     width: 5px; height: 5px; border-radius: 50%; background: #60d080;
   }
 
-  .section { margin: 0.5rem 0 0.2rem; color: #555; font-size: 0.6rem; letter-spacing: 0.05em; text-transform: uppercase; }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 0.6rem 0 0.15rem; cursor: pointer; user-select: none;
+  }
+  .section-header span {
+    color: #555; font-size: 0.6rem; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .section-header .toggle { color: #444; font-size: 0.7rem; }
+  .section-body { overflow: hidden; }
+  .section-body.collapsed { display: none; }
 
-  .slider-row { display: flex; align-items: center; gap: 0.4rem; margin: 0.2rem 0; }
-  .slider-row label { width: 55px; color: #666; flex-shrink: 0; font-size: 0.65rem; }
+  .slider-row { display: flex; align-items: center; gap: 0.25rem; margin: 0.15rem 0; }
+  .slider-row label { width: 52px; color: #666; flex-shrink: 0; font-size: 0.65rem; }
   .slider-row input[type=range] { flex: 1; accent-color: #7eb8f0; height: 14px; }
-  .slider-row .val { width: 32px; text-align: right; color: #555; font-size: 0.6rem; }
+  .slider-row .val { width: 36px; text-align: right; color: #555; font-size: 0.6rem; }
+  .pm-btn {
+    width: 16px; height: 16px; background: #1e1e2a; border: 1px solid #333;
+    color: #666; font: 10px monospace; cursor: pointer; line-height: 14px;
+    text-align: center; padding: 0; flex-shrink: 0;
+  }
+  .pm-btn:hover { color: #aaa; border-color: #555; }
 
   .export-btn {
     width: 100%; margin-top: 1rem; padding: 0.5rem;
@@ -62,6 +77,7 @@
     let defaults = null;
     let currentState = 'idle';
     const configured = new Set();
+    const collapsed = new Set();
 
     widget.addEventListener('splatload', async () => {
       config = await fetch('/states.json').then(r => r.json());
@@ -72,7 +88,6 @@
     function buildPanel() {
       panel.innerHTML = '';
 
-      // State tabs with color indicators
       const statesDiv = document.createElement('div');
       statesDiv.className = 'states';
       for (const name of Object.keys(config.states)) {
@@ -87,48 +102,46 @@
       const state = config.states[currentState];
       const def = defaults.states[currentState];
 
-      // Ghost
-      addSection('ghost');
-      addSlider('amplitude', state.ghost, 'amplitude', 0, 0.02, 0.001, undefined, def.ghost.amplitude);
-      addSlider('frequency', state.ghost, 'frequency', 0, 2, 0.1, undefined, def.ghost.frequency);
-      addSlider('wobble', state.ghost, 'wobble', 0, 1, 0.05, undefined, def.ghost.wobble);
+      addSection('expression', () => {
+        if (!state.expression) state.expression = {};
+        if (!def.expression) def.expression = {};
+        addSlider('jawOpen', state.expression, 'jawOpen', 0, 0.3, 0.005, undefined, def.expression.jawOpen || 0);
+        addSlider('neckTilt', state.expression, 'neckTilt', -0.2, 0.2, 0.005, undefined, def.expression.neckTilt || 0);
+      });
 
-      // Expression (bone-driven)
-      if (!state.expression) state.expression = {};
-      if (!def.expression) def.expression = {};
-      addSection('expression');
-      addSlider('jawOpen', state.expression, 'jawOpen', 0, 0.3, 0.01, undefined, def.expression.jawOpen || 0);
-      addSlider('neckTilt', state.expression, 'neckTilt', -0.2, 0.2, 0.01, undefined, def.expression.neckTilt || 0);
+      addSection('ghost', () => {
+        addSlider('amplitude', state.ghost, 'amplitude', 0, 0.02, 0.0005, undefined, def.ghost.amplitude);
+        addSlider('frequency', state.ghost, 'frequency', 0, 2, 0.05, undefined, def.ghost.frequency);
+        addSlider('wobble', state.ghost, 'wobble', 0, 1, 0.02, undefined, def.ghost.wobble);
+      });
 
-      // Camera
-      addSection('camera');
-      addSlider('theta', state.camera, 'theta', -90, 90, 1, undefined, def.camera.theta);
-      addSlider('phi', state.camera, 'phi', 0, 180, 1, undefined, def.camera.phi);
-      addSlider('radius', state.camera, 'radius', 0.1, 3, 0.05, undefined, def.camera.radius);
-      addSlider('fov', state.camera, 'fov', 20, 120, 1, undefined, def.camera.fov);
+      addSection('camera', () => {
+        addSlider('theta', state.camera, 'theta', -90, 90, 0.5, undefined, def.camera.theta);
+        addSlider('phi', state.camera, 'phi', 0, 180, 0.5, undefined, def.camera.phi);
+        addSlider('radius', state.camera, 'radius', 0.1, 3, 0.01, undefined, def.camera.radius);
+        addSlider('fov', state.camera, 'fov', 20, 120, 0.5, undefined, def.camera.fov);
+      });
 
-      // Rotation
-      addSection('rotation');
-      addSlider('pitch', state, 'rotation', -30, 30, 0.5, 0, def.rotation[0]);
-      addSlider('yaw', state, 'rotation', -30, 30, 0.5, 1, def.rotation[1]);
-      addSlider('roll', state, 'rotation', -30, 30, 0.5, 2, def.rotation[2]);
+      addSection('rotation', () => {
+        addSlider('pitch', state, 'rotation', -30, 30, 0.1, 0, def.rotation[0]);
+        addSlider('yaw', state, 'rotation', -30, 30, 0.1, 1, def.rotation[1]);
+        addSlider('roll', state, 'rotation', -30, 30, 0.1, 2, def.rotation[2]);
+      });
 
-      // Tracking
-      addSection('tracking');
-      addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.05, undefined, def.tracking.eyes);
-      addSlider('head', state.tracking, 'head', 0, 1, 0.05, undefined, def.tracking.head);
+      addSection('tracking', () => {
+        addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
+        addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
+      });
 
-      // Transition
-      addSection('transition');
-      const transKey = Object.keys(config.transitions).find(k =>
-        k.includes('->' + currentState) || k.startsWith('*->' + currentState)
-      ) || Object.keys(config.transitions).find(k => k.startsWith('*'));
-      if (transKey && config.transitions[transKey]) {
-        const defTrans = defaults.transitions[transKey];
-        addSlider('duration', config.transitions[transKey], 'duration', 0.05, 2, 0.05, undefined, defTrans?.duration);
-      }
+      addSection('transition', () => {
+        const transKey = Object.keys(config.transitions).find(k =>
+          k.includes('->' + currentState) || k.startsWith('*->' + currentState)
+        ) || Object.keys(config.transitions).find(k => k.startsWith('*'));
+        if (transKey && config.transitions[transKey]) {
+          addSlider('duration', config.transitions[transKey], 'duration', 0.05, 2, 0.01, undefined, defaults.transitions[transKey]?.duration);
+        }
+      });
 
-      // Export .splattie
       const exportBtn = document.createElement('button');
       exportBtn.className = 'export-btn';
       exportBtn.textContent = 'Download .splattie';
@@ -136,11 +149,35 @@
       panel.appendChild(exportBtn);
     }
 
-    function addSection(title) {
-      const s = document.createElement('div');
-      s.className = 'section';
-      s.textContent = title;
-      panel.appendChild(s);
+    function addSection(title, buildContent) {
+      const header = document.createElement('div');
+      header.className = 'section-header';
+      const label = document.createElement('span');
+      label.textContent = title;
+      const toggle = document.createElement('span');
+      toggle.className = 'toggle';
+      toggle.textContent = collapsed.has(title) ? '▸' : '▾';
+      header.appendChild(label);
+      header.appendChild(toggle);
+      header.onclick = () => {
+        if (collapsed.has(title)) collapsed.delete(title);
+        else collapsed.add(title);
+        buildPanel();
+      };
+      panel.appendChild(header);
+
+      const body = document.createElement('div');
+      body.className = 'section-body' + (collapsed.has(title) ? ' collapsed' : '');
+      panel.appendChild(body);
+
+      const prevParent = panel;
+      panel._currentBody = body;
+      buildContent();
+      delete panel._currentBody;
+    }
+
+    function getContainer() {
+      return panel._currentBody || panel;
     }
 
     function addSlider(label, obj, key, min, max, step, arrayIdx, defaultVal) {
@@ -150,46 +187,48 @@
       const lbl = document.createElement('label');
       lbl.textContent = label;
 
+      const minus = document.createElement('button');
+      minus.className = 'pm-btn';
+      minus.textContent = '−';
+
       const input = document.createElement('input');
       input.type = 'range';
       input.min = min;
       input.max = max;
       input.step = step;
 
+      const plus = document.createElement('button');
+      plus.className = 'pm-btn';
+      plus.textContent = '+';
+
       const val = document.createElement('span');
       val.className = 'val';
 
       const getValue = () => arrayIdx !== undefined ? obj[key][arrayIdx] : obj[key];
       const setValue = (v) => {
+        v = Math.max(parseFloat(min), Math.min(parseFloat(max), v));
         if (arrayIdx !== undefined) obj[key][arrayIdx] = v;
         else obj[key] = v;
         configured.add(currentState);
-      };
-
-      input.value = getValue();
-      val.textContent = Number(getValue()).toFixed(2);
-
-      input.oninput = () => {
-        const v = parseFloat(input.value);
-        setValue(v);
-        val.textContent = v.toFixed(2);
+        input.value = v;
+        val.textContent = v.toFixed(step < 0.01 ? 4 : step < 0.1 ? 3 : 2);
         applyConfig();
       };
 
-      // Double click resets to default
-      input.ondblclick = () => {
-        if (defaultVal !== undefined) {
-          setValue(defaultVal);
-          input.value = defaultVal;
-          val.textContent = Number(defaultVal).toFixed(2);
-          applyConfig();
-        }
-      };
+      input.value = getValue();
+      val.textContent = Number(getValue()).toFixed(step < 0.01 ? 4 : step < 0.1 ? 3 : 2);
+
+      input.oninput = () => setValue(parseFloat(input.value));
+      minus.onclick = () => setValue(getValue() - step);
+      plus.onclick = () => setValue(getValue() + step);
+      input.ondblclick = () => { if (defaultVal !== undefined) setValue(defaultVal); };
 
       row.appendChild(lbl);
+      row.appendChild(minus);
       row.appendChild(input);
+      row.appendChild(plus);
       row.appendChild(val);
-      panel.appendChild(row);
+      getContainer().appendChild(row);
     }
 
     function applyConfig() {
@@ -200,27 +239,15 @@
       Object.assign(frame.camera, state.camera);
       frame.rotation = [...state.rotation];
       Object.assign(frame.tracking, state.tracking);
-      buildPanel(); // refresh configured indicators
+      if (state.expression) Object.assign(frame.expression, state.expression);
     }
 
     async function exportSplattie() {
       const zip = new JSZip.default();
-
-      // Fetch the splat PLY
-      const plyRes = await fetch('/andres.ply');
-      zip.file('andres.ply', await plyRes.blob());
-
-      // Fetch bone data
-      const bonesRes = await fetch('/bone_tree.json');
-      zip.file('bone_tree.json', await bonesRes.text());
-
-      const weightsRes = await fetch('/lbs_weight_20k.json');
-      zip.file('lbs_weight_20k.json', await weightsRes.text());
-
-      // Add the states config
+      zip.file('andres.ply', await fetch('/andres.ply').then(r => r.blob()));
+      zip.file('bone_tree.json', await fetch('/bone_tree.json').then(r => r.text()));
+      zip.file('lbs_weight_20k.json', await fetch('/lbs_weight_20k.json').then(r => r.text()));
       zip.file('states.json', JSON.stringify(config, null, 2));
-
-      // Generate and download
       const blob = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
