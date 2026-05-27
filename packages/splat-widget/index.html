@@ -1,178 +1,25 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>*{margin:0}body{background:#0e0e14;cursor:crosshair}</style></head>
+<html><head><meta charset="utf-8"><style>
+  * { margin: 0; }
+  body { background: #0e0e14; display: flex; align-items: center; justify-content: center; height: 100vh; }
+  splat-widget { width: 800px; height: 600px; }
+</style></head>
 <body>
-<script type="module">
-import * as THREE from 'three';
-import { SplatMesh, SparkRenderer, SplatSkinning, SplatSkinningMode } from '@sparkjsdev/spark';
+  <splat-widget
+    src="/andres.ply"
+    bones="/bone_tree.json"
+    weights="/lbs_weight_20k.json"
+    background="#0e0e14"
+  ></splat-widget>
 
-const BG = 0x0e0e14;
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setClearColor(BG);
-document.body.appendChild(renderer.domElement);
+  <script type="module">
+    import './src/index.ts';
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.001, 100);
-camera.position.set(0, 0, 0.5);
-camera.lookAt(0, 0, 0);
-
-const spark = new SparkRenderer({ renderer });
-scene.add(spark);
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// Mouse tracking
-let mouseNdcX = 0, mouseNdcY = 0, mouseClientX = 0, mouseClientY = 0, isOnPage = false;
-document.addEventListener('mousemove', (e) => {
-  mouseNdcX = (e.clientX / window.innerWidth) * 2 - 1;
-  mouseNdcY = -((e.clientY / window.innerHeight) * 2 - 1);
-  mouseClientX = e.clientX;
-  mouseClientY = e.clientY;
-  isOnPage = true;
-});
-document.addEventListener('mouseleave', () => { isOnPage = false; mouseNdcX = 0; mouseNdcY = 0; });
-
-// Press J to force jaw open (debug)
-
-
-
-// Hit detection
-const pixel = new Uint8Array(4);
-const bgR = (BG >> 16) & 0xff, bgG = (BG >> 8) & 0xff, bgB = BG & 0xff;
-function isOnSplat() {
-  if (!isOnPage) return false;
-  const gl = renderer.getContext();
-  const dpr = renderer.getPixelRatio();
-  gl.readPixels(
-    Math.floor(mouseClientX * dpr),
-    Math.floor((window.innerHeight - mouseClientY) * dpr),
-    1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel
-  );
-  return Math.abs(pixel[0] - bgR) + Math.abs(pixel[1] - bgG) + Math.abs(pixel[2] - bgB) > 40;
-}
-
-// Blink
-let blinkValue = 0, nextBlink = performance.now() + 3000;
-function updateBlink() {
-  const now = performance.now();
-  if (now > nextBlink) {
-    const elapsed = now - nextBlink;
-    if (elapsed < 150) {
-      blinkValue = Math.sin((elapsed / 150) * Math.PI);
-    } else {
-      blinkValue = 0;
-      nextBlink = now + 2000 + Math.random() * 5000;
-    }
-  }
-}
-
-// Load FLAME data
-const [btRes, lbsRes] = await Promise.all([
-  fetch('/bone_tree.json').then(r => r.json()),
-  fetch('/lbs_weight_20k.json').then(r => r.json()),
-]);
-
-const boneList = [];
-function flattenBones(node, parentIdx) {
-  const idx = boneList.length;
-  boneList.push({ name: node.name, pos: node.position, parentIdx, idx });
-  if (node.children) node.children.forEach(c => flattenBones(c, idx));
-}
-flattenBones(btRes.bones[0], -1);
-
-// Load splat
-const splat = new SplatMesh({
-  url: '/andres.ply',
-  sphericalHarmonicsDegree: 0,
-  onLoad: () => {
-    try { setupSkinning(); } catch(e) { console.error('SKINNING:', e); }
-  },
-});
-scene.add(splat);
-
-let skinning = null;
-let flyReaction = 0;
-let onHead = false;
-
-function setupSkinning() {
-  skinning = new SplatSkinning({
-    mesh: splat,
-    numBones: boneList.length,
-    mode: SplatSkinningMode.DUAL_QUATERNION,
-  });
-
-  const identityQuat = new THREE.Quaternion();
-  for (const bone of boneList) {
-    skinning.setRestQuatPos(bone.idx, identityQuat, new THREE.Vector3(...bone.pos));
-  }
-
-  for (let i = 0; i < Math.min(lbsRes.length, skinning.numSplats); i++) {
-    const w = lbsRes[i];
-    const pairs = w.map((val, idx) => [idx, val]).sort((a, b) => b[1] - a[1]);
-    skinning.setSplatBones(i,
-      new THREE.Vector4(pairs[0][0], pairs[1][0], pairs[2][0], pairs[3][0]),
-      new THREE.Vector4(pairs[0][1], pairs[1][1], pairs[2][1], pairs[3][1]),
-    );
-  }
-
-  splat.skinning = skinning;
-  skinning.updateBones();
-  console.log('skinning ready');
-}
-
-let frameCount = 0;
-
-renderer.setAnimationLoop(() => {
-  frameCount++;
-
-  if (skinning) {
-    updateBlink();
-
-    // Fly reaction smooth
-    const flyTarget = onHead ? 1 : 0;
-    flyReaction += (flyTarget - flyReaction) * 0.1;
-
-    // Eye tracking — follow cursor
-    const eyePitch = mouseNdcY * 0.15;
-    const eyeYaw = mouseNdcX * 0.2;
-
-    for (const eyeIdx of [3, 4]) {
-      const q = new THREE.Quaternion();
-      q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), eyeYaw));
-      q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -eyePitch));
-      skinning.setBoneQuatPos(eyeIdx, q, new THREE.Vector3(...boneList[eyeIdx].pos));
-    }
-
-    // Neck — subtle head follow
-    const neckYaw = mouseNdcX * 0.08;
-    const neckPitch = mouseNdcY * 0.05;
-    const neckQ = new THREE.Quaternion();
-    neckQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), neckYaw));
-    neckQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -neckPitch));
-    skinning.setBoneQuatPos(1, neckQ, new THREE.Vector3(...boneList[1].pos));
-
-    // Jaw — fly reaction opens jaw when hovering on face
-    const jawAngle = flyReaction * 0.15;
-    const jawQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), jawAngle);
-    skinning.setBoneQuatPos(2, jawQ, new THREE.Vector3(...boneList[2].pos));
-
-    skinning.updateBones();
-  }
-
-  renderer.render(scene, camera);
-
-  // Hit detection AFTER render — framebuffer is valid
-  if (skinning && frameCount % 3 === 0) {
-    onHead = isOnSplat();
-    if (frameCount % 60 === 0 && isOnPage) {
-      console.log('pixel:', pixel[0], pixel[1], pixel[2], 'bg:', bgR, bgG, bgB, 'onHead:', onHead);
-    }
-  }
-});
-</script>
-</body></html>
+    const widget = document.querySelector('splat-widget');
+    widget.addEventListener('splatload', () => console.log('splatload'));
+    widget.addEventListener('splathover', () => console.log('splathover'));
+    widget.addEventListener('splatleave', () => console.log('splatleave'));
+    widget.addEventListener('splatclick', () => console.log('splatclick'));
+  </script>
+</body>
+</html>
