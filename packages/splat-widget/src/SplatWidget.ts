@@ -27,7 +27,6 @@ export class SplatWidget extends HTMLElement {
   private hitDetector = new HitDetector();
   private events: SplatEvents | null = null;
   private isOnSplat = false;
-  private flyReaction = 0;
   private config: WidgetConfig | null = null;
   private frameCount = 0;
   private clickHoldTimer = 0;
@@ -242,9 +241,6 @@ export class SplatWidget extends HTMLElement {
 
     const tracking = frame.tracking;
 
-    // Fly reaction smooth in/out
-    this.flyReaction += ((this.isOnSplat ? 1 : 0) - this.flyReaction) * 0.1;
-
     // Neck (bone 1) — computed first so children inherit its rotation
     const exprNeckPitch = frame.expression.neckTilt ?? 0;
     const exprNeckYaw = frame.expression.neckYaw ?? 0;
@@ -275,10 +271,9 @@ export class SplatWidget extends HTMLElement {
       sk.setBoneQuatPos(eyeIdx, q, new THREE.Vector3(...bones[eyeIdx].pos));
     }
 
-    // Jaw (bone 2) — expression jawOpen + fly reaction, inherits neck rotation
+    // Jaw (bone 2) — expression jawOpen only, inherits neck rotation
     if (bones.length > 2) {
-      const exprJaw = frame.expression.jawOpen ?? 0;
-      const jawAngle = exprJaw + this.flyReaction * 0.15;
+      const jawAngle = frame.expression.jawOpen ?? 0;
       const localJaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), jawAngle);
       const jq = neckQ.clone().multiply(localJaw);
       sk.setBoneQuatPos(2, jq, new THREE.Vector3(...bones[2].pos));
