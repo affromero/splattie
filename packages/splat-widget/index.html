@@ -24,42 +24,8 @@ scene.add(spark);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-// Test each file
-const files = [
-  { url: 'https://sparkjs.dev/assets/splats/robot-head.spz', cam: [0,0,3], label: 'CDN robot-head.spz' },
-  { url: '/andres.spz', cam: [0,0,0.4], label: 'local andres.spz (offset)' },
-  { url: '/andres.ply', cam: [0,0,0.4], label: 'local andres.ply (offset)' },
-  { url: '/andres_absolute.ply', cam: [0,0,0.5], label: 'local absolute.ply' },
-  { url: '/andres_absolute.spz', cam: [0,0,0.5], label: 'local absolute.spz' },
-];
-
-let currentIdx = 0;
-let currentMesh = null;
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight') { currentIdx = (currentIdx + 1) % files.length; loadFile(); }
-  if (e.key === 'ArrowLeft') { currentIdx = (currentIdx - 1 + files.length) % files.length; loadFile(); }
-});
-
-async function loadFile() {
-  const f = files[currentIdx];
-  log(`[${currentIdx+1}/${files.length}] loading ${f.label}...`);
-  
-  if (currentMesh) { scene.remove(currentMesh); }
-  
-  try {
-    currentMesh = new SplatMesh({
-      url: f.url,
-      onLoad: () => log(`[${currentIdx+1}/${files.length}] ${f.label} — LOADED ✓ (arrow keys to switch)`),
-    });
-    currentMesh.quaternion.set(1, 0, 0, 0);
-    scene.add(currentMesh);
-    camera.position.set(...f.cam);
-    controls.target.set(0, 0, 0);
-  } catch(e) {
-    log(`ERROR: ${e.message}`);
-  }
-}
+camera.position.set(0, 0, 0.5);
+controls.target.set(0, 0, 0);
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth/window.innerHeight;
@@ -67,11 +33,17 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+log('loading your face...');
+const splat = new SplatMesh({
+  url: '/andres.ply',
+  sphericalHarmonicsDegree: 0,
+  onLoad: () => log('loaded — drag to orbit, scroll to zoom'),
+});
+scene.add(splat);
+
 renderer.setAnimationLoop(() => {
   controls.update();
   renderer.render(scene, camera);
 });
-
-loadFile();
 </script>
 </body></html>
