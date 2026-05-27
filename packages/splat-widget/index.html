@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>*{margin:0}body{background:#0e0e14}</style></head>
 <body>
-<div id="status" style="position:fixed;top:10px;left:10px;color:#666;font:12px monospace;z-index:9"></div>
+<div id="status" style="position:fixed;top:10px;left:10px;color:#666;font:12px monospace;z-index:9;max-width:400px"></div>
 <script type="module">
 import * as THREE from 'three';
-import { SplatMesh, SparkRenderer } from '@sparkjsdev/spark';
+import { SplatMesh, SparkRenderer, SplatSkinning, SplatSkinningMode } from '@sparkjsdev/spark';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const status = document.getElementById('status');
-const log = (m) => { status.textContent = m; console.log(m); };
+const log = (m) => { status.innerHTML += m + '<br>'; console.log(m); };
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -31,38 +31,103 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-const files = [
-  { url: '/andres.ply', label: 'YOUR FACE (color fixed)' },
-  { url: 'https://sparkjs.dev/assets/splats/robot-head.spz', label: 'robot (reference)', cam: 3 },
-];
+// Load FLAME data
+log('loading FLAME data...');
+const [btRes, lbsRes] = await Promise.all([
+  fetch('/bone_tree.json').then(r => r.json()),
+  fetch('/lbs_weight_20k.json').then(r => r.json()),
+]);
 
-let idx = 0;
-let currentMesh = null;
+// Flatten bone hierarchy: root(0) → neck(1) → jaw(2), leftEye(3), rightEye(4)
+const boneList = [];
+function flattenBones(node, parentIdx) {
+  const idx = boneList.length;
+  boneList.push({ name: node.name, pos: node.position, parentIdx, idx });
+  if (node.children) node.children.forEach(c => flattenBones(c, idx));
+}
+flattenBones(btRes.bones[0], -1);
+log(`bones: ${boneList.map(b=>b.name).join(', ')}`);
+log(`lbs weights: ${lbsRes.length} splats × ${lbsRes[0].length} bones`);
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight') { idx = (idx + 1) % files.length; load(); }
-  if (e.key === 'ArrowLeft') { idx = (idx - 1 + files.length) % files.length; load(); }
+// Load splat
+log('loading splat...');
+const splat = new SplatMesh({
+  url: '/andres.ply',
+  sphericalHarmonicsDegree: 0,
+  onLoad: () => {
+    log('splat loaded, wiring skinning...');
+    try {
+      setupSkinning();
+    } catch(e) {
+      log('SKINNING ERROR: ' + e.message);
+      console.error(e);
+    }
+  },
 });
+scene.add(splat);
 
-function load() {
-  const f = files[idx];
-  log(`[${idx+1}/${files.length}] ${f.label}...`);
-  if (currentMesh) scene.remove(currentMesh);
-  currentMesh = new SplatMesh({
-    url: f.url,
-    sphericalHarmonicsDegree: 0,
-    onLoad: () => log(`[${idx+1}/${files.length}] ${f.label} — LOADED (arrows to switch)`),
+let skinning = null;
+let time = 0;
+
+function setupSkinning() {
+  skinning = new SplatSkinning({
+    mesh: splat,
+    numBones: boneList.length,
+    mode: SplatSkinningMode.LINEAR_BLEND,
   });
-  scene.add(currentMesh);
-  camera.position.set(0, 0, f.cam || 0.5);
-  controls.target.set(0, 0, 0);
+  log(`skinning created: ${skinning.numSplats} splats, ${skinning.numBones} bones`);
+
+  // Set rest pose: each bone at its position from bone_tree
+  for (const bone of boneList) {
+    const mat = new THREE.Matrix4();
+    mat.setPosition(bone.pos[0], bone.pos[1], bone.pos[2]);
+    skinning.setRestMatrix(bone.idx, mat);
+  }
+  log('rest pose set');
+
+  // Assign LBS weights to each splat
+  for (let i = 0; i < Math.min(lbsRes.length, skinning.numSplats); i++) {
+    const w = lbsRes[i];
+    // Sort by weight descending, take top 4
+    const pairs = w.map((val, idx) => [idx, val]).sort((a, b) => b[1] - a[1]);
+    skinning.setSplatBones(
+      i,
+      new THREE.Vector4(pairs[0][0], pairs[1][0], pairs[2][0], pairs[3][0]),
+      new THREE.Vector4(pairs[0][1], pairs[1][1], pairs[2][1], pairs[3][1]),
+    );
+  }
+  log('LBS weights assigned');
+  skinning.updateBones();
+  log('READY — jaw should wiggle');
 }
 
 renderer.setAnimationLoop(() => {
+  time += 0.016;
+
+  if (skinning) {
+    // Animate jaw (bone 2) — open/close
+    const jawAngle = Math.sin(time * 3) * 0.15;
+    const jawMat = new THREE.Matrix4();
+    const jawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), jawAngle);
+    jawMat.makeRotationFromQuaternion(jawQuat);
+    jawMat.setPosition(boneList[2].pos[0], boneList[2].pos[1], boneList[2].pos[2]);
+    skinning.setBoneMatrix(2, jawMat);
+
+    // Animate eyes (bones 3,4) — look left/right
+    const eyeYaw = Math.sin(time * 2) * 0.2;
+    for (const eyeIdx of [3, 4]) {
+      const eyeMat = new THREE.Matrix4();
+      const eyeQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), eyeYaw);
+      eyeMat.makeRotationFromQuaternion(eyeQuat);
+      eyeMat.setPosition(boneList[eyeIdx].pos[0], boneList[eyeIdx].pos[1], boneList[eyeIdx].pos[2]);
+      skinning.setBoneMatrix(eyeIdx, eyeMat);
+    }
+
+    skinning.updateBones();
+  }
+
   controls.update();
   renderer.render(scene, camera);
 });
-
-load();
 </script>
 </body></html>
