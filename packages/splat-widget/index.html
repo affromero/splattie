@@ -5,14 +5,6 @@
 
   .main { flex: 1; display: flex; flex-direction: column; }
   splat-widget { flex: 1; }
-  .preview-bar {
-    height: 100px; background: #0a0a0f; border-top: 1px solid #1e1e2a;
-    display: flex; align-items: center; justify-content: center; gap: 1rem;
-    padding: 0.5rem;
-  }
-  .preview-bar .preview-label { color: #444; font-size: 0.6rem; writing-mode: vertical-rl; }
-  .preview-bar splat-widget { width: 120px; height: 80px; border: 1px solid #1e1e2a; flex: none; }
-  .preview-bar .state-name { font-size: 0.55rem; color: #555; text-align: center; }
 
   .panel {
     width: 260px;
@@ -99,13 +91,6 @@
       config="/states.json"
       background="#0e0e14"
     ></splat-widget>
-    <div class="preview-bar">
-      <span class="preview-label">preview</span>
-      <div>
-        <splat-widget src="/andres.ply" bones="/bone_tree.json" weights="/lbs_weight_20k.json" config="/states.json" background="#0e0e14"></splat-widget>
-        <div class="state-name">web embed</div>
-      </div>
-    </div>
   </div>
 
   <div class="panel" id="panel"></div>

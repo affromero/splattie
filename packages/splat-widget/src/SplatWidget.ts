@@ -224,12 +224,25 @@ export class SplatWidget extends HTMLElement {
     };
 
     const tracking = frame.tracking;
-    const blinkWeights = this.autoBlink.getWeights();
 
     // Fly reaction smooth in/out
     this.flyReaction += ((this.isOnSplat ? 1 : 0) - this.flyReaction) * 0.1;
 
-    // Eyes (bones 3, 4) — cursor tracking + gaze offset from expression
+    // Neck (bone 1) — computed first so children inherit its rotation
+    const exprNeckPitch = frame.expression.neckTilt ?? 0;
+    const exprNeckYaw = frame.expression.neckYaw ?? 0;
+    const exprNeckRoll = frame.expression.neckRoll ?? 0;
+    const neckYaw = this.cursor.ndcX * 0.08 * tracking.head + exprNeckYaw;
+    const neckPitch = this.cursor.ndcY * 0.05 * tracking.head + exprNeckPitch;
+    const neckQ = new THREE.Quaternion();
+    if (bones.length > 1) {
+      neckQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), exprNeckRoll));
+      neckQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), neckYaw));
+      neckQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -neckPitch));
+      sk.setBoneQuatPos(1, neckQ, new THREE.Vector3(...bones[1].pos));
+    }
+
+    // Eyes (bones 3, 4) — cursor tracking + gaze offset, inherits neck rotation
     const gazeX = frame.expression.gazeX ?? 0;
     const gazeY = frame.expression.gazeY ?? 0;
     const clampedX = Math.max(-1, Math.min(1, this.cursor.ndcX));
@@ -238,31 +251,19 @@ export class SplatWidget extends HTMLElement {
     const eyePitch = clampedY * 0.04 * tracking.eyes + gazeY;
     for (const eyeIdx of [3, 4]) {
       if (eyeIdx >= bones.length) continue;
-      const q = new THREE.Quaternion();
-      q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), eyeYaw));
-      q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -eyePitch));
+      const localQ = new THREE.Quaternion();
+      localQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), eyeYaw));
+      localQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -eyePitch));
+      const q = neckQ.clone().multiply(localQ);
       sk.setBoneQuatPos(eyeIdx, q, new THREE.Vector3(...bones[eyeIdx].pos));
     }
 
-    // Neck (bone 1) — cursor follow + expression pitch/yaw/roll
-    const exprNeckPitch = frame.expression.neckTilt ?? 0;
-    const exprNeckYaw = frame.expression.neckYaw ?? 0;
-    const exprNeckRoll = frame.expression.neckRoll ?? 0;
-    const neckYaw = this.cursor.ndcX * 0.08 * tracking.head + exprNeckYaw;
-    const neckPitch = this.cursor.ndcY * 0.05 * tracking.head + exprNeckPitch;
-    if (bones.length > 1) {
-      const nq = new THREE.Quaternion();
-      nq.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), exprNeckRoll));
-      nq.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), neckYaw));
-      nq.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -neckPitch));
-      sk.setBoneQuatPos(1, nq, new THREE.Vector3(...bones[1].pos));
-    }
-
-    // Jaw (bone 2) — expression jawOpen + fly reaction
+    // Jaw (bone 2) — expression jawOpen + fly reaction, inherits neck rotation
     if (bones.length > 2) {
       const exprJaw = frame.expression.jawOpen ?? 0;
       const jawAngle = exprJaw + this.flyReaction * 0.15;
-      const jq = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), jawAngle);
+      const localJaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), jawAngle);
+      const jq = neckQ.clone().multiply(localJaw);
       sk.setBoneQuatPos(2, jq, new THREE.Vector3(...bones[2].pos));
     }
 
