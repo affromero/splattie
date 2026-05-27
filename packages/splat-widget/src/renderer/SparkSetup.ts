@@ -5,6 +5,66 @@ export interface BoneInfo {
   pos: [number, number, number];
   idx: number;
   parentIdx: number;
+  virtual?: boolean;
+}
+
+function computeVirtualBones(bones: BoneInfo[]): BoneInfo[] {
+  if (bones.length < 5) return [];
+  const neck = bones[1].pos;
+  const jaw = bones[2].pos;
+  const lEye = bones[3].pos;
+  const rEye = bones[4].pos;
+  const midEyeX = (lEye[0] + rEye[0]) / 2;
+  const midEyeY = (lEye[1] + rEye[1]) / 2;
+  const midEyeZ = (lEye[2] + rEye[2]) / 2;
+  const eyeSep = Math.abs(lEye[0] - rEye[0]);
+  const mouthY = (jaw[1] + midEyeY) / 2 - 0.005;
+  const mouthZ = (jaw[2] + midEyeZ) / 2 + 0.01;
+
+  const idx = bones.length;
+  return [
+    { name: 'browL', pos: [lEye[0] - 0.005, lEye[1] + 0.012, lEye[2] - 0.005], idx: idx, parentIdx: 1, virtual: true },
+    { name: 'browR', pos: [rEye[0] + 0.005, rEye[1] + 0.012, rEye[2] - 0.005], idx: idx + 1, parentIdx: 1, virtual: true },
+    { name: 'mouthCornerL', pos: [midEyeX + eyeSep * 0.35, mouthY, mouthZ], idx: idx + 2, parentIdx: 2, virtual: true },
+    { name: 'mouthCornerR', pos: [midEyeX - eyeSep * 0.35, mouthY, mouthZ], idx: idx + 3, parentIdx: 2, virtual: true },
+  ];
+}
+
+async function parsePlyPositions(url: string): Promise<Float32Array> {
+  const res = await fetch(url);
+  const buffer = await res.arrayBuffer();
+  const headerBytes = new Uint8Array(buffer, 0, Math.min(4096, buffer.byteLength));
+  const header = new TextDecoder().decode(headerBytes);
+  const endIdx = header.indexOf('end_header');
+  const headerEnd = buffer.byteLength > endIdx ? header.indexOf('\n', endIdx) + 1 : 0;
+
+  const vertexMatch = header.match(/element vertex (\d+)/);
+  const numVerts = vertexMatch ? parseInt(vertexMatch[1]) : 0;
+
+  const props: string[] = [];
+  for (const line of header.split('\n')) {
+    if (line.startsWith('property ')) props.push(line.trim());
+    if (line === 'end_header') break;
+  }
+
+  let bytesPerVertex = 0;
+  for (const p of props) {
+    if (p.includes('float')) bytesPerVertex += 4;
+    else if (p.includes('double')) bytesPerVertex += 8;
+    else if (p.includes('uchar') || p.includes('uint8')) bytesPerVertex += 1;
+    else if (p.includes('short') || p.includes('int16')) bytesPerVertex += 2;
+    else if (p.includes('int') || p.includes('uint')) bytesPerVertex += 4;
+  }
+
+  const data = new DataView(buffer, headerEnd);
+  const positions = new Float32Array(numVerts * 3);
+  for (let i = 0; i < numVerts; i++) {
+    const offset = i * bytesPerVertex;
+    positions[i * 3] = data.getFloat32(offset, true);
+    positions[i * 3 + 1] = data.getFloat32(offset + 4, true);
+    positions[i * 3 + 2] = data.getFloat32(offset + 8, true);
+  }
+  return positions;
 }
 
 export interface SparkInstance {
@@ -72,10 +132,11 @@ export async function createSparkInstance(
   const bones: BoneInfo[] = [];
 
   if (boneTreeUrl && lbsWeightsUrl) {
-    const [boneTree, lbsWeights] = await Promise.all([
+    const [boneTree, lbsWeights, splatPositions] = await Promise.all([
       fetch(boneTreeUrl).then((r) => r.json()),
       fetch(lbsWeightsUrl).then((r) => r.json()),
-    ]) as [{ bones: Array<{ name: string; position: number[]; children?: unknown[] }> }, number[][]];
+      parsePlyPositions(splatUrl),
+    ]) as [{ bones: Array<{ name: string; position: number[]; children?: unknown[] }> }, number[][], Float32Array];
 
     function flattenBones(
       node: { name: string; position: number[]; children?: unknown[] },
@@ -88,6 +149,9 @@ export async function createSparkInstance(
     }
     flattenBones(boneTree.bones[0], -1);
 
+    const virtualBones = computeVirtualBones(bones);
+    bones.push(...virtualBones);
+
     skinning = new SplatSkinning({
       mesh: splatMesh,
       numBones: bones.length,
@@ -99,13 +163,33 @@ export async function createSparkInstance(
       skinning.setRestQuatPos(bone.idx, identityQuat, new THREE.Vector3(...bone.pos));
     }
 
-    for (let i = 0; i < Math.min(lbsWeights.length, skinning.numSplats); i++) {
-      const w = lbsWeights[i];
-      const pairs = w.map((val, idx) => [idx, val] as [number, number]).sort((a, b) => b[1] - a[1]);
+    const sigma = 0.012;
+    const sigma2 = 2 * sigma * sigma;
+    const numSplats = Math.min(lbsWeights.length, skinning.numSplats);
+
+    for (let i = 0; i < numSplats; i++) {
+      const origWeights = lbsWeights[i];
+      const allWeights: [number, number][] = origWeights.map((val, idx) => [idx, val]);
+
+      if (virtualBones.length > 0 && i * 3 + 2 < splatPositions.length) {
+        const px = splatPositions[i * 3];
+        const py = splatPositions[i * 3 + 1];
+        const pz = splatPositions[i * 3 + 2];
+        for (const vb of virtualBones) {
+          const dx = px - vb.pos[0], dy = py - vb.pos[1], dz = pz - vb.pos[2];
+          const dist2 = dx * dx + dy * dy + dz * dz;
+          const w = Math.exp(-dist2 / sigma2) * 0.5;
+          if (w > 0.001) allWeights.push([vb.idx, w]);
+        }
+      }
+
+      allWeights.sort((a, b) => b[1] - a[1]);
+      const top4 = allWeights.slice(0, 4);
+      const sum = top4.reduce((s, p) => s + p[1], 0) || 1;
       skinning.setSplatBones(
         i,
-        new THREE.Vector4(pairs[0][0], pairs[1][0], pairs[2][0], pairs[3][0]),
-        new THREE.Vector4(pairs[0][1], pairs[1][1], pairs[2][1], pairs[3][1]),
+        new THREE.Vector4(top4[0]?.[0] ?? 0, top4[1]?.[0] ?? 0, top4[2]?.[0] ?? 0, top4[3]?.[0] ?? 0),
+        new THREE.Vector4((top4[0]?.[1] ?? 0) / sum, (top4[1]?.[1] ?? 0) / sum, (top4[2]?.[1] ?? 0) / sum, (top4[3]?.[1] ?? 0) / sum),
       );
     }
 

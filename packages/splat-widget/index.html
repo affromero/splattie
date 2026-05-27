@@ -4,7 +4,16 @@
   body { background: #0e0e14; display: flex; height: 100vh; font-family: monospace; color: #888; }
 
   .main { flex: 1; display: flex; flex-direction: column; }
-  splat-widget { flex: 1; }
+  .main > splat-widget { flex: 1; }
+  .preview-bar {
+    height: 120px; background: #0a0a0f; border-top: 1px solid #1e1e2a;
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem;
+  }
+  .preview-bar .preview-label {
+    color: #444; font-size: 0.55rem; writing-mode: vertical-rl;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .preview-bar splat-widget { flex: 1; height: 100%; }
 
   .panel {
     width: 260px;
@@ -85,12 +94,24 @@
   <div class="main">
     <splat-widget
       id="widget"
+      editor-mode
       src="/andres.ply"
       bones="/bone_tree.json"
       weights="/lbs_weight_20k.json"
       config="/states.json"
       background="#0e0e14"
     ></splat-widget>
+    <div class="preview-bar">
+      <span class="preview-label">live</span>
+      <splat-widget
+        id="preview"
+        src="/andres.ply"
+        bones="/bone_tree.json"
+        weights="/lbs_weight_20k.json"
+        config="/states.json"
+        background="#0e0e14"
+      ></splat-widget>
+    </div>
   </div>
 
   <div class="panel" id="panel"></div>
@@ -100,6 +121,7 @@
     import * as JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
     const widget = document.getElementById('widget');
+    const preview = document.getElementById('preview');
     const panel = document.getElementById('panel');
 
     let config = null;
@@ -111,6 +133,8 @@
     widget.addEventListener('splatload', async () => {
       config = await fetch('/states.json').then(r => r.json());
       defaults = JSON.parse(JSON.stringify(config));
+      widget._stateMachine.frozen = true;
+      widget._stateMachine.forceState('idle');
       buildPanel();
     });
 
@@ -123,7 +147,12 @@
         const btn = document.createElement('button');
         btn.className = 'state-btn' + (name === currentState ? ' active' : '') + (configured.has(name) ? ' configured' : '');
         btn.textContent = name;
-        btn.onclick = () => { currentState = name; buildPanel(); };
+        btn.onclick = () => {
+          currentState = name;
+          widget._stateMachine?.forceState(name);
+          buildPanel();
+          applyConfig();
+        };
         statesDiv.appendChild(btn);
       }
       panel.appendChild(statesDiv);
@@ -135,11 +164,14 @@
         if (!state.expression) state.expression = {};
         if (!def.expression) def.expression = {};
         const d = def.expression;
-        const exprKeys = ['jawOpen', 'neckTilt', 'neckYaw', 'neckRoll', 'gazeX', 'gazeY', 'eyeSquint'];
+        const exprKeys = ['smile', 'browRaise', 'browFrown', 'jawOpen', 'neckTilt', 'neckYaw', 'neckRoll', 'gazeX', 'gazeY', 'eyeSquint'];
         for (const k of exprKeys) {
           if (state.expression[k] === undefined) state.expression[k] = d[k] || 0;
           if (d[k] === undefined) d[k] = 0;
         }
+        addSlider('smile', state.expression, 'smile', 0, 1, 0.01, undefined, d.smile);
+        addSlider('browRaise', state.expression, 'browRaise', 0, 1, 0.01, undefined, d.browRaise);
+        addSlider('browFrown', state.expression, 'browFrown', 0, 1, 0.01, undefined, d.browFrown);
         addSlider('jawOpen', state.expression, 'jawOpen', 0, 0.3, 0.005, undefined, d.jawOpen);
         addSlider('neckPitch', state.expression, 'neckTilt', -0.3, 0.3, 0.005, undefined, d.neckTilt);
         addSlider('neckYaw', state.expression, 'neckYaw', -0.3, 0.3, 0.005, undefined, d.neckYaw);
@@ -401,6 +433,10 @@
       frame.rotation = [...state.rotation];
       Object.assign(frame.tracking, state.tracking);
       if (state.expression) Object.assign(frame.expression, state.expression);
+
+      if (preview?._stateMachine) {
+        preview._stateMachine.updateStates(JSON.parse(JSON.stringify(config.states)));
+      }
     }
 
     async function exportSplattie() {

@@ -198,6 +198,7 @@ export class SplatWidget extends HTMLElement {
       renderer.render(scene, camera);
 
       // Hit detection AFTER render
+      const editorMode = this.hasAttribute('editor-mode');
       if (this.frameCount % 3 === 0) {
         if (this.cursor.isOnPage) {
           const rect = this.spark.canvas.getBoundingClientRect();
@@ -207,11 +208,12 @@ export class SplatWidget extends HTMLElement {
         }
         this.events?.update(this.isOnSplat);
 
-        // Auto-transition hover/idle
-        if (this.isOnSplat && this.stateMachine.activeStateName !== 'hover') {
-          this.stateMachine.transitionTo('hover');
-        } else if (!this.isOnSplat && this.stateMachine.activeStateName === 'hover') {
-          this.stateMachine.transitionTo('idle');
+        if (!editorMode) {
+          if (this.isOnSplat && this.stateMachine.activeStateName !== 'hover') {
+            this.stateMachine.transitionTo('hover');
+          } else if (!this.isOnSplat && this.stateMachine.activeStateName === 'hover') {
+            this.stateMachine.transitionTo('idle');
+          }
         }
       }
     });
@@ -265,6 +267,29 @@ export class SplatWidget extends HTMLElement {
       const localJaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), jawAngle);
       const jq = neckQ.clone().multiply(localJaw);
       sk.setBoneQuatPos(2, jq, new THREE.Vector3(...bones[2].pos));
+    }
+
+    // Virtual bones — translate from rest position to simulate expressions
+    for (const bone of bones) {
+      if (!bone.virtual) continue;
+      const rest = new THREE.Vector3(...bone.pos);
+      const offset = new THREE.Vector3(0, 0, 0);
+
+      if (bone.name === 'browL' || bone.name === 'browR') {
+        const raise = frame.expression.browRaise ?? 0;
+        const frown = frame.expression.browFrown ?? 0;
+        offset.y += raise * 0.008 - frown * 0.005;
+        if (bone.name === 'browR') offset.x -= frown * 0.003;
+        else offset.x += frown * 0.003;
+      } else if (bone.name === 'mouthCornerL' || bone.name === 'mouthCornerR') {
+        const smile = frame.expression.smile ?? 0;
+        offset.y += smile * 0.006;
+        const sign = bone.name === 'mouthCornerL' ? 1 : -1;
+        offset.x += smile * 0.002 * sign;
+      }
+
+      rest.add(offset);
+      sk.setBoneQuatPos(bone.idx, neckQ, rest);
     }
 
     sk.updateBones();

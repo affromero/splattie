@@ -13,6 +13,7 @@ export class StateMachine {
   private transitionElapsed = 0;
   private transitionConfig: TransitionConfig = DEFAULT_TRANSITION;
 
+  frozen = false;
   currentFrame: StateDefinition;
 
   constructor(config: WidgetConfig) {
@@ -26,6 +27,19 @@ export class StateMachine {
 
   get activeStateName(): string {
     return this.targetName ?? this.currentName;
+  }
+
+  forceState(stateName: string): void {
+    if (!this.states[stateName]) return;
+    this.currentName = stateName;
+    this.targetName = null;
+    this.targetState = null;
+    this.fromState = this.states[stateName];
+    this.currentFrame = { ...this.states[stateName] };
+  }
+
+  updateStates(states: Record<string, StateDefinition>): void {
+    this.states = states;
   }
 
   transitionTo(stateName: string): void {
@@ -45,6 +59,7 @@ export class StateMachine {
   }
 
   update(deltaTime: number): void {
+    if (this.frozen) return;
     if (!this.targetState || !this.targetName) return;
 
     this.transitionElapsed += deltaTime;
