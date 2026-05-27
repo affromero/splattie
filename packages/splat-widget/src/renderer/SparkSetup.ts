@@ -48,12 +48,12 @@ export async function createSparkInstance(
   const spark = new SparkRenderer({ renderer });
   scene.add(spark);
 
-  const splatMesh: InstanceType<typeof SplatMesh> = await new Promise((resolve) => {
+  const splatMesh = await new Promise<InstanceType<typeof SplatMesh>>((resolve) => {
     const mesh = new SplatMesh({
       url: splatUrl,
       sphericalHarmonicsDegree: 0,
       onLoad: () => resolve(mesh),
-    });
+    } as Record<string, unknown>);
     scene.add(mesh);
   });
 
