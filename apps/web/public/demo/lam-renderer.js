@@ -58258,6 +58258,19 @@ class GaussianSplatRenderer {
         if (this.viewer.shouldRender()) {
           this.viewer.render();
           this.viewer.consecutiveRenderFrames++;
+          if (window.__mouseX !== undefined && this.viewer.renderer) {
+            try {
+              const gl = this.viewer.renderer.getContext();
+              const dpr = window.devicePixelRatio || 1;
+              const px = Math.floor(window.__mouseX * dpr);
+              const py = Math.floor((gl.drawingBufferHeight - window.__mouseY * dpr));
+              const pixel = new Uint8Array(4);
+              gl.readPixels(px, py, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+              const bg = 14 + 14 + 20;
+              const sum = pixel[0] + pixel[1] + pixel[2];
+              window.__onSplat = Math.abs(sum - bg) > 40;
+            } catch(e) {}
+          };
         } else {
           this.viewer.consecutiveRenderFrames = 0;
         }
@@ -58444,6 +58457,8 @@ function randomBlinkDelay() {
 document.addEventListener("mousemove", (e) => {
   mouseNdcX = e.clientX / window.innerWidth * 2 - 1;
   mouseNdcY = -(e.clientY / window.innerHeight * 2 - 1);
+  window.__mouseX = e.clientX;
+  window.__mouseY = e.clientY;
   isOnPage = true;
 });
 document.addEventListener("mouseleave", () => {
@@ -58451,15 +58466,9 @@ document.addEventListener("mouseleave", () => {
   mouseNdcX = 0;
   mouseNdcY = 0;
 });
-const FACE_CX = 0;
-const FACE_CY = -0.05;
-const FACE_RX = 0.18;
-const FACE_RY = 0.15;
 function isMouseOnFace() {
   if (!isOnPage) return false;
-  const dx = (mouseNdcX - FACE_CX) / FACE_RX;
-  const dy = (mouseNdcY - FACE_CY) / FACE_RY;
-  return dx * dx + dy * dy < 1;
+  return !!window.__onSplat;
 }
 function getChatState() {
   return "Idle";
