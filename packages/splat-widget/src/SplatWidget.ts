@@ -283,22 +283,28 @@ export class SplatWidget extends HTMLElement {
     for (const bone of bones) {
       if (!bone.virtual) continue;
       const rest = new THREE.Vector3(...bone.pos);
-      const offset = new THREE.Vector3(0, 0, 0);
+      const off = new THREE.Vector3(0, 0, 0);
+      const expr = frame.expression;
 
       if (bone.name === 'browL' || bone.name === 'browR') {
-        const raise = frame.expression.browRaise ?? 0;
-        const frown = frame.expression.browFrown ?? 0;
-        offset.y += raise * 0.008 - frown * 0.005;
-        if (bone.name === 'browR') offset.x -= frown * 0.003;
-        else offset.x += frown * 0.003;
+        off.y += (expr.browRaise ?? 0) * 0.08 - (expr.browFrown ?? 0) * 0.05;
+        const inward = bone.name === 'browL' ? -1 : 1;
+        off.x += (expr.browFrown ?? 0) * 0.015 * inward;
       } else if (bone.name === 'mouthCornerL' || bone.name === 'mouthCornerR') {
-        const smile = frame.expression.smile ?? 0;
-        offset.y += smile * 0.006;
         const sign = bone.name === 'mouthCornerL' ? 1 : -1;
-        offset.x += smile * 0.002 * sign;
+        off.y += (expr.smile ?? 0) * 0.06 - (expr.mouthFrown ?? 0) * 0.05;
+        off.x += (expr.smile ?? 0) * 0.015 * sign;
+        off.x -= (expr.lipPucker ?? 0) * 0.025 * sign;
+      } else if (bone.name === 'cheekL' || bone.name === 'cheekR') {
+        const sign = bone.name === 'cheekL' ? 1 : -1;
+        off.x += (expr.cheekPuff ?? 0) * 0.04 * sign;
+        off.z += (expr.cheekPuff ?? 0) * 0.02;
+      } else if (bone.name === 'noseBridge') {
+        off.y += (expr.noseSneer ?? 0) * 0.025;
+        off.z += (expr.noseSneer ?? 0) * 0.01;
       }
 
-      rest.add(offset);
+      rest.add(off);
       sk.setBoneQuatPos(bone.idx, neckQ, rest);
     }
 

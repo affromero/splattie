@@ -10,23 +10,30 @@ export interface BoneInfo {
 
 function computeVirtualBones(bones: BoneInfo[]): BoneInfo[] {
   if (bones.length < 5) return [];
-  const neck = bones[1].pos;
   const jaw = bones[2].pos;
   const lEye = bones[3].pos;
   const rEye = bones[4].pos;
-  const midEyeX = (lEye[0] + rEye[0]) / 2;
-  const midEyeY = (lEye[1] + rEye[1]) / 2;
-  const midEyeZ = (lEye[2] + rEye[2]) / 2;
+  const midX = (lEye[0] + rEye[0]) / 2;
+  const midY = (lEye[1] + rEye[1]) / 2;
+  const midZ = (lEye[2] + rEye[2]) / 2;
   const eyeSep = Math.abs(lEye[0] - rEye[0]);
-  const mouthY = (jaw[1] + midEyeY) / 2 - 0.005;
-  const mouthZ = (jaw[2] + midEyeZ) / 2 + 0.01;
+
+  const mouthY = jaw[1] + (midY - jaw[1]) * 0.3;
+  const mouthZ = jaw[2] + (midZ - jaw[2]) * 0.5;
+  const cheekY = jaw[1] + (midY - jaw[1]) * 0.5;
+  const cheekZ = jaw[2] + (midZ - jaw[2]) * 0.4;
+  const noseY = jaw[1] + (midY - jaw[1]) * 0.6;
+  const noseZ = midZ + 0.01;
 
   const idx = bones.length;
   return [
-    { name: 'browL', pos: [lEye[0] - 0.005, lEye[1] + 0.012, lEye[2] - 0.005], idx: idx, parentIdx: 1, virtual: true },
-    { name: 'browR', pos: [rEye[0] + 0.005, rEye[1] + 0.012, rEye[2] - 0.005], idx: idx + 1, parentIdx: 1, virtual: true },
-    { name: 'mouthCornerL', pos: [midEyeX + eyeSep * 0.35, mouthY, mouthZ], idx: idx + 2, parentIdx: 2, virtual: true },
-    { name: 'mouthCornerR', pos: [midEyeX - eyeSep * 0.35, mouthY, mouthZ], idx: idx + 3, parentIdx: 2, virtual: true },
+    { name: 'browL', pos: [lEye[0], lEye[1] + 0.015, lEye[2]], idx: idx, parentIdx: 1, virtual: true },
+    { name: 'browR', pos: [rEye[0], rEye[1] + 0.015, rEye[2]], idx: idx + 1, parentIdx: 1, virtual: true },
+    { name: 'mouthCornerL', pos: [midX + eyeSep * 0.3, mouthY, mouthZ], idx: idx + 2, parentIdx: 2, virtual: true },
+    { name: 'mouthCornerR', pos: [midX - eyeSep * 0.3, mouthY, mouthZ], idx: idx + 3, parentIdx: 2, virtual: true },
+    { name: 'cheekL', pos: [lEye[0] + 0.01, cheekY, cheekZ], idx: idx + 4, parentIdx: 1, virtual: true },
+    { name: 'cheekR', pos: [rEye[0] - 0.01, cheekY, cheekZ], idx: idx + 5, parentIdx: 1, virtual: true },
+    { name: 'noseBridge', pos: [midX, noseY, noseZ], idx: idx + 6, parentIdx: 1, virtual: true },
   ];
 }
 
@@ -163,7 +170,7 @@ export async function createSparkInstance(
       skinning.setRestQuatPos(bone.idx, identityQuat, new THREE.Vector3(...bone.pos));
     }
 
-    const sigma = 0.012;
+    const sigma = 0.02;
     const sigma2 = 2 * sigma * sigma;
     const numSplats = Math.min(lbsWeights.length, skinning.numSplats);
 
@@ -178,8 +185,8 @@ export async function createSparkInstance(
         for (const vb of virtualBones) {
           const dx = px - vb.pos[0], dy = py - vb.pos[1], dz = pz - vb.pos[2];
           const dist2 = dx * dx + dy * dy + dz * dz;
-          const w = Math.exp(-dist2 / sigma2) * 0.5;
-          if (w > 0.001) allWeights.push([vb.idx, w]);
+          const w = Math.exp(-dist2 / sigma2) * 3.0;
+          if (w > 0.01) allWeights.push([vb.idx, w]);
         }
       }
 
