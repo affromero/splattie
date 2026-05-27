@@ -1,75 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>splat-widget demo</title>
-  <style>
-    * { margin: 0; padding: 0; }
-    body { background: #0e0e14; font-family: monospace; color: #888; }
-    .container { display: flex; flex-direction: column; align-items: center; padding: 2rem; gap: 1rem; }
-    h1 { font-size: 1rem; font-weight: normal; }
-    #widget-container { width: 600px; height: 500px; border: 1px solid #1e1e2a; }
-    #log { font-size: 0.75rem; color: #555; max-height: 200px; overflow-y: auto; width: 600px; }
-  </style>
-</head>
+<html><head><meta charset="utf-8"><style>*{margin:0}body{background:#0e0e14}</style></head>
 <body>
-  <div class="container">
-    <h1>&lt;splat-widget&gt; proof of life</h1>
-    <div id="widget-container"></div>
-    <div id="log"></div>
-  </div>
-  <script type="module">
-    console.log('script start');
+<div id="status" style="position:fixed;top:10px;left:10px;color:#666;font:12px monospace;z-index:9"></div>
+<script type="module">
+import * as THREE from 'three';
+import { SplatMesh, SparkRenderer } from '@sparkjsdev/spark';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    import * as THREE from 'three';
-    console.log('three loaded:', THREE.REVISION);
+const status = document.getElementById('status');
+const log = (m) => { status.textContent = m; console.log(m); };
 
-    const { SparkRenderer, SplatMesh } = await import('@sparkjsdev/spark');
-    console.log('spark loaded');
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x0e0e14);
+document.body.appendChild(renderer.domElement);
 
-    const container = document.getElementById('widget-container');
-    const canvas = document.createElement('canvas');
-    container.appendChild(canvas);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.001, 100);
+const spark = new SparkRenderer({ renderer });
+scene.add(spark);
 
-    const renderer = new THREE.WebGLRenderer({ canvas });
-    renderer.setSize(600, 500);
-    renderer.setClearColor(0x0e0e14);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, 600/500, 0.01, 100);
-    camera.position.set(0, 0.05, 0.5);
-    camera.lookAt(0, 0, 0);
+// Test each file
+const files = [
+  { url: 'https://sparkjs.dev/assets/splats/robot-head.spz', cam: [0,0,3], label: 'CDN robot-head.spz' },
+  { url: '/andres.spz', cam: [0,0,0.4], label: 'local andres.spz (offset)' },
+  { url: '/andres.ply', cam: [0,0,0.4], label: 'local andres.ply (offset)' },
+  { url: '/andres_absolute.ply', cam: [0,0,0.5], label: 'local absolute.ply' },
+  { url: '/andres_absolute.spz', cam: [0,0,0.5], label: 'local absolute.spz' },
+];
 
-    // Also try adding a visible cube to confirm rendering works at all
-    const box = new THREE.Mesh(
-      new THREE.BoxGeometry(0.05, 0.05, 0.05),
-      new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
-    );
-    scene.add(box);
-    console.log('debug cube added at origin');
+let currentIdx = 0;
+let currentMesh = null;
 
-    console.log('creating SparkRenderer...');
-    const spark = new SparkRenderer({ renderer });
-    console.log('spark renderer created');
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') { currentIdx = (currentIdx + 1) % files.length; loadFile(); }
+  if (e.key === 'ArrowLeft') { currentIdx = (currentIdx - 1 + files.length) % files.length; loadFile(); }
+});
 
-    const mesh = new SplatMesh({
-      url: '/andres.ply',
-      onLoad: () => {
-        console.log('SPLAT LOADED');
-        document.getElementById('log').textContent = 'LOADED';
-      },
+async function loadFile() {
+  const f = files[currentIdx];
+  log(`[${currentIdx+1}/${files.length}] loading ${f.label}...`);
+  
+  if (currentMesh) { scene.remove(currentMesh); }
+  
+  try {
+    currentMesh = new SplatMesh({
+      url: f.url,
+      onLoad: () => log(`[${currentIdx+1}/${files.length}] ${f.label} — LOADED ✓ (arrow keys to switch)`),
     });
+    currentMesh.quaternion.set(1, 0, 0, 0);
+    scene.add(currentMesh);
+    camera.position.set(...f.cam);
+    controls.target.set(0, 0, 0);
+  } catch(e) {
+    log(`ERROR: ${e.message}`);
+  }
+}
 
-    scene.add(mesh);
-    console.log('splatmesh added to scene');
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
-    function animate() {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    }
-    animate();
-    console.log('render loop started');
-  </script>
-</body>
-</html>
+renderer.setAnimationLoop(() => {
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+loadFile();
+</script>
+</body></html>
