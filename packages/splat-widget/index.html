@@ -6,14 +6,18 @@
   .main { flex: 1; display: flex; flex-direction: column; }
   .main > splat-widget { flex: 1; }
   .preview-bar {
-    height: 120px; background: #0a0a0f; border-top: 1px solid #1e1e2a;
-    display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem;
+    height: 130px; background: #08080c; border-top: 2px solid #2a2a3a;
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.5rem 0.5rem 0;
   }
   .preview-bar .preview-label {
-    color: #444; font-size: 0.55rem; writing-mode: vertical-rl;
-    text-transform: uppercase; letter-spacing: 0.1em;
+    color: #333; font-size: 0.5rem; writing-mode: vertical-rl;
+    text-transform: uppercase; letter-spacing: 0.15em; padding: 0 0.25rem;
+    border-right: 1px solid #1e1e2a;
   }
-  .preview-bar splat-widget { flex: 1; height: 100%; }
+  .preview-bar splat-widget {
+    flex: 1; height: 100%;
+    border: 1px solid #1e1e2a; border-radius: 4px;
+  }
 
   .panel {
     width: 260px;

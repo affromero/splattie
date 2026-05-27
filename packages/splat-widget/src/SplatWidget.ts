@@ -30,6 +30,7 @@ export class SplatWidget extends HTMLElement {
   private flyReaction = 0;
   private config: WidgetConfig | null = null;
   private frameCount = 0;
+  private clickHoldTimer = 0;
   private blinkEdit: { left: SplatEditSdf; right: SplatEditSdf; edit: SplatEdit } | null = null;
 
   static get observedAttributes(): string[] {
@@ -106,6 +107,12 @@ export class SplatWidget extends HTMLElement {
 
       this.spark = await createSparkInstance(this, splatUrl, bgColor, bonesUrl, weightsUrl);
       this.events.attachClick(this);
+      this.addEventListener('splatclick', () => {
+        if (!this.hasAttribute('editor-mode') && this._stateMachine) {
+          this._stateMachine.transitionTo('click');
+          this.clickHoldTimer = 1;
+        }
+      });
       this.setupBlinkEdits();
       this.dispatchEvent(new CustomEvent('splatload', { bubbles: true }));
 
@@ -209,10 +216,18 @@ export class SplatWidget extends HTMLElement {
         this.events?.update(this.isOnSplat);
 
         if (!editorMode) {
-          if (this.isOnSplat && this.stateMachine.activeStateName !== 'hover') {
-            this.stateMachine.transitionTo('hover');
-          } else if (!this.isOnSplat && this.stateMachine.activeStateName === 'hover') {
-            this.stateMachine.transitionTo('idle');
+          const active = this.stateMachine.activeStateName;
+          if (this.clickHoldTimer > 0) {
+            this.clickHoldTimer -= deltaTime * 3;
+            if (this.clickHoldTimer <= 0) {
+              this.stateMachine.transitionTo(this.isOnSplat ? 'hover' : 'idle');
+            }
+          } else if (active !== 'click') {
+            if (this.isOnSplat && active !== 'hover') {
+              this.stateMachine.transitionTo('hover');
+            } else if (!this.isOnSplat && active === 'hover') {
+              this.stateMachine.transitionTo('idle');
+            }
           }
         }
       }

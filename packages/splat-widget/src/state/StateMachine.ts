@@ -40,6 +40,12 @@ export class StateMachine {
 
   updateStates(states: Record<string, StateDefinition>): void {
     this.states = states;
+    if (this.states[this.currentName]) {
+      this.fromState = this.states[this.currentName];
+      if (!this.targetName) {
+        this.currentFrame = { ...this.fromState };
+      }
+    }
   }
 
   transitionTo(stateName: string): void {
