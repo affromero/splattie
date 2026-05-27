@@ -147,12 +147,10 @@ export class SplatWidget extends HTMLElement {
     // Fly reaction smooth in/out
     this.flyReaction += ((this.isOnSplat ? 1 : 0) - this.flyReaction) * 0.1;
 
-    // Eyes (bones 3, 4) — cursor tracking with clamped range
-    const maxEyeAngle = 0.12;
-    const rawYaw = this.cursor.ndcX * 0.15 * tracking.eyes;
-    const rawPitch = this.cursor.ndcY * 0.12 * tracking.eyes;
-    const eyeYaw = Math.max(-maxEyeAngle, Math.min(maxEyeAngle, rawYaw));
-    const eyePitch = Math.max(-maxEyeAngle, Math.min(maxEyeAngle, rawPitch));
+    // Eyes (bones 3, 4) — cursor tracking, same intensity all directions
+    const eyeIntensity = 0.1 * tracking.eyes;
+    const eyeYaw = this.cursor.ndcX * eyeIntensity;
+    const eyePitch = this.cursor.ndcY * eyeIntensity;
     for (const eyeIdx of [3, 4]) {
       if (eyeIdx >= bones.length) continue;
       const q = new THREE.Quaternion();
