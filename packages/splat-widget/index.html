@@ -17,33 +17,54 @@ renderer.setClearColor(0x0e0e14);
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.001, 100);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.001, 100);
 const spark = new SparkRenderer({ renderer });
 scene.add(spark);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-
 camera.position.set(0, 0, 0.5);
-controls.target.set(0, 0, 0);
 
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-log('loading your face...');
-const splat = new SplatMesh({
-  url: '/andres.ply',
-  sphericalHarmonicsDegree: 0,
-  onLoad: () => log('loaded — drag to orbit, scroll to zoom'),
+const files = [
+  { url: '/andres_xyz_plus_offset.ply', label: 'xyz + offset (absolute)' },
+  { url: '/andres_xyz_only.ply', label: 'xyz only (mesh vertices)' },
+  { url: '/andres.ply', label: 'offset only (original)' },
+  { url: 'https://sparkjs.dev/assets/splats/robot-head.spz', label: 'robot (reference)', cam: 3 },
+];
+
+let idx = 0;
+let currentMesh = null;
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') { idx = (idx + 1) % files.length; load(); }
+  if (e.key === 'ArrowLeft') { idx = (idx - 1 + files.length) % files.length; load(); }
 });
-scene.add(splat);
+
+function load() {
+  const f = files[idx];
+  log(`[${idx+1}/${files.length}] ${f.label}...`);
+  if (currentMesh) scene.remove(currentMesh);
+  currentMesh = new SplatMesh({
+    url: f.url,
+    sphericalHarmonicsDegree: 0,
+    onLoad: () => log(`[${idx+1}/${files.length}] ${f.label} — LOADED (arrows to switch)`),
+  });
+  scene.add(currentMesh);
+  camera.position.set(0, 0, f.cam || 0.5);
+  controls.target.set(0, 0, 0);
+}
 
 renderer.setAnimationLoop(() => {
   controls.update();
   renderer.render(scene, camera);
 });
+
+load();
 </script>
 </body></html>
