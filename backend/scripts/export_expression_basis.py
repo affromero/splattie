@@ -54,7 +54,7 @@ def patch_torch_load() -> None:
     torch.load = _patched
 
 
-def load_flame_head(device: str = "cuda") -> object:
+def load_flame_head(device: str = "cuda", num_expressions: int = 50) -> object:
     lam_path = str(VENDOR_LAM)
     if lam_path not in sys.path:
         sys.path.insert(0, lam_path)
@@ -74,11 +74,78 @@ def load_flame_head(device: str = "cuda") -> object:
         flame_template_mesh_path=f"{human_model_path}/flame_assets/flame/head_template_mesh.obj",
         flame_parts_path=f"{human_model_path}/flame_assets/flame/FLAME_masks.pkl",
         shape_params=cfg.model.get("shape_param_dim", 10),
-        expr_params=cfg.model.get("expr_param_dim", 10),
+        expr_params=num_expressions,
         subdivide_num=1,
     ).to(device)
     flame.eval()
     return flame
+
+
+REGION_NAMES = ["jaw", "lips", "brow", "nose", "cheek", "eyes", "forehead", "neck"]
+
+
+def _label_expressions(
+    flame: object,
+    basis_np: np.ndarray,
+    num_expr: int,
+    num_verts: int,
+) -> list[str]:
+    """Assign semantic names to PCA expression components using FLAME vertex masks."""
+    import pickle
+
+    masks_path = Path(flame.flame_model_dir) / "FLAME_masks.pkl"
+    if not masks_path.exists():
+        return [f"expr_{i}" for i in range(num_expr)]
+
+    with open(masks_path, "rb") as f:
+        masks = pickle.load(f, encoding="latin1")
+
+    region_map: dict[str, set[int]] = {}
+    for name in REGION_NAMES:
+        key = name if name in masks else next((k for k in masks if name in k.lower()), None)
+        if key and hasattr(masks[key], "__iter__"):
+            region_map[name] = set(int(v) for v in masks[key] if int(v) < num_verts)
+
+    if not region_map:
+        return [f"expr_{i}" for i in range(num_expr)]
+
+    labels: list[str] = []
+    used_names: dict[str, int] = {}
+    for i in range(num_expr):
+        disp = basis_np[:, i, :]
+        per_vert_mag = np.linalg.norm(disp, axis=1)
+
+        best_region = "face"
+        best_score = 0.0
+        for rname, vids in region_map.items():
+            vids_arr = np.array(list(vids))
+            vids_arr = vids_arr[vids_arr < num_verts]
+            if len(vids_arr) == 0:
+                continue
+            score = float(per_vert_mag[vids_arr].mean())
+            if score > best_score:
+                best_score = score
+                best_region = rname
+
+        # Direction hint from dominant axis of top-displaced vertices
+        top_verts = np.argsort(per_vert_mag)[-100:]
+        mean_disp = disp[top_verts].mean(axis=0)
+        dominant_axis = int(np.argmax(np.abs(mean_disp)))
+        direction = ""
+        if dominant_axis == 0:
+            direction = "L" if mean_disp[0] > 0 else "R"
+        elif dominant_axis == 1:
+            direction = "Up" if mean_disp[1] > 0 else "Down"
+        elif dominant_axis == 2:
+            direction = "Fwd" if mean_disp[2] > 0 else "Back"
+
+        base = f"{best_region}{direction}"
+        count = used_names.get(base, 0)
+        used_names[base] = count + 1
+        label = base if count == 0 else f"{base}{count + 1}"
+        labels.append(label)
+
+    return labels
 
 
 def export_basis(
@@ -112,10 +179,12 @@ def export_basis(
     # Transpose to (num_verts, num_expr, 3) for easier web consumption
     basis_np = expr_basis.permute(0, 2, 1).contiguous().cpu().numpy().astype(np.float32)
 
-    # Show magnitude of each expression for debugging
+    # Analyze which facial region each expression affects most
+    labels = _label_expressions(flame, basis_np, num_expr, num_verts)
+
     for i in range(num_expr):
         mag = np.linalg.norm(basis_np[:, i, :], axis=1).max()
-        print(f"  expr_{i:02d}: max displacement = {mag:.6f}")
+        print(f"  {i:02d} {labels[i]:20s} max_disp={mag:.6f}")
 
     # Write binary
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -134,7 +203,8 @@ def export_basis(
         "num_expressions": int(num_expr),
         "bytes": int(file_size),
         "format": "float32_le, shape (num_vertices, num_expressions, 3)",
-        "labels": [f"expr_{i}" for i in range(num_expr)],
+        "labels": labels,
+        "indices": {label: i for i, label in enumerate(labels)},
     }
     with open(json_path, "w") as f:
         json.dump(meta, f, indent=2)
@@ -162,7 +232,7 @@ def main() -> None:
         print(f"Loaded shape param: {shape_param.shape}")
 
     print("Loading FLAME model...")
-    flame = load_flame_head(device=args.device)
+    flame = load_flame_head(device=args.device, num_expressions=args.num_expressions)
     print(f"FLAME loaded: {flame.n_shape_params} shape, {flame.n_expr_params} expr params")
 
     export_basis(flame, shape_param, args.num_expressions, Path(args.output))
