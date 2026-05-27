@@ -1,14 +1,13 @@
-'use client';
-
-import { SplatViewer } from '@/components/viewer/SplatViewer';
 import styles from './page.module.css';
 
 export default function DemoPage() {
   return (
     <main className={styles.page}>
-      <div className={styles.viewerContainer}>
-        <SplatViewer spzUrl="/demo/andres.ply" />
-      </div>
+      <iframe
+        src="/demo/viewer.html"
+        className={styles.viewer}
+        title="3D Head Viewer"
+      />
     </main>
   );
 }

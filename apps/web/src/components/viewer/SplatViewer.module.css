@@ -1,14 +1,7 @@
-.container {
-  position: relative;
+.viewer {
   width: 100%;
   height: calc(100vh - 3rem);
-  background: var(--color-surface);
-  overflow: hidden;
-}
-
-.canvas {
-  width: 100%;
-  height: 100%;
+  border: none;
   display: block;
 }
 

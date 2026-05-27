@@ -1,3 +1,6 @@
 [submodule "backend/vendor/LAM"]
 	path = backend/vendor/LAM
 	url = https://github.com/aigc3d/LAM.git
+[submodule "packages/lam-renderer"]
+	path = packages/lam-renderer
+	url = https://github.com/aigc3d/LAM_WebRender.git

@@ -4,7 +4,9 @@
   min-height: calc(100vh - 3rem);
 }
 
-.viewerContainer {
+.viewer {
   flex: 1;
-  min-height: 0;
+  width: 100%;
+  border: none;
+  display: block;
 }
