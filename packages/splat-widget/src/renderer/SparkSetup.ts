@@ -82,6 +82,9 @@ export interface SparkInstance {
   skinning: unknown;
   bones: BoneInfo[];
   canvas: HTMLCanvasElement;
+  baselinePositions: Float32Array | null;
+  packedArray: Uint32Array | null;
+  packedSplatsRef: { needsUpdate: boolean } | null;
 }
 
 export async function createSparkInstance(
@@ -137,6 +140,7 @@ export async function createSparkInstance(
 
   let skinning: InstanceType<typeof SplatSkinning> | null = null;
   const bones: BoneInfo[] = [];
+  let baselinePositions: Float32Array | null = null;
 
   if (boneTreeUrl && lbsWeightsUrl) {
     const [boneTree, lbsWeights, splatPositions] = await Promise.all([
@@ -219,7 +223,19 @@ export async function createSparkInstance(
 
     (splatMesh as unknown as { skinning: unknown }).skinning = skinning;
     skinning.updateBones();
+    baselinePositions = splatPositions;
   }
 
-  return { renderer, scene, camera, splatMesh, skinning, bones, canvas };
+  // Expose packed splat buffer for expression basis per-splat position updates
+  let packedArray: Uint32Array | null = null;
+  let packedSplatsRef: { needsUpdate: boolean } | null = null;
+
+  const meshAny = splatMesh as Record<string, unknown>;
+  const ps = meshAny.packedSplats as { packedArray?: Uint32Array; needsUpdate?: boolean } | undefined;
+  if (ps?.packedArray) {
+    packedArray = ps.packedArray;
+    packedSplatsRef = ps as { needsUpdate: boolean };
+  }
+
+  return { renderer, scene, camera, splatMesh, skinning, bones, canvas, baselinePositions, packedArray, packedSplatsRef };
 }

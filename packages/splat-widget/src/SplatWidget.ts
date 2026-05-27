@@ -10,6 +10,7 @@ import { SplatEvents } from './interaction/Events';
 import { HitDetector } from './interaction/HitDetector';
 import { createSparkInstance } from './renderer/SparkSetup';
 import type { BoneInfo, SparkInstance } from './renderer/SparkSetup';
+import { ExpressionBasisApplier, loadExpressionBasis } from './features/ExpressionBasis';
 import { createDefaultConfig, loadConfig } from './state/StateConfig';
 import { StateMachine } from './state/StateMachine';
 import type { WidgetConfig } from './types';
@@ -31,9 +32,10 @@ export class SplatWidget extends HTMLElement {
   private frameCount = 0;
   private clickHoldTimer = 0;
   private blinkEdit: { left: SplatEditSdf; right: SplatEditSdf; edit: SplatEdit } | null = null;
+  private exprBasis: ExpressionBasisApplier | null = null;
 
   static get observedAttributes(): string[] {
-    return ['src', 'config', 'background', 'width', 'height', 'bones', 'weights'];
+    return ['src', 'config', 'background', 'width', 'height', 'bones', 'weights', 'expression-basis'];
   }
 
   async connectedCallback(): Promise<void> {
@@ -113,6 +115,13 @@ export class SplatWidget extends HTMLElement {
         }
       });
       this.setupBlinkEdits();
+
+      const basisUrl = this.getAttribute('expression-basis');
+      if (basisUrl && this.spark.baselinePositions && this.spark.packedArray) {
+        const basisData = await loadExpressionBasis(basisUrl);
+        this.exprBasis = new ExpressionBasisApplier(basisData, this.spark.baselinePositions);
+      }
+
       this.dispatchEvent(new CustomEvent('splatload', { bubbles: true }));
 
       this.startRenderLoop();
@@ -188,6 +197,12 @@ export class SplatWidget extends HTMLElement {
       // Dimension 2 + 5: Expressions + cursor tracking via SplatSkinning
       if (this.spark.skinning && this.spark.bones.length > 0) {
         this.applySkinning(this.spark.skinning, this.spark.bones, frame);
+      }
+
+      // Expression basis — per-splat position offsets from FLAME blendshapes
+      if (this.exprBasis && this.spark.packedArray && this.spark.packedSplatsRef) {
+        const updated = this.exprBasis.apply(this.spark.packedArray, frame.expression);
+        if (updated) this.spark.packedSplatsRef.needsUpdate = true;
       }
 
       // Blink + squint via SplatEdit

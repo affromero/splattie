@@ -98,6 +98,7 @@
       bones="/bone_tree.json"
       weights="/lbs_weight_20k.json"
       config="/states.json"
+      expression-basis="/expression_basis.bin"
       background="#0e0e14"
     ></splat-widget>
   </div>
@@ -204,6 +205,17 @@
         addSlider('neckRoll', state.expression, 'neckRoll', -0.3, 0.3, 0.005, undefined, d.neckRoll);
         addSlider('gazeX', state.expression, 'gazeX', -0.1, 0.1, 0.002, undefined, d.gazeX);
         addSlider('gazeY', state.expression, 'gazeY', -0.05, 0.05, 0.001, undefined, d.gazeY);
+      });
+
+      addSection('flame blendshapes', () => {
+        if (!state.expression) state.expression = {};
+        if (!def.expression) def.expression = {};
+        for (let i = 0; i < 10; i++) {
+          const key = `expr_${i}`;
+          if (state.expression[key] === undefined) state.expression[key] = def.expression[key] || 0;
+          if (def.expression[key] === undefined) def.expression[key] = 0;
+          addSlider(`expr ${i}`, state.expression, key, -2, 2, 0.01, undefined, def.expression[key]);
+        }
       });
 
       addSection('ghost', () => {
