@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="apps/web/public/logo.svg" alt="Mirada" width="120" />
+<img src="apps/web/public/logo.svg" alt="Splattie" width="120" />
 
-# Mirada
+# Splattie
 
 **Upload a photo. Get a 3D head whose eyes follow you.**
 
@@ -10,7 +10,7 @@
 
 [![Stage](https://img.shields.io/badge/stage-prototype-orange)]()
 [![License](https://img.shields.io/badge/license-private-lightgrey)]()
-[![CI](https://github.com/affromero/mirada/actions/workflows/ci.yml/badge.svg)](https://github.com/affromero/mirada/actions/workflows/ci.yml)
+[![CI](https://github.com/affromero/splattie/actions/workflows/ci.yml/badge.svg)](https://github.com/affromero/splattie/actions/workflows/ci.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Spark](https://img.shields.io/badge/Spark_2.0-MIT-green?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjYiIGZpbGw9IiNmZmYiLz48L3N2Zz4=)](https://github.com/sparkjsdev/spark)
@@ -24,7 +24,7 @@
 
 ---
 
-Mirada turns a single photograph into an interactive 3D gaussian splatting head. The eyes follow your cursor, the face blinks naturally, and reacts when you hover over it — all rendered client-side at 60fps.
+Splattie turns a single photograph into an interactive 3D gaussian splatting head. The eyes follow your cursor, the face blinks naturally, and reacts when you hover over it — all rendered client-side at 60fps.
 
 ## How It Works
 
@@ -122,7 +122,7 @@ python3 scripts/export_expression_basis.py \
 ## Architecture
 
 ```
-mirada/
+splattie/
 ├── apps/web/                     # Next.js 15 frontend (port 4001)
 ├── backend/                      # FastAPI GPU service (port 8000)
 │   ├── src/mirada/               # API routes, LAM method, segmentation

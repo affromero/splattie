@@ -1,5 +1,5 @@
 {
-  "name": "mirada",
+  "name": "splattie",
   "private": true,
   "workspaces": [
     "apps/web",
