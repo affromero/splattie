@@ -5,12 +5,11 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/splattie-widget/package.json packages/splattie-widget/
-RUN npm ci --workspace=apps/web
+RUN npm ci
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY . .
 RUN npm run build -w apps/web
 
