@@ -119,7 +119,8 @@ export class SplatWidget extends HTMLElement {
       const basisUrl = this.getAttribute('expression-basis');
       if (basisUrl && this.spark.baselinePositions && this.spark.packedArray) {
         const basisData = await loadExpressionBasis(basisUrl);
-        this.exprBasis = new ExpressionBasisApplier(basisData, this.spark.baselinePositions);
+        const jawY = this.spark.bones.length > 2 ? this.spark.bones[2].pos[1] : undefined;
+        this.exprBasis = new ExpressionBasisApplier(basisData, this.spark.baselinePositions, jawY);
       }
 
       this.dispatchEvent(new CustomEvent('splatload', { bubbles: true }));
