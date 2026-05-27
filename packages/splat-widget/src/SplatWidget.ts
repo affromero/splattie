@@ -157,11 +157,6 @@ export class SplatWidget extends HTMLElement {
       const q = new THREE.Quaternion();
       q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), eyeYaw));
       q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -eyePitch));
-      // Blink — close eyes by rotating down
-      const blink = blinkWeights.eyeBlinkLeft ?? 0;
-      if (blink > 0.01) {
-        q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), blink * 0.15));
-      }
       sk.setBoneQuatPos(eyeIdx, q, new THREE.Vector3(...bones[eyeIdx].pos));
     }
 
