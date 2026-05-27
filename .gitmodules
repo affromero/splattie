@@ -1,0 +1,3 @@
+[submodule "backend/vendor/LAM"]
+	path = backend/vendor/LAM
+	url = https://github.com/aigc3d/LAM.git

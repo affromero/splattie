@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
 import { useGazeTracker } from '@/hooks/useGazeTracker';
 import styles from './SplatViewer.module.css';
 
@@ -9,120 +8,74 @@ interface SplatViewerProps {
   spzUrl?: string;
 }
 
-export function SplatViewer({ spzUrl = '/demo/head.spz' }: SplatViewerProps) {
+export function SplatViewer({ spzUrl = '/demo/andres.ply' }: SplatViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const splatMeshRef = useRef<THREE.Object3D | null>(null);
+  const viewerRef = useRef<unknown>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [statusMsg, setStatusMsg] = useState('initializing...');
 
   const headPose = useGazeTracker(containerRef);
 
-  const initSpark = useCallback(async () => {
-    const canvas = canvasRef.current;
+  const initViewer = useCallback(async () => {
     const container = containerRef.current;
-    if (!canvas || !container) return;
-
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    if (width === 0 || height === 0) return;
+    if (!container) return;
 
     try {
-      const { SparkRenderer, SplatMesh } = await import('@sparkjsdev/spark');
+      setStatusMsg('loading viewer...');
+      const GS = await import('@mkkellogg/gaussian-splats-3d');
 
-      const threeRenderer = new THREE.WebGLRenderer({ canvas });
-      threeRenderer.setSize(width, height);
-      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      threeRenderer.setClearColor(0x0e0e14);
-      rendererRef.current = threeRenderer;
-
-      const scene = new THREE.Scene();
-      sceneRef.current = scene;
-
-      const camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 100);
-      camera.position.set(0, 0.1, 2.0);
-      camera.lookAt(0, 0, 0);
-      cameraRef.current = camera;
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _sparkRenderer = new SparkRenderer({
-        renderer: threeRenderer,
+      const viewer = new GS.Viewer({
+        selfDrivenMode: true,
+        useBuiltInControls: false,
+        rootElement: container,
+        sceneRevealMode: GS.SceneRevealMode.Instant,
+        logLevel: GS.LogLevel.None,
+        sharedMemoryForWorkers: false,
       });
 
-      const splatMesh = new SplatMesh({
-        url: spzUrl,
-        onLoad: () => {
-          setStatus('ready');
-        },
-      });
+      viewerRef.current = viewer;
 
-      scene.add(splatMesh);
-      splatMeshRef.current = splatMesh;
+      setStatusMsg('loading splat...');
+      await viewer.addSplatScene(spzUrl, {
+        showLoadingUI: false,
+        progressiveLoad: true,
+      });
 
       setStatus('ready');
+      setStatusMsg('ready');
     } catch (err) {
       setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to initialize Spark');
+      setStatusMsg(err instanceof Error ? err.message : String(err));
     }
   }, [spzUrl]);
 
   useEffect(() => {
-    initSpark();
-
-    const handleResize = () => {
-      const container = containerRef.current;
-      if (!container || !rendererRef.current || !cameraRef.current) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      rendererRef.current.setSize(w, h);
-      cameraRef.current.aspect = w / h;
-      cameraRef.current.updateProjectionMatrix();
-    };
-
-    window.addEventListener('resize', handleResize);
+    initViewer();
     return () => {
-      window.removeEventListener('resize', handleResize);
-      rendererRef.current?.dispose();
+      const viewer = viewerRef.current as { dispose?: () => void } | null;
+      viewer?.dispose?.();
+      viewerRef.current = null;
     };
-  }, [initSpark]);
+  }, [initViewer]);
 
   useEffect(() => {
     if (status !== 'ready') return;
-
-    const animate = () => {
-      const mesh = splatMeshRef.current;
-      const renderer = rendererRef.current;
-      const scene = sceneRef.current;
-      const camera = cameraRef.current;
-
-      if (mesh && renderer && scene && camera) {
-        mesh.rotation.y = headPose.neckYaw * 0.8;
-        mesh.rotation.x = -headPose.neckPitch * 0.5;
-
-        renderer.render(scene, camera);
-      }
-
-      rafId = requestAnimationFrame(animate);
-    };
-
-    let rafId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafId);
+    const viewer = viewerRef.current as {
+      splatMesh?: { rotation?: { y: number; x: number } };
+    } | null;
+    if (viewer?.splatMesh?.rotation) {
+      viewer.splatMesh.rotation.y = headPose.neckYaw * 0.8;
+      viewer.splatMesh.rotation.x = -headPose.neckPitch * 0.5;
+    }
   }, [status, headPose]);
 
   return (
     <div ref={containerRef} className={styles.container}>
-      <canvas ref={canvasRef} className={styles.canvas} />
-      {status === 'loading' && (
+      {status !== 'ready' && (
         <div className={styles.overlay}>
-          <span className={styles.loadingText}>loading splat...</span>
-        </div>
-      )}
-      {status === 'error' && (
-        <div className={styles.overlay}>
-          <span className={styles.errorText}>{errorMsg}</span>
+          <span className={status === 'error' ? styles.errorText : styles.loadingText}>
+            {statusMsg}
+          </span>
         </div>
       )}
     </div>

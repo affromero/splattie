@@ -7,7 +7,7 @@ export default function DemoPage() {
   return (
     <main className={styles.page}>
       <div className={styles.viewerContainer}>
-        <SplatViewer spzUrl="/demo/head.spz" />
+        <SplatViewer spzUrl="/demo/andres.ply" />
       </div>
     </main>
   );
