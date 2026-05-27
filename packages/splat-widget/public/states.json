@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "defaults": {
+    "camera": { "theta": 0, "phi": 75, "radius": 0.5, "fov": 60 },
+    "autoBlink": { "interval": [2000, 7000], "duration": 150 }
+  },
+  "states": {
+    "idle": {
+      "ghost": { "amplitude": 0.003, "frequency": 0.4, "wobble": 0.2 },
+      "expression": {},
+      "camera": { "theta": 0, "phi": 75, "radius": 0.5, "fov": 60 },
+      "rotation": [0, 0, 0],
+      "tracking": { "eyes": 1.0, "head": 0.1 }
+    },
+    "hover": {
+      "ghost": { "amplitude": 0.005, "frequency": 0.6, "wobble": 0.4 },
+      "expression": {},
+      "camera": { "theta": 0, "phi": 75, "radius": 0.45, "fov": 60 },
+      "rotation": [-2, 0, -1],
+      "tracking": { "eyes": 1.0, "head": 0.3 }
+    },
+    "click": {
+      "ghost": { "amplitude": 0.001, "frequency": 1.0, "wobble": 0.1 },
+      "expression": {},
+      "camera": { "theta": 0, "phi": 70, "radius": 0.4, "fov": 65 },
+      "rotation": [3, 0, 0],
+      "tracking": { "eyes": 0.5, "head": 0.0 }
+    }
+  },
+  "transitions": {
+    "idle->hover": { "duration": 0.3, "easing": "ease-out" },
+    "hover->idle": { "duration": 0.5, "easing": "ease-in" },
+    "*->click": { "duration": 0.1, "easing": "snap" }
+  }
+}
