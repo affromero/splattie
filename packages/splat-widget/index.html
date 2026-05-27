@@ -73,15 +73,18 @@ function setupSkinning() {
   skinning = new SplatSkinning({
     mesh: splat,
     numBones: boneList.length,
-    mode: SplatSkinningMode.LINEAR_BLEND,
+    mode: SplatSkinningMode.DUAL_QUATERNION,
   });
   log(`skinning created: ${skinning.numSplats} splats, ${skinning.numBones} bones`);
 
-  // Set rest pose: each bone at its position from bone_tree
+  // Set rest pose using quaternion + position (DQ mode)
+  const identityQuat = new THREE.Quaternion();
   for (const bone of boneList) {
-    const mat = new THREE.Matrix4();
-    mat.setPosition(bone.pos[0], bone.pos[1], bone.pos[2]);
-    skinning.setRestMatrix(bone.idx, mat);
+    skinning.setRestQuatPos(
+      bone.idx,
+      identityQuat,
+      new THREE.Vector3(bone.pos[0], bone.pos[1], bone.pos[2])
+    );
   }
   log('rest pose set');
 
@@ -97,6 +100,8 @@ function setupSkinning() {
     );
   }
   log('LBS weights assigned');
+  // Connect skinning to mesh — SplatMesh auto-calls modify/modifyCov
+  splat.skinning = skinning;
   skinning.updateBones();
   log('READY — jaw should wiggle');
 }
@@ -107,20 +112,16 @@ renderer.setAnimationLoop(() => {
   if (skinning) {
     // Animate jaw (bone 2) — open/close
     const jawAngle = Math.sin(time * 3) * 0.15;
-    const jawMat = new THREE.Matrix4();
     const jawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), jawAngle);
-    jawMat.makeRotationFromQuaternion(jawQuat);
-    jawMat.setPosition(boneList[2].pos[0], boneList[2].pos[1], boneList[2].pos[2]);
-    skinning.setBoneMatrix(2, jawMat);
+    const jawPos = new THREE.Vector3(boneList[2].pos[0], boneList[2].pos[1], boneList[2].pos[2]);
+    skinning.setBoneQuatPos(2, jawQuat, jawPos);
 
     // Animate eyes (bones 3,4) — look left/right
     const eyeYaw = Math.sin(time * 2) * 0.2;
     for (const eyeIdx of [3, 4]) {
-      const eyeMat = new THREE.Matrix4();
       const eyeQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), eyeYaw);
-      eyeMat.makeRotationFromQuaternion(eyeQuat);
-      eyeMat.setPosition(boneList[eyeIdx].pos[0], boneList[eyeIdx].pos[1], boneList[eyeIdx].pos[2]);
-      skinning.setBoneMatrix(eyeIdx, eyeMat);
+      const eyePos = new THREE.Vector3(boneList[eyeIdx].pos[0], boneList[eyeIdx].pos[1], boneList[eyeIdx].pos[2]);
+      skinning.setBoneQuatPos(eyeIdx, eyeQuat, eyePos);
     }
 
     skinning.updateBones();
