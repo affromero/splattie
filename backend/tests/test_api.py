@@ -14,6 +14,9 @@ async def test_health(client: AsyncClient) -> None:
     data = response.json()
     assert data["status"] == "ok"
     assert "lam" in data["methods_loaded"]
+    assert isinstance(data["gpu"], dict)
+    assert "available" in data["gpu"]
+    assert "model_loaded" in data["gpu"]
 
 
 async def test_models(client: AsyncClient) -> None:

@@ -31,7 +31,7 @@ sh make.sh
 cd ../../../../../..
 
 echo "[6/6] Downloading model weights..."
-python -c "
+uv run python -c "
 from huggingface_hub import snapshot_download
 import os
 lam_dir = 'vendor/LAM'
