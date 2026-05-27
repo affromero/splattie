@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>splat-widget demo</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { background: #0e0e14; font-family: monospace; color: #888; }
+    .container { display: flex; flex-direction: column; align-items: center; padding: 2rem; gap: 1rem; }
+    h1 { font-size: 1rem; font-weight: normal; }
+    #widget-container { width: 600px; height: 500px; border: 1px solid #1e1e2a; }
+    #log { font-size: 0.75rem; color: #555; max-height: 200px; overflow-y: auto; width: 600px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>&lt;splat-widget&gt; proof of life</h1>
+    <div id="widget-container"></div>
+    <div id="log"></div>
+  </div>
+  <script type="module">
+    console.log('script start');
+
+    import * as THREE from 'three';
+    console.log('three loaded:', THREE.REVISION);
+
+    const { SparkRenderer, SplatMesh } = await import('@sparkjsdev/spark');
+    console.log('spark loaded');
+
+    const container = document.getElementById('widget-container');
+    const canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+
+    const renderer = new THREE.WebGLRenderer({ canvas });
+    renderer.setSize(600, 500);
+    renderer.setClearColor(0x0e0e14);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 600/500, 0.01, 100);
+    camera.position.set(0, 0.05, 0.5);
+    camera.lookAt(0, 0, 0);
+
+    // Also try adding a visible cube to confirm rendering works at all
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.05, 0.05),
+      new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
+    );
+    scene.add(box);
+    console.log('debug cube added at origin');
+
+    console.log('creating SparkRenderer...');
+    const spark = new SparkRenderer({ renderer });
+    console.log('spark renderer created');
+
+    const mesh = new SplatMesh({
+      url: '/andres.ply',
+      onLoad: () => {
+        console.log('SPLAT LOADED');
+        document.getElementById('log').textContent = 'LOADED';
+      },
+    });
+
+    scene.add(mesh);
+    console.log('splatmesh added to scene');
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+    console.log('render loop started');
+  </script>
+</body>
+</html>

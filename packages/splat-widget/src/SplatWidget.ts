@@ -36,36 +36,42 @@ export class SplatWidget extends HTMLElement {
   }
 
   async connectedCallback(): Promise<void> {
-    this.style.display = 'block';
-    this.style.position = 'relative';
-    this.style.overflow = 'hidden';
-    if (!this.style.width) this.style.width = this.getAttribute('width') ?? '100%';
-    if (!this.style.height) this.style.height = this.getAttribute('height') ?? '400px';
+    try {
+      this.style.display = 'block';
+      this.style.position = 'relative';
+      this.style.overflow = 'hidden';
+      if (!this.style.width) this.style.width = this.getAttribute('width') ?? '100%';
+      if (!this.style.height) this.style.height = this.getAttribute('height') ?? '400px';
 
-    const bgAttr = this.getAttribute('background');
-    const bgColor = bgAttr ? parseInt(bgAttr.replace('#', ''), 16) : 0x0e0e14;
+      const bgAttr = this.getAttribute('background');
+      const bgColor = bgAttr ? parseInt(bgAttr.replace('#', ''), 16) : 0x0e0e14;
 
-    const configUrl = this.getAttribute('config');
-    this.config = configUrl ? await loadConfig(configUrl) : createDefaultConfig();
-    this.stateMachine = new StateMachine(this.config);
+      const configUrl = this.getAttribute('config');
+      this.config = configUrl ? await loadConfig(configUrl) : createDefaultConfig();
+      this.stateMachine = new StateMachine(this.config);
 
-    if (this.config.defaults.autoBlink) {
-      this.autoBlink = new AutoBlink(this.config.defaults.autoBlink);
+      if (this.config.defaults.autoBlink) {
+        this.autoBlink = new AutoBlink(this.config.defaults.autoBlink);
+      }
+
+      this.hitDetector.setBackgroundColor(bgColor);
+      this.events = new SplatEvents(this);
+      this.cursor.attach(this);
+
+      const src = this.getAttribute('src');
+      if (!src) { console.warn('splat-widget: no src attribute'); return; }
+
+      console.log('splat-widget: loading', src);
+      this.spark = await createSparkInstance(this, src, bgColor);
+      console.log('splat-widget: spark ready');
+      this.events.attachClick(this);
+      this.dispatchEvent(new CustomEvent('splatload', { bubbles: true }));
+
+      this.lastTime = performance.now();
+      this.animate();
+    } catch (err) {
+      console.error('splat-widget init failed:', err);
     }
-
-    this.hitDetector.setBackgroundColor(bgColor);
-    this.events = new SplatEvents(this);
-    this.cursor.attach(this);
-
-    const src = this.getAttribute('src');
-    if (!src) return;
-
-    this.spark = await createSparkInstance(this, src, bgColor);
-    this.events.attachClick(this);
-    this.dispatchEvent(new CustomEvent('splatload', { bubbles: true }));
-
-    this.lastTime = performance.now();
-    this.animate();
   }
 
   disconnectedCallback(): void {
