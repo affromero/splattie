@@ -108,8 +108,6 @@ export class SplatWidget extends HTMLElement {
       sdfs: [leftSdf, rightSdf],
       softEdge: 0.005,
     });
-    edit.visible = false;
-
     mesh.add(edit);
     if (!mesh.edits) mesh.edits = [];
     mesh.edits.push(edit);
@@ -146,17 +144,13 @@ export class SplatWidget extends HTMLElement {
         this.applySkinning(this.spark.skinning, this.spark.bones, frame);
       }
 
-      // Blink via SplatEdit — hide eye splats briefly
+      // Blink via SplatEdit — fade eye splats to transparent
       if (this.blinkEdit) {
         const blink = this.autoBlink.getWeights();
         const blinkVal = blink.eyeBlinkLeft ?? 0;
-        if (blinkVal > 0.01) {
-          this.blinkEdit.edit.visible = true;
-          this.blinkEdit.left.opacity = 1 - blinkVal;
-          this.blinkEdit.right.opacity = 1 - blinkVal;
-        } else {
-          this.blinkEdit.edit.visible = false;
-        }
+        // opacity = 1 means fully visible (no blink), 0 means invisible (full blink)
+        this.blinkEdit.left.opacity = 1 - blinkVal;
+        this.blinkEdit.right.opacity = 1 - blinkVal;
       }
 
       // Render
