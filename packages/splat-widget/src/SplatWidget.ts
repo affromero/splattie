@@ -287,9 +287,12 @@ export class SplatWidget extends HTMLElement {
       const expr = frame.expression;
 
       if (bone.name === 'browL' || bone.name === 'browR') {
-        off.y += (expr.browRaise ?? 0) * 0.08 - (expr.browFrown ?? 0) * 0.05;
+        const side = bone.name === 'browL' ? 'L' : 'R';
+        const raise = expr[`browRaise${side}`] ?? expr.browRaise ?? 0;
+        const frown = expr[`browFrown${side}`] ?? expr.browFrown ?? 0;
+        off.y += raise * 0.08 - frown * 0.05;
         const inward = bone.name === 'browL' ? -1 : 1;
-        off.x += (expr.browFrown ?? 0) * 0.015 * inward;
+        off.x += frown * 0.015 * inward;
       } else if (bone.name === 'mouthCornerL' || bone.name === 'mouthCornerR') {
         const sign = bone.name === 'mouthCornerL' ? 1 : -1;
         off.y += (expr.smile ?? 0) * 0.06 - (expr.mouthFrown ?? 0) * 0.05;

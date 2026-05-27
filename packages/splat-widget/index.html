@@ -179,7 +179,7 @@
         const d = def.expression;
         const exprKeys = [
           'smile', 'mouthFrown', 'lipPucker', 'jawOpen',
-          'browRaise', 'browFrown', 'eyeSquint',
+          'browRaiseL', 'browRaiseR', 'browFrownL', 'browFrownR', 'eyeSquint',
           'cheekPuff', 'noseSneer',
           'neckTilt', 'neckYaw', 'neckRoll',
           'gazeX', 'gazeY',
@@ -192,8 +192,10 @@
         addSlider('mouthFrown', state.expression, 'mouthFrown', 0, 1, 0.01, undefined, d.mouthFrown);
         addSlider('lipPucker', state.expression, 'lipPucker', 0, 1, 0.01, undefined, d.lipPucker);
         addSlider('jawOpen', state.expression, 'jawOpen', 0, 0.3, 0.005, undefined, d.jawOpen);
-        addSlider('browRaise', state.expression, 'browRaise', 0, 1, 0.01, undefined, d.browRaise);
-        addSlider('browFrown', state.expression, 'browFrown', 0, 1, 0.01, undefined, d.browFrown);
+        addSlider('browRaise L', state.expression, 'browRaiseL', 0, 1, 0.01, undefined, d.browRaiseL);
+        addSlider('browRaise R', state.expression, 'browRaiseR', 0, 1, 0.01, undefined, d.browRaiseR);
+        addSlider('browFrown L', state.expression, 'browFrownL', 0, 1, 0.01, undefined, d.browFrownL);
+        addSlider('browFrown R', state.expression, 'browFrownR', 0, 1, 0.01, undefined, d.browFrownR);
         addSlider('eyeSquint', state.expression, 'eyeSquint', 0, 1, 0.01, undefined, d.eyeSquint);
         addSlider('cheekPuff', state.expression, 'cheekPuff', 0, 1, 0.01, undefined, d.cheekPuff);
         addSlider('noseSneer', state.expression, 'noseSneer', 0, 1, 0.01, undefined, d.noseSneer);

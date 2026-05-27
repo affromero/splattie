@@ -172,9 +172,12 @@ export async function createSparkInstance(
 
     const numSplats = Math.min(lbsWeights.length, skinning.numSplats);
     const mouthBoneNames = new Set(['mouthCornerL', 'mouthCornerR']);
-    const sigmaByBone = new Map<number, number>();
+    type Sigma3 = [number, number, number];
+    const sigmaByBone = new Map<number, Sigma3>();
     for (const vb of virtualBones) {
-      sigmaByBone.set(vb.idx, mouthBoneNames.has(vb.name) ? 0.04 : 0.02);
+      sigmaByBone.set(vb.idx, mouthBoneNames.has(vb.name)
+        ? [0.035, 0.015, 0.035]
+        : [0.02, 0.02, 0.02]);
     }
 
     for (let i = 0; i < numSplats; i++) {
@@ -187,9 +190,9 @@ export async function createSparkInstance(
         const pz = splatPositions[i * 3 + 2];
         for (const vb of virtualBones) {
           const dx = px - vb.pos[0], dy = py - vb.pos[1], dz = pz - vb.pos[2];
-          const dist2 = dx * dx + dy * dy + dz * dz;
-          const s = sigmaByBone.get(vb.idx) ?? 0.02;
-          const w = Math.exp(-dist2 / (2 * s * s)) * 3.0;
+          const [sx, sy, sz] = sigmaByBone.get(vb.idx) ?? [0.02, 0.02, 0.02];
+          const nd2 = (dx * dx) / (2 * sx * sx) + (dy * dy) / (2 * sy * sy) + (dz * dz) / (2 * sz * sz);
+          const w = Math.exp(-nd2) * 3.0;
           if (w > 0.01) allWeights.push([vb.idx, w]);
         }
       }
