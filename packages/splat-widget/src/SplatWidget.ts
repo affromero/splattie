@@ -148,8 +148,8 @@ export class SplatWidget extends HTMLElement {
     this.flyReaction += ((this.isOnSplat ? 1 : 0) - this.flyReaction) * 0.1;
 
     // Eyes (bones 3, 4) — cursor tracking
-    const eyeYaw = this.cursor.ndcX * 0.3 * tracking.eyes;
-    const eyePitch = this.cursor.ndcY * 0.3 * tracking.eyes;
+    const eyeYaw = this.cursor.ndcX * 0.12 * tracking.eyes;
+    const eyePitch = this.cursor.ndcY * 0.1 * tracking.eyes;
     for (const eyeIdx of [3, 4]) {
       if (eyeIdx >= bones.length) continue;
       const q = new THREE.Quaternion();
