@@ -75,7 +75,7 @@ export class SplatWidget extends HTMLElement {
   disconnectedCallback(): void {
     this.spark?.renderer.dispose();
     this.spark = null;
-    this.cursor.detach(this);
+    this.cursor.detach();
   }
 
   setState(name: string): void {
@@ -147,10 +147,11 @@ export class SplatWidget extends HTMLElement {
     // Fly reaction smooth in/out
     this.flyReaction += ((this.isOnSplat ? 1 : 0) - this.flyReaction) * 0.1;
 
-    // Eyes (bones 3, 4) — cursor tracking, same intensity all directions
-    const eyeIntensity = 0.1 * tracking.eyes;
-    const eyeYaw = this.cursor.ndcX * eyeIntensity;
-    const eyePitch = this.cursor.ndcY * eyeIntensity;
+    // Eyes (bones 3, 4) — cursor tracking, clamp NDC to ±1 then scale
+    const clampedX = Math.max(-1, Math.min(1, this.cursor.ndcX));
+    const clampedY = Math.max(-1, Math.min(1, this.cursor.ndcY));
+    const eyeYaw = clampedX * 0.1 * tracking.eyes;
+    const eyePitch = clampedY * 0.1 * tracking.eyes;
     for (const eyeIdx of [3, 4]) {
       if (eyeIdx >= bones.length) continue;
       const q = new THREE.Quaternion();
