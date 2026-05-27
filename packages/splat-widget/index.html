@@ -83,6 +83,14 @@
     cursor: pointer;
   }
 
+  .copy-btn {
+    width: 100%; padding: 0.3rem; margin-bottom: 0.5rem;
+    background: none; border: 1px dashed #2a2a3a;
+    color: #555; font: inherit; font-size: 0.6rem; cursor: pointer;
+    letter-spacing: 0.03em;
+  }
+  .copy-btn:hover { color: #7eb8f0; border-color: #7eb8f0; }
+
   .export-btn {
     width: 100%; margin-top: 1rem; padding: 0.5rem;
     background: #7eb8f0; border: none; color: #0e0e14;
@@ -156,6 +164,25 @@
         statesDiv.appendChild(btn);
       }
       panel.appendChild(statesDiv);
+
+      const stateNames = Object.keys(config.states);
+      const currentIdx = stateNames.indexOf(currentState);
+      const targets = stateNames.slice(currentIdx + 1);
+      if (targets.length > 0) {
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.textContent = `copy ${currentState} → ${targets.join(', ')}`;
+        copyBtn.onclick = () => {
+          const src = config.states[currentState];
+          for (const name of targets) {
+            config.states[name] = JSON.parse(JSON.stringify(src));
+            configured.add(name);
+          }
+          applyConfig();
+          buildPanel();
+        };
+        panel.appendChild(copyBtn);
+      }
 
       const state = config.states[currentState];
       const def = defaults.states[currentState];
