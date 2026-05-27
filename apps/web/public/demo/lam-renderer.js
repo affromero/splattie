@@ -15156,7 +15156,7 @@ let PMREMGenerator$1 = class PMREMGenerator {
   _allocateTargets() {
     const width = 3 * Math.max(this._cubeSize, 16 * 7);
     const height = 4 * this._cubeSize;
-    const params2 = {
+    const params = {
       magFilter: LinearFilter,
       minFilter: LinearFilter,
       generateMipmaps: false,
@@ -15165,12 +15165,12 @@ let PMREMGenerator$1 = class PMREMGenerator {
       colorSpace: LinearSRGBColorSpace,
       depthBuffer: false
     };
-    const cubeUVRenderTarget = _createRenderTarget$1(width, height, params2);
+    const cubeUVRenderTarget = _createRenderTarget$1(width, height, params);
     if (this._pingPongRenderTarget === null || this._pingPongRenderTarget.width !== width || this._pingPongRenderTarget.height !== height) {
       if (this._pingPongRenderTarget !== null) {
         this._dispose();
       }
-      this._pingPongRenderTarget = _createRenderTarget$1(width, height, params2);
+      this._pingPongRenderTarget = _createRenderTarget$1(width, height, params);
       const { _lodMax } = this;
       ({ sizeLods: this._sizeLods, lodPlanes: this._lodPlanes, sigmas: this._sigmas } = _createPlanes$1(_lodMax));
       this._blurMaterial = _getBlurShader$1(_lodMax, width, height);
@@ -15424,8 +15424,8 @@ function _createPlanes$1(lodMax) {
   }
   return { lodPlanes, sizeLods, sigmas };
 }
-function _createRenderTarget$1(width, height, params2) {
-  const cubeUVRenderTarget = new WebGLRenderTarget(width, height, params2);
+function _createRenderTarget$1(width, height, params) {
+  const cubeUVRenderTarget = new WebGLRenderTarget(width, height, params);
   cubeUVRenderTarget.texture.mapping = CubeUVReflectionMapping;
   cubeUVRenderTarget.texture.name = "PMREM.cubeUv";
   cubeUVRenderTarget.scissorTest = true;
@@ -33164,7 +33164,7 @@ function cyrb53(value, seed = 0) {
 }
 const hashString = (str) => cyrb53(str);
 const hashArray = (array) => cyrb53(array);
-const hash$1 = (...params2) => cyrb53(params2);
+const hash$1 = (...params) => cyrb53(params);
 function getCacheKey$1(object, force = false) {
   const values = [];
   if (object.isNode === true) {
@@ -33265,35 +33265,35 @@ function getValueType(value) {
   }
   return null;
 }
-function getValueFromType(type, ...params2) {
+function getValueFromType(type, ...params) {
   const last4 = type ? type.slice(-4) : void 0;
-  if (params2.length === 1) {
-    if (last4 === "vec2") params2 = [params2[0], params2[0]];
-    else if (last4 === "vec3") params2 = [params2[0], params2[0], params2[0]];
-    else if (last4 === "vec4") params2 = [params2[0], params2[0], params2[0], params2[0]];
+  if (params.length === 1) {
+    if (last4 === "vec2") params = [params[0], params[0]];
+    else if (last4 === "vec3") params = [params[0], params[0], params[0]];
+    else if (last4 === "vec4") params = [params[0], params[0], params[0], params[0]];
   }
   if (type === "color") {
-    return new Color(...params2);
+    return new Color(...params);
   } else if (last4 === "vec2") {
-    return new Vector2(...params2);
+    return new Vector2(...params);
   } else if (last4 === "vec3") {
-    return new Vector3(...params2);
+    return new Vector3(...params);
   } else if (last4 === "vec4") {
-    return new Vector4(...params2);
+    return new Vector4(...params);
   } else if (last4 === "mat2") {
-    return new Matrix2(...params2);
+    return new Matrix2(...params);
   } else if (last4 === "mat3") {
-    return new Matrix3(...params2);
+    return new Matrix3(...params);
   } else if (last4 === "mat4") {
-    return new Matrix4(...params2);
+    return new Matrix4(...params);
   } else if (type === "bool") {
-    return params2[0] || false;
+    return params[0] || false;
   } else if (type === "float" || type === "int" || type === "uint") {
-    return params2[0] || 0;
+    return params[0] || 0;
   } else if (type === "string") {
-    return params2[0] || "";
+    return params[0] || "";
   } else if (type === "ArrayBuffer") {
-    return base64ToArrayBuffer(params2[0]);
+    return base64ToArrayBuffer(params[0]);
   }
   return null;
 }
@@ -34342,25 +34342,25 @@ function addMethodChaining(name2, nodeElement) {
 const parseSwizzle = (props) => props.replace(/r|s/g, "x").replace(/g|t/g, "y").replace(/b|p/g, "z").replace(/a|q/g, "w");
 const parseSwizzleAndSort = (props) => parseSwizzle(props).split("").sort().join("");
 const shaderNodeHandler = {
-  setup(NodeClosure, params2) {
-    const inputs = params2.shift();
-    return NodeClosure(nodeObjects$1(inputs), ...params2);
+  setup(NodeClosure, params) {
+    const inputs = params.shift();
+    return NodeClosure(nodeObjects$1(inputs), ...params);
   },
   get(node, prop, nodeObj) {
     if (typeof prop === "string" && node[prop] === void 0) {
       if (node.isStackNode !== true && prop === "assign") {
-        return (...params2) => {
-          currentStack.assign(nodeObj, ...params2);
+        return (...params) => {
+          currentStack.assign(nodeObj, ...params);
           return nodeObj;
         };
       } else if (NodeElements.has(prop)) {
         const nodeElement = NodeElements.get(prop);
-        return node.isStackNode ? (...params2) => nodeObj.add(nodeElement(...params2)) : (...params2) => nodeElement(nodeObj, ...params2);
+        return node.isStackNode ? (...params) => nodeObj.add(nodeElement(...params)) : (...params) => nodeElement(nodeObj, ...params);
       } else if (prop === "self") {
         return node;
       } else if (prop.endsWith("Assign") && NodeElements.has(prop.slice(0, prop.length - "Assign".length))) {
         const nodeElement = NodeElements.get(prop.slice(0, prop.length - "Assign".length));
-        return node.isStackNode ? (...params2) => nodeObj.assign(params2[0], nodeElement(...params2)) : (...params2) => nodeObj.assign(nodeElement(nodeObj, ...params2));
+        return node.isStackNode ? (...params) => nodeObj.assign(params[0], nodeElement(...params)) : (...params) => nodeObj.assign(nodeElement(nodeObj, ...params));
       } else if (/^[xyzwrgbastpq]{1,4}$/.test(prop) === true) {
         prop = parseSwizzle(prop);
         return nodeObject$1(new SplitNode(nodeObj, prop));
@@ -34428,22 +34428,22 @@ const ShaderNodeArray = function(array, altType = null) {
 const ShaderNodeProxy = function(NodeClass, scope = null, factor = null, settings = null) {
   const assignNode = (node) => nodeObject$1(settings !== null ? Object.assign(node, settings) : node);
   if (scope === null) {
-    return (...params2) => {
-      return assignNode(new NodeClass(...nodeArray$1(params2)));
+    return (...params) => {
+      return assignNode(new NodeClass(...nodeArray$1(params)));
     };
   } else if (factor !== null) {
     factor = nodeObject$1(factor);
-    return (...params2) => {
-      return assignNode(new NodeClass(scope, ...nodeArray$1(params2), factor));
+    return (...params) => {
+      return assignNode(new NodeClass(scope, ...nodeArray$1(params), factor));
     };
   } else {
-    return (...params2) => {
-      return assignNode(new NodeClass(scope, ...nodeArray$1(params2)));
+    return (...params) => {
+      return assignNode(new NodeClass(scope, ...nodeArray$1(params)));
     };
   }
 };
-const ShaderNodeImmutable = function(NodeClass, ...params2) {
-  return nodeObject$1(new NodeClass(...nodeArray$1(params2)));
+const ShaderNodeImmutable = function(NodeClass, ...params) {
+  return nodeObject$1(new NodeClass(...nodeArray$1(params)));
 };
 class ShaderCallNodeInternal extends Node {
   constructor(shaderNode, inputNodes) {
@@ -34559,19 +34559,19 @@ const safeGetNodeType = (node) => {
   }
 };
 const ConvertType = function(type, cacheMap = null) {
-  return (...params2) => {
-    if (params2.length === 0 || !["bool", "float", "int", "uint"].includes(type) && params2.every((param) => typeof param !== "object")) {
-      params2 = [getValueFromType(type, ...params2)];
+  return (...params) => {
+    if (params.length === 0 || !["bool", "float", "int", "uint"].includes(type) && params.every((param) => typeof param !== "object")) {
+      params = [getValueFromType(type, ...params)];
     }
-    if (params2.length === 1 && cacheMap !== null && cacheMap.has(params2[0])) {
-      return nodeObject$1(cacheMap.get(params2[0]));
+    if (params.length === 1 && cacheMap !== null && cacheMap.has(params[0])) {
+      return nodeObject$1(cacheMap.get(params[0]));
     }
-    if (params2.length === 1) {
-      const node = getConstNode(params2[0], type);
+    if (params.length === 1) {
+      const node = getConstNode(params[0], type);
       if (safeGetNodeType(node) === type) return nodeObject$1(node);
       return nodeObject$1(new ConvertNode(node, type));
     }
-    const nodes = params2.map((param) => getConstNode(param));
+    const nodes = params.map((param) => getConstNode(param));
     return nodeObject$1(new JoinNode(nodes, type));
   };
 };
@@ -34586,17 +34586,17 @@ const nodeObject$1 = (val, altType = null) => (
 );
 const nodeObjects$1 = (val, altType = null) => new ShaderNodeObjects(val, altType);
 const nodeArray$1 = (val, altType = null) => new ShaderNodeArray(val, altType);
-const nodeProxy$1 = (...params2) => new ShaderNodeProxy(...params2);
-const nodeImmutable$1 = (...params2) => new ShaderNodeImmutable(...params2);
+const nodeProxy$1 = (...params) => new ShaderNodeProxy(...params);
+const nodeImmutable$1 = (...params) => new ShaderNodeImmutable(...params);
 const Fn$1 = (jsFunc, nodeType) => {
   const shaderNode = new ShaderNode$1(jsFunc, nodeType);
-  const fn = (...params2) => {
+  const fn = (...params) => {
     let inputs;
-    nodeObjects$1(params2);
-    if (params2[0] && params2[0].isNode) {
-      inputs = [...params2];
+    nodeObjects$1(params);
+    if (params[0] && params[0].isNode) {
+      inputs = [...params];
     } else {
-      inputs = params2[0];
+      inputs = params[0];
     }
     return shaderNode.call(inputs);
   };
@@ -34611,9 +34611,9 @@ const Fn$1 = (jsFunc, nodeType) => {
   };
   return fn;
 };
-const tslFn$1 = (...params2) => {
+const tslFn$1 = (...params) => {
   console.warn("TSL.ShaderNode: tslFn() has been renamed to Fn().");
-  return Fn$1(...params2);
+  return Fn$1(...params);
 };
 addMethodChaining("toGlobal", (node) => {
   node.global = true;
@@ -34623,7 +34623,7 @@ const setCurrentStack$1 = (stack) => {
   currentStack = stack;
 };
 const getCurrentStack$1 = () => currentStack;
-const If$1 = (...params2) => currentStack.If(...params2);
+const If$1 = (...params) => currentStack.If(...params);
 function append$1(node) {
   if (currentStack) currentStack.add(node);
   return node;
@@ -34707,14 +34707,14 @@ class ArrayNode extends TempNode {
     return builder.generateArray(type, this.count, this.values);
   }
 }
-const array$1 = (...params2) => {
+const array$1 = (...params) => {
   let node;
-  if (params2.length === 1) {
-    const values = params2[0];
+  if (params.length === 1) {
+    const values = params[0];
     node = new ArrayNode(null, values.length, values);
   } else {
-    const nodeType = params2[0];
-    const count = params2[1];
+    const nodeType = params[0];
+    const count = params[1];
     node = new ArrayNode(nodeType, count);
   }
   return nodeObject$1(node);
@@ -35030,7 +35030,7 @@ class FunctionCallNode extends TempNode {
     return this.functionNode.getNodeType(builder);
   }
   generate(builder) {
-    const params2 = [];
+    const params = [];
     const functionNode = this.functionNode;
     const inputs = functionNode.getInputs(builder);
     const parameters = this.parameters;
@@ -35044,25 +35044,25 @@ class FunctionCallNode extends TempNode {
     };
     if (Array.isArray(parameters)) {
       for (let i = 0; i < parameters.length; i++) {
-        params2.push(generateInput(parameters[i], inputs[i]));
+        params.push(generateInput(parameters[i], inputs[i]));
       }
     } else {
       for (const inputNode of inputs) {
         const node = parameters[inputNode.name];
         if (node !== void 0) {
-          params2.push(generateInput(node, inputNode));
+          params.push(generateInput(node, inputNode));
         } else {
           throw new Error(`FunctionCallNode: Input '${inputNode.name}' not found in FunctionNode.`);
         }
       }
     }
     const functionName = functionNode.build(builder, "property");
-    return `${functionName}( ${params2.join(", ")} )`;
+    return `${functionName}( ${params.join(", ")} )`;
   }
 }
-const call$1 = (func, ...params2) => {
-  params2 = params2.length > 1 || params2[0] && params2[0].isNode === true ? nodeArray$1(params2) : nodeObjects$1(params2[0]);
-  return nodeObject$1(new FunctionCallNode(nodeObject$1(func), params2));
+const call$1 = (func, ...params) => {
+  params = params.length > 1 || params[0] && params[0].isNode === true ? nodeArray$1(params) : nodeObjects$1(params[0]);
+  return nodeObject$1(new FunctionCallNode(nodeObject$1(func), params));
 };
 addMethodChaining("call", call$1);
 class OperatorNode extends TempNode {
@@ -35077,15 +35077,15 @@ class OperatorNode extends TempNode {
    * @param {Node} bNode - The second input.
    * @param {...Node} params - Additional input parameters.
    */
-  constructor(op, aNode, bNode, ...params2) {
+  constructor(op, aNode, bNode, ...params) {
     super();
-    if (params2.length > 0) {
+    if (params.length > 0) {
       let finalOp = new OperatorNode(op, aNode, bNode);
-      for (let i = 0; i < params2.length - 1; i++) {
-        finalOp = new OperatorNode(op, finalOp, params2[i]);
+      for (let i = 0; i < params.length - 1; i++) {
+        finalOp = new OperatorNode(op, finalOp, params[i]);
       }
       aNode = finalOp;
-      bNode = params2[params2.length - 1];
+      bNode = params[params.length - 1];
     }
     this.op = op;
     this.aNode = aNode;
@@ -35286,9 +35286,9 @@ addMethodChaining("bitOr", bitOr$1);
 addMethodChaining("bitXor", bitXor$1);
 addMethodChaining("shiftLeft", shiftLeft$1);
 addMethodChaining("shiftRight", shiftRight$1);
-const remainder$1 = (...params2) => {
+const remainder$1 = (...params) => {
   console.warn("TSL.OperatorNode: .remainder() has been renamed to .modInt().");
-  return modInt$1(...params2);
+  return modInt$1(...params);
 };
 addMethodChaining("remainder", remainder$1);
 class MathNode extends TempNode {
@@ -35382,30 +35382,30 @@ class MathNode extends TempNode {
     } else if (method === MathNode.DIFFERENCE) {
       return abs$1(sub$1(a, b)).build(builder, output);
     } else {
-      const params2 = [];
+      const params = [];
       if (method === MathNode.CROSS || method === MathNode.MOD) {
-        params2.push(
+        params.push(
           a.build(builder, type),
           b.build(builder, type)
         );
       } else if (coordinateSystem === WebGLCoordinateSystem && method === MathNode.STEP) {
-        params2.push(
+        params.push(
           a.build(builder, builder.getTypeLength(a.getNodeType(builder)) === 1 ? "float" : inputType),
           b.build(builder, inputType)
         );
       } else if (coordinateSystem === WebGLCoordinateSystem && (method === MathNode.MIN || method === MathNode.MAX) || method === MathNode.MOD) {
-        params2.push(
+        params.push(
           a.build(builder, inputType),
           b.build(builder, builder.getTypeLength(b.getNodeType(builder)) === 1 ? "float" : inputType)
         );
       } else if (method === MathNode.REFRACT) {
-        params2.push(
+        params.push(
           a.build(builder, inputType),
           b.build(builder, inputType),
           c.build(builder, "float")
         );
       } else if (method === MathNode.MIX) {
-        params2.push(
+        params.push(
           a.build(builder, inputType),
           b.build(builder, inputType),
           c.build(builder, builder.getTypeLength(c.getNodeType(builder)) === 1 ? "float" : inputType)
@@ -35414,11 +35414,11 @@ class MathNode extends TempNode {
         if (coordinateSystem === WebGPUCoordinateSystem && method === MathNode.ATAN && b !== null) {
           method = "atan2";
         }
-        params2.push(a.build(builder, inputType));
-        if (b !== null) params2.push(b.build(builder, inputType));
-        if (c !== null) params2.push(c.build(builder, inputType));
+        params.push(a.build(builder, inputType));
+        if (b !== null) params.push(b.build(builder, inputType));
+        if (c !== null) params.push(c.build(builder, inputType));
       }
-      return builder.format(`${builder.getMethod(method, type)}( ${params2.join(", ")} )`, type, output);
+      return builder.format(`${builder.getMethod(method, type)}( ${params.join(", ")} )`, type, output);
     }
   }
   serialize(data) {
@@ -35704,9 +35704,9 @@ ${builder.tab}if ( ${nodeSnippet} ) {
 }
 const select$1 = /* @__PURE__ */ nodeProxy$1(ConditionalNode);
 addMethodChaining("select", select$1);
-const cond$1 = (...params2) => {
+const cond$1 = (...params) => {
   console.warn("TSL.ConditionalNode: cond() has been renamed to select().");
-  return select$1(...params2);
+  return select$1(...params);
 };
 addMethodChaining("cond", cond$1);
 class ContextNode extends Node {
@@ -35910,13 +35910,13 @@ const varying$1 = /* @__PURE__ */ nodeProxy$1(VaryingNode);
 const vertexStage = (node) => varying$1(node);
 addMethodChaining("toVarying", varying$1);
 addMethodChaining("toVertexStage", vertexStage);
-addMethodChaining("varying", (...params2) => {
+addMethodChaining("varying", (...params) => {
   console.warn("TSL.VaryingNode: .varying() has been renamed to .toVarying().");
-  return varying$1(...params2);
+  return varying$1(...params);
 });
-addMethodChaining("vertexStage", (...params2) => {
+addMethodChaining("vertexStage", (...params) => {
   console.warn("TSL.VaryingNode: .vertexStage() has been renamed to .toVertexStage().");
-  return varying$1(...params2);
+  return varying$1(...params);
 });
 const sRGBTransferEOTF$1 = /* @__PURE__ */ Fn$1(([color]) => {
   const a = color.mul(0.9478672986).add(0.0521327014).pow(2.4);
@@ -36487,11 +36487,11 @@ class CacheNode extends Node {
     builder.setCache(previousCache);
     return nodeType;
   }
-  build(builder, ...params2) {
+  build(builder, ...params) {
     const previousCache = builder.getCache();
     const cache = builder.getCacheFromNode(this, this.parent);
     builder.setCache(cache);
-    const data = this.node.build(builder, ...params2);
+    const data = this.node.build(builder, ...params);
     builder.setCache(previousCache);
     return data;
   }
@@ -37186,7 +37186,7 @@ class TextureNode extends UniformNode {
   }
 }
 const texture$1 = /* @__PURE__ */ nodeProxy$1(TextureNode);
-const textureLoad$1 = (...params2) => texture$1(...params2).setSampler(false);
+const textureLoad$1 = (...params) => texture$1(...params).setSampler(false);
 const sampler$1 = (aTexture) => (aTexture.isNode === true ? aTexture : texture$1(aTexture)).convert("sampler");
 class BufferNode extends UniformNode {
   static get type() {
@@ -38759,9 +38759,9 @@ class LoopNode extends Node {
    *
    * @param {Array<Any>} params - Depending on the loop type, array holds different parameterization values for the loop.
    */
-  constructor(params2 = []) {
+  constructor(params = []) {
     super();
-    this.params = params2;
+    this.params = params;
   }
   /**
    * Returns a loop variable name based on an index. The pattern is
@@ -38810,10 +38810,10 @@ class LoopNode extends Node {
   }
   generate(builder) {
     const properties = this.getProperties(builder);
-    const params2 = this.params;
+    const params = this.params;
     const stackNode = properties.stackNode;
-    for (let i = 0, l = params2.length - 1; i < l; i++) {
-      const param = params2[i];
+    for (let i = 0, l = params.length - 1; i < l; i++) {
+      const param = params[i];
       let start = null, end = null, name2 = null, type = null, condition = null, update = null;
       if (param.isNode) {
         type = "int";
@@ -38879,12 +38879,12 @@ class LoopNode extends Node {
     return returnsSnippet;
   }
 }
-const Loop$1 = (...params2) => nodeObject$1(new LoopNode(nodeArray$1(params2, "int"))).append();
+const Loop$1 = (...params) => nodeObject$1(new LoopNode(nodeArray$1(params, "int"))).append();
 const Continue$1 = () => expression$1("continue").append();
 const Break$1 = () => expression$1("break").append();
-const loop$1 = (...params2) => {
+const loop$1 = (...params) => {
   console.warn("TSL.LoopNode: loop() has been renamed to Loop().");
-  return Loop$1(...params2);
+  return Loop$1(...params);
 };
 const _morphTextures = /* @__PURE__ */ new WeakMap();
 const _morphVec4 = /* @__PURE__ */ new Vector4();
@@ -40871,14 +40871,14 @@ class StackNode extends Node {
     this._currentCond.elseNode = new ShaderNode$1(method);
     return this;
   }
-  build(builder, ...params2) {
+  build(builder, ...params) {
     const previousStack = getCurrentStack$1();
     setCurrentStack$1(this);
     for (const node of this.nodes) {
       node.build(builder, "void");
     }
     setCurrentStack$1(previousStack);
-    return this.outputNode ? this.outputNode.build(builder, ...params2) : super.build(builder, ...params2);
+    return this.outputNode ? this.outputNode.build(builder, ...params) : super.build(builder, ...params);
   }
   // Deprecated
   /**
@@ -40888,9 +40888,9 @@ class StackNode extends Node {
    * @param  {...any} params
    * @returns {StackNode}
    */
-  else(...params2) {
+  else(...params) {
     console.warn("TSL.StackNode: .else() has been renamed to .Else().");
-    return this.Else(...params2);
+    return this.Else(...params);
   }
   /**
    * @deprecated since r168. Use {@link StackNode#ElseIf} instead.
@@ -40898,9 +40898,9 @@ class StackNode extends Node {
    * @param  {...any} params
    * @returns {StackNode}
    */
-  elseif(...params2) {
+  elseif(...params) {
     console.warn("TSL.StackNode: .elseif() has been renamed to .ElseIf().");
-    return this.ElseIf(...params2);
+    return this.ElseIf(...params);
   }
 }
 const stack$1 = /* @__PURE__ */ nodeProxy$1(StackNode);
@@ -40979,17 +40979,17 @@ class StructNode extends Node {
 }
 const struct$1 = (membersLayout, name2 = null) => {
   const structLayout = new StructTypeNode(membersLayout, name2);
-  const struct = (...params2) => {
+  const struct = (...params) => {
     let values = null;
-    if (params2.length > 0) {
-      if (params2[0].isNode) {
+    if (params.length > 0) {
+      if (params[0].isNode) {
         values = {};
         const names = Object.keys(membersLayout);
-        for (let i = 0; i < params2.length; i++) {
-          values[names[i]] = params2[i];
+        for (let i = 0; i < params.length; i++) {
+          values[names[i]] = params[i];
         }
       } else {
-        values = params2[0];
+        values = params[0];
       }
     }
     return nodeObject$1(new StructNode(structLayout, values));
@@ -41185,7 +41185,7 @@ class FunctionOverloadingNode extends Node {
     return this.functionNodes[0].shaderNode.layout.type;
   }
   setup(builder) {
-    const params2 = this.parametersNodes;
+    const params = this.parametersNodes;
     let candidateFnCall = this._candidateFnCall;
     if (candidateFnCall === null) {
       let candidateFn = null;
@@ -41197,10 +41197,10 @@ class FunctionOverloadingNode extends Node {
           throw new Error("FunctionOverloadingNode: FunctionNode must be a layout.");
         }
         const inputs = layout.inputs;
-        if (params2.length === inputs.length) {
+        if (params.length === inputs.length) {
           let score = 0;
-          for (let i = 0; i < params2.length; i++) {
-            const param = params2[i];
+          for (let i = 0; i < params.length; i++) {
+            const param = params[i];
             const input = inputs[i];
             if (param.getNodeType(builder) === input.type) {
               score++;
@@ -41214,13 +41214,13 @@ class FunctionOverloadingNode extends Node {
           }
         }
       }
-      this._candidateFnCall = candidateFnCall = candidateFn(...params2);
+      this._candidateFnCall = candidateFnCall = candidateFn(...params);
     }
     return candidateFnCall;
   }
 }
 const overloadingBaseFn = /* @__PURE__ */ nodeProxy$1(FunctionOverloadingNode);
-const overloadingFn$1 = (functionNodes) => (...params2) => overloadingBaseFn(functionNodes, ...params2);
+const overloadingFn$1 = (functionNodes) => (...params) => overloadingBaseFn(functionNodes, ...params);
 const time$1 = /* @__PURE__ */ uniform$1(0).setGroup(renderGroup$1).onRenderUpdate((frame) => frame.time);
 const deltaTime$1 = /* @__PURE__ */ uniform$1(0).setGroup(renderGroup$1).onRenderUpdate((frame) => frame.deltaTime);
 const frameId$1 = /* @__PURE__ */ uniform$1(0, "uint").setGroup(renderGroup$1).onRenderUpdate((frame) => frame.frameId);
@@ -41351,7 +41351,7 @@ class TriplanarTexturesNode extends Node {
   }
 }
 const triplanarTextures$1 = /* @__PURE__ */ nodeProxy$1(TriplanarTexturesNode);
-const triplanarTexture$1 = (...params2) => triplanarTextures$1(...params2);
+const triplanarTexture$1 = (...params) => triplanarTextures$1(...params);
 const _reflectorPlane = new Plane();
 const _normal = new Vector3();
 const _reflectorWorldPosition = new Vector3();
@@ -41721,11 +41721,11 @@ class RTTNode extends TextureNode {
     return newNode;
   }
 }
-const rtt$1 = (node, ...params2) => nodeObject$1(new RTTNode(nodeObject$1(node), ...params2));
-const convertToTexture$1 = (node, ...params2) => {
+const rtt$1 = (node, ...params) => nodeObject$1(new RTTNode(nodeObject$1(node), ...params));
+const convertToTexture$1 = (node, ...params) => {
   if (node.isTextureNode) return node;
   if (node.isPassNode) return node.getTextureNode();
-  return rtt$1(node, ...params2);
+  return rtt$1(node, ...params);
 };
 const getViewPosition$1 = /* @__PURE__ */ Fn$1(([screenPosition, depth, projectionMatrixInverse], builder) => {
   let clipSpacePosition;
@@ -42459,21 +42459,21 @@ const blendColor$1 = /* @__PURE__ */ Fn$1(([base, blend]) => {
     { name: "blend", type: "vec4" }
   ]
 });
-const burn$1 = (...params2) => {
+const burn$1 = (...params) => {
   console.warn('THREE.TSL: "burn" has been renamed. Use "blendBurn" instead.');
-  return blendBurn$1(params2);
+  return blendBurn$1(params);
 };
-const dodge$1 = (...params2) => {
+const dodge$1 = (...params) => {
   console.warn('THREE.TSL: "dodge" has been renamed. Use "blendDodge" instead.');
-  return blendDodge$1(params2);
+  return blendDodge$1(params);
 };
-const screen$1 = (...params2) => {
+const screen$1 = (...params) => {
   console.warn('THREE.TSL: "screen" has been renamed. Use "blendScreen" instead.');
-  return blendScreen$1(params2);
+  return blendScreen$1(params);
 };
-const overlay$1 = (...params2) => {
+const overlay$1 = (...params) => {
   console.warn('THREE.TSL: "overlay" has been renamed. Use "blendOverlay" instead.');
-  return blendOverlay$1(params2);
+  return blendOverlay$1(params);
 };
 const grayscale$1 = /* @__PURE__ */ Fn$1(([color]) => {
   return luminance$1(color.rgb);
@@ -43178,7 +43178,7 @@ const nativeFn = (code, includes = [], language = "") => {
     }
   }
   const functionNode = nodeObject$1(new FunctionNode(code, includes, language));
-  const fn = (...params2) => functionNode.call(...params2);
+  const fn = (...params) => functionNode.call(...params);
   fn.functionNode = functionNode;
   return fn;
 };
@@ -43296,10 +43296,10 @@ class ScriptableValueNode extends Node {
 }
 const scriptableValue$1 = /* @__PURE__ */ nodeProxy$1(ScriptableValueNode);
 class Resources extends Map {
-  get(key, callback = null, ...params2) {
+  get(key, callback = null, ...params) {
     if (this.has(key)) return super.get(key);
     if (callback !== null) {
-      const value = callback(...params2);
+      const value = callback(...params);
       this.set(key, value);
       return value;
     }
@@ -43510,11 +43510,11 @@ class ScriptableNode extends Node {
    * @param {...Any} params - A list of parameters.
    * @return {Any} The result of the function call.
    */
-  call(name2, ...params2) {
+  call(name2, ...params) {
     const object = this.getObject();
     const method = object[name2];
     if (typeof method === "function") {
-      return method(...params2);
+      return method(...params);
     }
   }
   /**
@@ -43524,11 +43524,11 @@ class ScriptableNode extends Node {
    * @param {...Any} params - A list of parameters.
    * @return {Promise<Any>} The result of the function call.
    */
-  async callAsync(name2, ...params2) {
+  async callAsync(name2, ...params) {
     const object = this.getObject();
     const method = object[name2];
     if (typeof method === "function") {
-      return method.constructor.name === "AsyncFunction" ? await method(...params2) : method(...params2);
+      return method.constructor.name === "AsyncFunction" ? await method(...params) : method(...params);
     }
   }
   /**
@@ -43566,8 +43566,8 @@ class ScriptableNode extends Node {
     const THREE = ScriptableNodeResources$1.get("THREE");
     const TSL2 = ScriptableNodeResources$1.get("TSL");
     const method = this.getMethod();
-    const params2 = [parameters, this._local, ScriptableNodeResources$1, refresh, setOutput, THREE, TSL2];
-    this._object = method(...params2);
+    const params = [parameters, this._local, ScriptableNodeResources$1, refresh, setOutput, THREE, TSL2];
+    this._object = method(...params);
     const layout = this._object.layout;
     if (layout) {
       if (layout.cache === false) {
@@ -44053,12 +44053,12 @@ class AtomicFunctionNode extends TempNode {
     const inputType = this.getInputType(builder);
     const a = this.pointerNode;
     const b = this.valueNode;
-    const params2 = [];
-    params2.push(`&${a.build(builder, inputType)}`);
+    const params = [];
+    params.push(`&${a.build(builder, inputType)}`);
     if (b !== null) {
-      params2.push(b.build(builder, inputType));
+      params.push(b.build(builder, inputType));
     }
-    const methodSnippet = `${builder.getMethod(method, type)}( ${params2.join(", ")} )`;
+    const methodSnippet = `${builder.getMethod(method, type)}( ${params.join(", ")} )`;
     if (this.storeNode !== null) {
       const varSnippet = this.storeNode.build(builder, inputType);
       builder.addLineFlowCode(`${varSnippet} = ${methodSnippet}`, this);
@@ -44759,13 +44759,13 @@ class ShadowNode extends ShadowBaseNode {
     const useVelocity = currentMRT ? currentMRT.has("velocity") : false;
     _rendererState = resetRendererAndSceneState(renderer, scene, _rendererState);
     scene.overrideMaterial = getShadowMaterial(light);
-    renderer.setRenderObjectFunction((object, scene2, _camera2, geometry, material, group, ...params2) => {
+    renderer.setRenderObjectFunction((object, scene2, _camera2, geometry, material, group, ...params) => {
       if (object.castShadow === true || object.receiveShadow && shadowType === VSMShadowMap) {
         if (useVelocity) {
           getDataFromObject(object).useVelocity = true;
         }
         object.onBeforeShadow(renderer, object, camera, shadow.camera, geometry, scene2.overrideMaterial, group);
-        renderer.renderObject(object, scene2, _camera2, geometry, material, group, ...params2);
+        renderer.renderObject(object, scene2, _camera2, geometry, material, group, ...params);
         object.onAfterShadow(renderer, object, camera, shadow.camera, geometry, scene2.overrideMaterial, group);
       }
     });
@@ -49944,9 +49944,9 @@ function encode$1(str) {
     return charMap[match];
   });
 }
-function AxiosURLSearchParams(params2, options) {
+function AxiosURLSearchParams(params, options) {
   this._pairs = [];
-  params2 && toFormData$1(params2, this, options);
+  params && toFormData$1(params, this, options);
 }
 const prototype = AxiosURLSearchParams.prototype;
 prototype.append = function append(name2, value) {
@@ -49963,8 +49963,8 @@ prototype.toString = function toString2(encoder) {
 function encode(val) {
   return encodeURIComponent(val).replace(/%3A/gi, ":").replace(/%24/g, "$").replace(/%2C/gi, ",").replace(/%20/g, "+");
 }
-function buildURL(url, params2, options) {
-  if (!params2) {
+function buildURL(url, params, options) {
+  if (!params) {
     return url;
   }
   const _encode = options && options.encode || encode;
@@ -49976,9 +49976,9 @@ function buildURL(url, params2, options) {
   const serializeFn = options && options.serialize;
   let serializedParams;
   if (serializeFn) {
-    serializedParams = serializeFn(params2, options);
+    serializedParams = serializeFn(params, options);
   } else {
-    serializedParams = utils$1.isURLSearchParams(params2) ? params2.toString() : new AxiosURLSearchParams(params2, options).toString(_encode);
+    serializedParams = utils$1.isURLSearchParams(params) ? params.toString() : new AxiosURLSearchParams(params, options).toString(_encode);
   }
   if (serializedParams) {
     const hashmarkIndex = url.indexOf("#");
@@ -57400,15 +57400,15 @@ class GLTFParser {
   loadCamera(cameraIndex) {
     let camera;
     const cameraDef = this.json.cameras[cameraIndex];
-    const params2 = cameraDef[cameraDef.type];
-    if (!params2) {
+    const params = cameraDef[cameraDef.type];
+    if (!params) {
       console.warn("THREE.GLTFLoader: Missing camera parameters.");
       return;
     }
     if (cameraDef.type === "perspective") {
-      camera = new PerspectiveCamera(MathUtils.radToDeg(params2.yfov), params2.aspectRatio || 1, params2.znear || 1, params2.zfar || 2e6);
+      camera = new PerspectiveCamera(MathUtils.radToDeg(params.yfov), params.aspectRatio || 1, params.znear || 1, params.zfar || 2e6);
     } else if (cameraDef.type === "orthographic") {
-      camera = new OrthographicCamera(-params2.xmag, params2.xmag, params2.ymag, -params2.ymag, params2.znear, params2.zfar);
+      camera = new OrthographicCamera(-params.xmag, params.xmag, params.ymag, -params.ymag, params.znear, params.zfar);
     }
     if (cameraDef.name) camera.name = this.createUniqueName(cameraDef.name);
     assignExtrasToUserData(camera, cameraDef);
@@ -58013,14 +58013,14 @@ var charactorConfig = {
   useFlame
 };
 class GaussianSplatRenderer {
-  static getInstance(container, assetPath2, options) {
+  static getInstance(container, assetPath, options) {
     var _a, _b, _c, _d, _e, _f;
     return __awaiter(this, void 0, void 0, function* () {
       if (this.instance != void 0) {
         return this.instance;
       }
       try {
-        const characterPath = assetPath2;
+        const characterPath = assetPath;
         const { pathname } = urlParse(characterPath);
         const matches = pathname.match(/\/([^/]+?)\.zip/);
         const characterName = matches && matches[1];
@@ -58430,94 +58430,22 @@ class GaussianSplatRenderer {
 }
 GaussianSplatRenderer._canvas = document.createElement("canvas");
 const div = document.getElementById("LAM_WebRender");
-const params = new URLSearchParams(window.location.search);
-const assetPath = params.get("zip") || "./andres.zip";
-let mouseNdcX = 0;
-let mouseNdcY = 0;
-let isOnPage = false;
-let flyReaction = 0;
-let blinkValue = 0;
-let nextBlinkTime = randomBlinkDelay();
-function randomBlinkDelay() {
-  return performance.now() + 2e3 + Math.random() * 5e3;
-}
-document.addEventListener("mousemove", (e) => {
-  mouseNdcX = e.clientX / window.innerWidth * 2 - 1;
-  mouseNdcY = -(e.clientY / window.innerHeight * 2 - 1);
-  isOnPage = true;
-});
-document.addEventListener("mouseleave", () => {
-  isOnPage = false;
-  mouseNdcX = 0;
-  mouseNdcY = 0;
-});
-const FACE_CX = 0;
-const FACE_CY = 0.05;
-const FACE_RX = 0.22;
-const FACE_RY = 0.18;
-function isMouseOnFace() {
-  if (!isOnPage) return false;
-  const dx = (mouseNdcX - FACE_CX) / FACE_RX;
-  const dy = (mouseNdcY - FACE_CY) / FACE_RY;
-  return dx * dx + dy * dy < 1;
-}
 function getChatState() {
   return "Idle";
 }
 function getExpressionData() {
   const bs = {};
-  const now2 = performance.now();
-  const onFace = isMouseOnFace();
-  bs["eyeLookInLeft"] = Math.max(0, -mouseNdcX);
-  bs["eyeLookOutLeft"] = Math.max(0, mouseNdcX);
-  bs["eyeLookInRight"] = Math.max(0, mouseNdcX);
-  bs["eyeLookOutRight"] = Math.max(0, -mouseNdcX);
-  bs["eyeLookUpLeft"] = Math.max(0, mouseNdcY) * 0.8;
-  bs["eyeLookUpRight"] = Math.max(0, mouseNdcY) * 0.8;
-  bs["eyeLookDownLeft"] = Math.max(0, -mouseNdcY) * 0.8;
-  bs["eyeLookDownRight"] = Math.max(0, -mouseNdcY) * 0.8;
-  if (now2 > nextBlinkTime) {
-    const elapsed = now2 - nextBlinkTime;
-    if (elapsed < 150) {
-      blinkValue = Math.sin(elapsed / 150 * Math.PI);
-    } else {
-      blinkValue = 0;
-      nextBlinkTime = randomBlinkDelay();
-    }
-  }
-  bs["eyeBlinkLeft"] = blinkValue;
-  bs["eyeBlinkRight"] = blinkValue;
-  bs["browDownLeft"] = 0.12;
-  bs["browOuterUpRight"] = 0.15;
-  bs["eyeSquintLeft"] = 0.08;
-  bs["mouthPressLeft"] = 0.06;
-  bs["noseSneerLeft"] = 0.05;
-  const target = onFace ? 1 : 0;
-  flyReaction += (target - flyReaction) * 0.1;
-  if (flyReaction > 0.05) {
-    const f = flyReaction;
-    bs["eyeWideLeft"] = f * 0.5;
-    bs["eyeWideRight"] = f * 0.4;
-    bs["eyeSquintLeft"] = 0.08 + f * 0.3;
-    bs["eyeSquintRight"] = f * 0.25;
-    bs["noseSneerLeft"] = 0.05 + f * 0.7;
-    bs["noseSneerRight"] = f * 0.6;
-    bs["mouthUpperUpLeft"] = f * 0.5;
-    bs["mouthUpperUpRight"] = f * 0.35;
-    bs["mouthPressLeft"] = 0.06 + f * 0.35;
-    bs["mouthPressRight"] = f * 0.2;
-    bs["browDownLeft"] = 0.12 + f * 0.5;
-    bs["browDownRight"] = f * 0.2;
-    bs["browOuterUpRight"] = 0.15 + f * 0.45;
-    bs["browInnerUp"] = f * 0.35;
-    bs["cheekPuff"] = f * 0.2;
-  }
+  bs["eyeLookOutLeft"] = 1;
+  bs["eyeLookInRight"] = 1;
+  bs["mouthSmileLeft"] = 0.8;
+  bs["mouthSmileRight"] = 0.8;
+  bs["browOuterUpLeft"] = 0.7;
   return bs;
 }
 async function init() {
   await GaussianSplatRenderer.getInstance(
     div,
-    assetPath,
+    "./andres.zip",
     {
       getChatState,
       getExpressionData,
