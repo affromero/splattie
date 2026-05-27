@@ -1,0 +1,29 @@
+splattie.app {
+	reverse_proxy localhost:4001
+
+	header {
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		-Server
+	}
+
+	@static {
+		path *.js *.css *.png *.jpg *.jpeg *.gif *.svg *.ico *.woff *.woff2 *.ttf *.eot *.splattie *.bin
+	}
+	header @static Cache-Control "public, max-age=31536000, immutable"
+
+	encode gzip zstd
+
+	log {
+		output file /var/log/caddy/splattie-access.log {
+			roll_size 50MiB
+			roll_keep 5
+		}
+	}
+}
+
+www.splattie.app {
+	redir https://splattie.app{uri} permanent
+}
