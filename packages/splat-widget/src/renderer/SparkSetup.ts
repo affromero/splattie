@@ -18,12 +18,12 @@ function computeVirtualBones(bones: BoneInfo[]): BoneInfo[] {
   const midZ = (lEye[2] + rEye[2]) / 2;
   const eyeSep = Math.abs(lEye[0] - rEye[0]);
 
-  const mouthY = jaw[1] + (midY - jaw[1]) * 0.3;
-  const mouthZ = jaw[2] + (midZ - jaw[2]) * 0.5;
-  const cheekY = jaw[1] + (midY - jaw[1]) * 0.5;
-  const cheekZ = jaw[2] + (midZ - jaw[2]) * 0.4;
-  const noseY = jaw[1] + (midY - jaw[1]) * 0.6;
-  const noseZ = midZ + 0.01;
+  const mouthY = jaw[1] + (midY - jaw[1]) * 0.15;
+  const mouthZ = jaw[2] + (midZ - jaw[2]) * 0.17;
+  const cheekY = jaw[1] + (midY - jaw[1]) * 0.35;
+  const cheekZ = jaw[2] + (midZ - jaw[2]) * 0.25;
+  const noseY = jaw[1] + (midY - jaw[1]) * 0.55;
+  const noseZ = jaw[2] + (midZ - jaw[2]) * 0.45;
 
   const idx = bones.length;
   return [
@@ -170,9 +170,12 @@ export async function createSparkInstance(
       skinning.setRestQuatPos(bone.idx, identityQuat, new THREE.Vector3(...bone.pos));
     }
 
-    const sigma = 0.02;
-    const sigma2 = 2 * sigma * sigma;
     const numSplats = Math.min(lbsWeights.length, skinning.numSplats);
+    const mouthBoneNames = new Set(['mouthCornerL', 'mouthCornerR']);
+    const sigmaByBone = new Map<number, number>();
+    for (const vb of virtualBones) {
+      sigmaByBone.set(vb.idx, mouthBoneNames.has(vb.name) ? 0.04 : 0.02);
+    }
 
     for (let i = 0; i < numSplats; i++) {
       const origWeights = lbsWeights[i];
@@ -185,7 +188,8 @@ export async function createSparkInstance(
         for (const vb of virtualBones) {
           const dx = px - vb.pos[0], dy = py - vb.pos[1], dz = pz - vb.pos[2];
           const dist2 = dx * dx + dy * dy + dz * dz;
-          const w = Math.exp(-dist2 / sigma2) * 3.0;
+          const s = sigmaByBone.get(vb.idx) ?? 0.02;
+          const w = Math.exp(-dist2 / (2 * s * s)) * 3.0;
           if (w > 0.01) allWeights.push([vb.idx, w]);
         }
       }
