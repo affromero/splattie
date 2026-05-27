@@ -1,6 +1,6 @@
 """LAM (Large Avatar Model) head generation method.
 
-SIGGRAPH 2025 — single image → drivable 3DGS head with FLAME animation.
+SIGGRAPH 2025 - single image to drivable 3DGS head with FLAME animation.
 Calls LAM's Python API directly from vendor/LAM submodule.
 """
 
