@@ -2,6 +2,8 @@ import type { GenerationProgress, GenerationResult, HealthResponse, SegmentRespo
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
+export { API_URL };
+
 export async function segmentImage(image: File): Promise<SegmentResponse> {
   const formData = new FormData();
   formData.append('image', image);
@@ -13,6 +15,26 @@ export async function segmentImage(image: File): Promise<SegmentResponse> {
 
   if (!res.ok) {
     throw new Error(`Segmentation failed: ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
+export async function generateFromUpload(image: File): Promise<{
+  modelId: string;
+  zipUrl: string;
+  inferenceSeconds: number;
+}> {
+  const formData = new FormData();
+  formData.append('image', image);
+
+  const res = await fetch(`${API_URL}/generate-from-upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Generation failed: ${res.statusText}`);
   }
 
   return res.json();

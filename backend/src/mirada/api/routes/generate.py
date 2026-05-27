@@ -7,8 +7,8 @@ import time
 from collections.abc import AsyncGenerator
 
 import numpy as np
-from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Request, UploadFile
+from fastapi.responses import JSONResponse, StreamingResponse
 from PIL import Image
 
 from mirada.methods.registry import registry
@@ -18,10 +18,7 @@ router = APIRouter()
 
 @router.post("/generate")
 async def generate(request: Request) -> StreamingResponse:
-    """Generate a 3DGS head from a segmented image.
-
-    Returns an SSE stream with progress events and a final result.
-    """
+    """Generate a 3DGS head from image/mask URLs. Returns SSE stream."""
     body = await request.json()
     image_url: str = body["image_url"]
     mask_url: str = body["mask_url"]
@@ -30,6 +27,35 @@ async def generate(request: Request) -> StreamingResponse:
     return StreamingResponse(
         _generation_stream(image_url, mask_url, method_id),
         media_type="text/event-stream",
+    )
+
+
+@router.post("/generate-from-upload")
+async def generate_from_upload(image: UploadFile) -> JSONResponse:
+    """Generate a 3DGS head directly from an uploaded image. Returns JSON."""
+    import io
+
+    contents = await image.read()
+    img = np.array(Image.open(io.BytesIO(contents)).convert("RGB"))
+    mask = np.ones(img.shape[:2], dtype=np.bool_)
+
+    method_id = registry.default_method_id or "lam"
+    method = registry.get(method_id)
+    method.load()
+
+    start = time.monotonic()
+    result = method.generate(img, mask)
+    elapsed = time.monotonic() - start
+
+    return JSONResponse(
+        {
+            "modelId": result.model_id,
+            "zipUrl": result.spz_url,
+            "zipSizeBytes": result.spz_size_bytes,
+            "numGaussians": result.num_gaussians,
+            "methodId": result.method_id,
+            "inferenceSeconds": round(elapsed, 2),
+        }
     )
 
 
@@ -51,13 +77,12 @@ async def _generation_stream(
     img = np.array(Image.open(image_path).convert("RGB"))
     mask = np.array(Image.open(mask_path).convert("L")) > 127
 
-    yield _sse("progress", {"stage": "generating_gaussians", "pct": 50})
+    yield _sse("progress", {"stage": "generating_head", "pct": 50})
 
     start = time.monotonic()
     result = method.generate(img, mask)
     elapsed = time.monotonic() - start
 
-    yield _sse("progress", {"stage": "compressing_spz", "pct": 90})
     yield _sse("progress", {"stage": "done", "pct": 100})
     yield _sse(
         "complete",
@@ -79,14 +104,12 @@ def _sse(event: str, data: dict) -> str:
 
 def _url_to_local_path(url: str) -> str:
     """Convert a /storage/{id}/file URL to a local filesystem path."""
+    from pathlib import Path
+
     parts = url.strip("/").split("/")
     if parts[0] == "storage":
-        from pathlib import Path
-
-        upload_path = Path("data/uploads") / parts[1] / parts[2]
-        if upload_path.exists():
-            return str(upload_path)
-        gen_path = Path("data/generations") / parts[1] / parts[2]
-        if gen_path.exists():
-            return str(gen_path)
+        for base in [Path("data/uploads"), Path("data/generations")]:
+            path = base / parts[1] / parts[2]
+            if path.exists():
+                return str(path)
     return url

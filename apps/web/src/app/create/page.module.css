@@ -104,6 +104,43 @@
   gap: 1.25rem;
 }
 
+.preview {
+  max-width: 400px;
+  max-height: 400px;
+  width: auto;
+  height: auto;
+  border: 1px solid var(--color-border);
+  object-fit: contain;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.buttonSecondary {
+  padding: 0.625rem 1.5rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.buttonSecondary:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.hint {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}
+
 .button {
   padding: 0.625rem 1.5rem;
   background: var(--color-text);

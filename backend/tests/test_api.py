@@ -42,6 +42,22 @@ async def test_segment(client: AsyncClient) -> None:
     assert len(data["bbox"]) == 4
 
 
+async def test_generate_from_upload(client: AsyncClient) -> None:
+    img = Image.new("RGB", (200, 200), (128, 128, 128))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    response = await client.post(
+        "/generate-from-upload",
+        files={"image": ("test.png", buf, "image/png")},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "modelId" in data
+    assert "zipUrl" in data
+
+
 async def test_generate(client: AsyncClient) -> None:
     img = Image.new("RGB", (200, 200), (128, 128, 128))
     buf = io.BytesIO()
