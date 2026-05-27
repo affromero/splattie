@@ -1,3 +1,6 @@
 [submodule "backend/vendor/LAM"]
 	path = backend/vendor/LAM
 	url = git@github.com:affromero/LAM.git
+[submodule "packages/splattie-widget"]
+	path = packages/splattie-widget
+	url = git@github.com:affromero/splattie-widget.git
