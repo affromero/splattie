@@ -62,10 +62,49 @@ export class SplatWidget extends HTMLElement {
       const src = this.getAttribute('src');
       if (!src) return;
 
-      const bonesUrl = this.getAttribute('bones') ?? undefined;
-      const weightsUrl = this.getAttribute('weights') ?? undefined;
+      let splatUrl = src;
+      let bonesUrl = this.getAttribute('bones') ?? undefined;
+      let weightsUrl = this.getAttribute('weights') ?? undefined;
+      let statesConfig: Partial<WidgetConfig> | undefined;
 
-      this.spark = await createSparkInstance(this, src, bgColor, bonesUrl, weightsUrl);
+      // Load .splattie bundle (ZIP with ply + bones + weights + states)
+      if (src.endsWith('.splattie')) {
+        const { default: JSZip } = await import('jszip');
+        const res = await fetch(src);
+        const zip = await JSZip.loadAsync(await res.arrayBuffer());
+
+        const plyFile = Object.keys(zip.files).find(f => f.endsWith('.ply'));
+        if (plyFile) {
+          const blob = await zip.file(plyFile)!.async('blob');
+          splatUrl = URL.createObjectURL(blob);
+        }
+
+        const bonesFile = Object.keys(zip.files).find(f => f.includes('bone_tree'));
+        if (bonesFile) {
+          const blob = await zip.file(bonesFile)!.async('blob');
+          bonesUrl = URL.createObjectURL(blob);
+        }
+
+        const weightsFile = Object.keys(zip.files).find(f => f.includes('lbs_weight'));
+        if (weightsFile) {
+          const blob = await zip.file(weightsFile)!.async('blob');
+          weightsUrl = URL.createObjectURL(blob);
+        }
+
+        const statesFile = Object.keys(zip.files).find(f => f.includes('states.json'));
+        if (statesFile) {
+          const text = await zip.file(statesFile)!.async('text');
+          statesConfig = JSON.parse(text);
+        }
+      }
+
+      if (statesConfig) {
+        const { mergeWithDefaults } = await import('./state/StateConfig');
+        this.config = mergeWithDefaults(statesConfig);
+        this._stateMachine = new StateMachine(this.config);
+      }
+
+      this.spark = await createSparkInstance(this, splatUrl, bgColor, bonesUrl, weightsUrl);
       this.events.attachClick(this);
       this.setupBlinkEdits();
       this.dispatchEvent(new CustomEvent('splatload', { bubbles: true }));

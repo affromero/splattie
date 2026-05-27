@@ -52,7 +52,18 @@ export async function createSparkInstance(
     const mesh = new SplatMesh({
       url: splatUrl,
       sphericalHarmonicsDegree: 0,
-      onLoad: () => resolve(mesh),
+      onLoad: () => {
+        // Auto-center camera on the loaded splat
+        const box = new THREE.Box3().setFromObject(mesh as unknown as THREE.Object3D);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        if (maxDim > 0) {
+          camera.position.set(center.x, center.y, center.z + maxDim * 2);
+          camera.lookAt(center);
+        }
+        resolve(mesh);
+      },
     } as Record<string, unknown>);
     scene.add(mesh);
   });
