@@ -191,8 +191,8 @@ export class SplatWidget extends HTMLElement {
     // Eyes (bones 3, 4) — cursor tracking, clamp NDC to ±1 then scale
     const clampedX = Math.max(-1, Math.min(1, this.cursor.ndcX));
     const clampedY = Math.max(-1, Math.min(1, this.cursor.ndcY));
-    const eyeYaw = clampedX * 0.1 * tracking.eyes;
-    const eyePitch = clampedY * 0.1 * tracking.eyes;
+    const eyeYaw = clampedX * 0.06 * tracking.eyes;
+    const eyePitch = clampedY * 0.04 * tracking.eyes;
     for (const eyeIdx of [3, 4]) {
       if (eyeIdx >= bones.length) continue;
       const q = new THREE.Quaternion();
