@@ -16,11 +16,18 @@
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   text-decoration: none;
   color: var(--color-text);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: lowercase;
+}
+
+.brandLogo {
+  opacity: 0.7;
 }
 
 .brand:hover {
@@ -54,4 +61,47 @@
 .linkActive {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
+}
+
+.linkDisabled {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+  cursor: default;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.badge {
+  font-size: 0.5625rem;
+  padding: 0.125rem 0.3125rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.themeToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-left: 0.5rem;
+}
+
+.themeToggle:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-active);
 }

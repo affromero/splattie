@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
+  * { margin: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { background: #0e0e14; display: flex; font-family: monospace; color: #888; overflow: hidden; }
+
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .main > splattie-widget { flex: 1; }
+
+  .panel {
+    width: 240px;
+    background: #12121a;
+    border-left: 1px solid #1e1e2a;
+    overflow-y: auto;
+    padding: 0.75rem;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+
+  .states { display: flex; gap: 2px; margin-bottom: 0.75rem; }
+  .state-btn {
+    flex: 1; padding: 0.35rem; background: #1e1e2a; border: 1px solid #2a2a3a;
+    color: #555; font: inherit; cursor: pointer; text-align: center; position: relative;
+  }
+  .state-btn.editing { color: #7eb8f0; border-color: #7eb8f0; }
+  .state-btn.live { box-shadow: 0 0 0 1px #60d080 inset; }
+  .state-btn.configured::after {
+    content: ''; position: absolute; top: 3px; right: 3px;
+    width: 5px; height: 5px; border-radius: 50%; background: #60d080;
+  }
+
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 0.6rem 0 0.15rem; cursor: pointer; user-select: none;
+  }
+  .section-header span { color: #555; font-size: 0.6rem; letter-spacing: 0.05em; text-transform: uppercase; }
+  .section-header .toggle { color: #444; font-size: 0.7rem; }
+  .section-body { overflow: hidden; }
+  .section-body.collapsed { display: none; }
+
+  .slider-group { margin: 0.3rem 0; }
+  .slider-top { display: flex; align-items: center; justify-content: space-between; }
+  .slider-top label { color: #666; font-size: 0.65rem; }
+  .slider-top .val-controls { display: flex; align-items: center; gap: 3px; }
+  .slider-top .val {
+    color: #7eb8f0; font-size: 0.65rem; min-width: 40px; text-align: right;
+    background: #1a1a24; padding: 1px 4px; border-radius: 2px;
+  }
+  .pm-btn {
+    width: 14px; height: 14px; background: #1e1e2a; border: 1px solid #333;
+    color: #555; font: 9px monospace; cursor: pointer; line-height: 12px;
+    text-align: center; padding: 0; flex-shrink: 0; border-radius: 2px;
+  }
+  .pm-btn:hover { color: #aaa; border-color: #555; }
+  .slider-group input[type=range] { width: 100%; accent-color: #7eb8f0; height: 12px; margin-top: 2px; }
+
+  .cam-sphere {
+    width: 100%; height: 80px; position: relative; margin: 4px 0;
+    background: #1a1a24; border-radius: 4px; overflow: hidden; cursor: crosshair;
+  }
+  .cam-sphere canvas { width: 100%; height: 100%; }
+  .cam-sphere-label { position: absolute; bottom: 2px; right: 4px; font-size: 0.5rem; color: #444; }
+
+  .easing-group { margin: 0.3rem 0; }
+  .easing-group label { color: #666; font-size: 0.65rem; }
+  .easing-group select {
+    width: 100%; margin-top: 2px; background: #1a1a24; border: 1px solid #2a2a3a;
+    color: #7eb8f0; font: inherit; font-size: 0.65rem; padding: 2px 4px; cursor: pointer;
+  }
+
+  .export-btn {
+    width: 100%; margin-top: 1rem; padding: 0.5rem;
+    background: #7eb8f0; border: none; color: #0e0e14;
+    font: inherit; font-weight: bold; cursor: pointer; font-size: 0.75rem;
+  }
+  .export-btn:hover { opacity: 0.9; }
+
+  @media (max-width: 600px) {
+    body { flex-direction: column; }
+    .panel { width: 100%; height: 40%; border-left: none; border-top: 1px solid #1e1e2a; }
+  }
+</style></head>
+<body>
+  <div class="main" id="main"></div>
+  <div class="panel" id="panel"></div>
+
+  <script src="/splattie-widget.cdn.js"></script>
+  <script type="module">
+    const params = new URLSearchParams(location.search);
+    const src = params.get('src');
+    const main = document.getElementById('main');
+    const panel = document.getElementById('panel');
+
+    if (!src) {
+      panel.textContent = 'No ?src= parameter';
+    }
+
+    const widget = document.createElement('splattie-widget');
+    widget.id = 'widget';
+    widget.setAttribute('background', '#0e0e14');
+    widget.setAttribute('editor-mode', '');
+    if (src) widget.setAttribute('src', src);
+    widget.style.flex = '1';
+    main.appendChild(widget);
+
+    let config = null;
+    let defaults = null;
+    let currentState = 'idle';
+    const configured = new Set();
+    const collapsed = new Set(['flame blendshapes', 'transition']);
+
+    widget.addEventListener('splatload', () => {
+      const wConfig = widget.config;
+      if (wConfig) {
+        config = JSON.parse(JSON.stringify(wConfig));
+      } else {
+        config = { version: 1, defaults: { camera: { theta: 0, phi: 75, radius: 0.5, fov: 60 } },
+          states: { idle: {}, hover: {}, click: {} }, transitions: {} };
+      }
+      defaults = JSON.parse(JSON.stringify(config));
+      currentState = Object.keys(config.states)[0] || 'idle';
+      configured.clear();
+      buildPanel();
+      setInterval(() => {
+        const live = widget._stateMachine?.activeStateName;
+        document.querySelectorAll('.state-btn').forEach(btn => {
+          btn.classList.toggle('live', btn.textContent === live);
+        });
+      }, 200);
+    });
+
+    function buildPanel() {
+      panel.innerHTML = '';
+
+      const statesDiv = document.createElement('div');
+      statesDiv.className = 'states';
+      const liveState = widget._stateMachine?.activeStateName;
+      for (const name of Object.keys(config.states)) {
+        const btn = document.createElement('button');
+        btn.className = 'state-btn' + (name === currentState ? ' editing' : '') + (name === liveState ? ' live' : '') + (configured.has(name) ? ' configured' : '');
+        btn.textContent = name;
+        btn.onclick = () => { currentState = name; buildPanel(); };
+        statesDiv.appendChild(btn);
+      }
+      panel.appendChild(statesDiv);
+
+      const state = config.states[currentState];
+      const def = defaults.states[currentState];
+
+      addSection('expression', () => {
+        if (!state.expression) state.expression = {};
+        if (!def.expression) def.expression = {};
+        const boneKeys = ['smile', 'mouthFrown', 'lipPucker', 'jawOpen', 'browRaiseL', 'browRaiseR', 'browFrownL', 'browFrownR', 'eyeSquint', 'cheekPuff', 'noseSneer', 'neckTilt', 'neckYaw', 'neckRoll', 'gazeX', 'gazeY'];
+        const ranges = { jawOpen: [0, 0.3, 0.005], neckTilt: [-0.3, 0.3, 0.005], neckYaw: [-0.3, 0.3, 0.005], neckRoll: [-0.3, 0.3, 0.005], gazeX: [-0.1, 0.1, 0.002], gazeY: [-0.05, 0.05, 0.001] };
+        for (const k of boneKeys) {
+          if (state.expression[k] === undefined) state.expression[k] = def.expression[k] || 0;
+          if (def.expression[k] === undefined) def.expression[k] = 0;
+          const [min, max, step] = ranges[k] || [0, 1, 0.01];
+          addSlider(k, state.expression, k, min, max, step, undefined, def.expression[k]);
+        }
+      });
+
+      addSection('ghost', () => {
+        addSlider('amplitude', state.ghost, 'amplitude', 0, 0.02, 0.0005, undefined, def.ghost.amplitude);
+        addSlider('frequency', state.ghost, 'frequency', 0, 2, 0.05, undefined, def.ghost.frequency);
+        addSlider('wobble', state.ghost, 'wobble', 0, 1, 0.02, undefined, def.ghost.wobble);
+      });
+
+      addSection('camera', () => {
+        addCameraSphere(state.camera, def.camera);
+        addSlider('radius', state.camera, 'radius', 0.1, 3, 0.01, undefined, def.camera.radius);
+        addSlider('fov', state.camera, 'fov', 20, 120, 0.5, undefined, def.camera.fov);
+      });
+
+      addSection('rotation', () => {
+        addSlider('pitch', state, 'rotation', -30, 30, 0.1, 0, def.rotation[0]);
+        addSlider('yaw', state, 'rotation', -30, 30, 0.1, 1, def.rotation[1]);
+        addSlider('roll', state, 'rotation', -30, 30, 0.1, 2, def.rotation[2]);
+      });
+
+      addSection('tracking', () => {
+        addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
+        addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
+      });
+
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'export-btn';
+      exportBtn.textContent = 'Download .splattie';
+      exportBtn.onclick = exportSplattie;
+      panel.appendChild(exportBtn);
+    }
+
+    function addSection(title, buildContent) {
+      const header = document.createElement('div');
+      header.className = 'section-header';
+      const label = document.createElement('span');
+      label.textContent = title;
+      const toggle = document.createElement('span');
+      toggle.className = 'toggle';
+      toggle.textContent = collapsed.has(title) ? '▸' : '▾';
+      header.appendChild(label);
+      header.appendChild(toggle);
+      header.onclick = () => { collapsed.has(title) ? collapsed.delete(title) : collapsed.add(title); buildPanel(); };
+      panel.appendChild(header);
+
+      const body = document.createElement('div');
+      body.className = 'section-body' + (collapsed.has(title) ? ' collapsed' : '');
+      panel.appendChild(body);
+      panel._currentBody = body;
+      buildContent();
+      delete panel._currentBody;
+    }
+
+    function getContainer() { return panel._currentBody || panel; }
+
+    function addCameraSphere(cam, defCam) {
+      const wrap = document.createElement('div');
+      wrap.className = 'cam-sphere';
+      const cvs = document.createElement('canvas');
+      cvs.width = 200; cvs.height = 80;
+      wrap.appendChild(cvs);
+      const lbl = document.createElement('div');
+      lbl.className = 'cam-sphere-label';
+      wrap.appendChild(lbl);
+
+      function draw() {
+        const ctx = cvs.getContext('2d');
+        const w = cvs.width, h = cvs.height, cx = w/2, cy = h/2, r = Math.min(cx, cy) - 8;
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+        ctx.strokeStyle = '#1e1e2a'; ctx.beginPath();
+        ctx.moveTo(cx-r, cy); ctx.lineTo(cx+r, cy); ctx.moveTo(cx, cy-r); ctx.lineTo(cx, cy+r); ctx.stroke();
+        const dotX = cx + (cam.theta/90)*r, dotY = cy - ((cam.phi-90)/90)*r;
+        ctx.fillStyle = '#7eb8f0'; ctx.beginPath(); ctx.arc(dotX, dotY, 5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(dotX, dotY, 2, 0, Math.PI*2); ctx.fill();
+        lbl.textContent = `θ ${cam.theta.toFixed(0)}° φ ${cam.phi.toFixed(0)}°`;
+      }
+
+      let dragging = false;
+      function updateFromMouse(e) {
+        const rect = cvs.getBoundingClientRect();
+        cam.theta = Math.max(-90, Math.min(90, ((e.clientX-rect.left)/rect.width - 0.5)*180));
+        cam.phi = Math.max(0, Math.min(180, (0.5-(e.clientY-rect.top)/rect.height)*180 + 90));
+        configured.add(currentState); draw(); applyConfig();
+      }
+      cvs.onpointerdown = (e) => { dragging = true; cvs.setPointerCapture(e.pointerId); updateFromMouse(e); };
+      cvs.onpointermove = (e) => { if (dragging) updateFromMouse(e); };
+      cvs.onpointerup = () => { dragging = false; };
+      cvs.ondblclick = () => { cam.theta = defCam.theta; cam.phi = defCam.phi; configured.add(currentState); draw(); applyConfig(); };
+      draw();
+      getContainer().appendChild(wrap);
+    }
+
+    function addSlider(label, obj, key, min, max, step, arrayIdx, defaultVal) {
+      const group = document.createElement('div');
+      group.className = 'slider-group';
+      const top = document.createElement('div');
+      top.className = 'slider-top';
+      const lbl = document.createElement('label');
+      lbl.textContent = label;
+      const controls = document.createElement('div');
+      controls.className = 'val-controls';
+      const minus = document.createElement('button'); minus.className = 'pm-btn'; minus.textContent = '−';
+      const val = document.createElement('span'); val.className = 'val';
+      const plus = document.createElement('button'); plus.className = 'pm-btn'; plus.textContent = '+';
+      controls.append(minus, val, plus);
+      top.append(lbl, controls);
+
+      const input = document.createElement('input');
+      input.type = 'range'; input.min = min; input.max = max; input.step = step;
+      const fmt = (v) => { const n = Number(v); return step < 0.005 ? n.toFixed(4) : step < 0.05 ? n.toFixed(3) : step < 0.5 ? n.toFixed(2) : n.toFixed(1); };
+      const getValue = () => arrayIdx !== undefined ? obj[key][arrayIdx] : obj[key];
+      const setValue = (v) => {
+        v = Math.max(parseFloat(min), Math.min(parseFloat(max), v));
+        if (arrayIdx !== undefined) obj[key][arrayIdx] = v; else obj[key] = v;
+        configured.add(currentState); input.value = v; val.textContent = fmt(v); applyConfig();
+      };
+      input.value = getValue(); val.textContent = fmt(getValue());
+      input.oninput = () => setValue(parseFloat(input.value));
+      minus.onclick = () => setValue(getValue() - step);
+      plus.onclick = () => setValue(getValue() + step);
+      input.ondblclick = () => { if (defaultVal !== undefined) setValue(defaultVal); };
+      group.append(top, input);
+      getContainer().appendChild(group);
+    }
+
+    function applyConfig() {
+      if (!widget._stateMachine) return;
+      widget._stateMachine.updateStates(JSON.parse(JSON.stringify(config.states)));
+    }
+
+    async function exportSplattie() {
+      const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+      if (!src) return;
+
+      const res = await fetch(src);
+      const originalZip = await JSZip.loadAsync(await res.arrayBuffer());
+      const newZip = new JSZip();
+
+      for (const [name, file] of Object.entries(originalZip.files)) {
+        if (name === 'states.json') continue;
+        newZip.file(name, await file.async('blob'));
+      }
+      newZip.file('states.json', JSON.stringify(config, null, 2));
+
+      const blob = await newZip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'avatar.splattie';
+      a.click();
+    }
+  </script>
+</body>
+</html>

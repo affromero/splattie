@@ -168,7 +168,15 @@ class LAMMethod:
                 torch.tensor([[focal, 0, focal, 0, focal, focal, 0, 0, 1]]).reshape(1, 1, 3, 3).float().to("cuda")
             )
             dummy_bg = torch.ones(1, 1, 3).to("cuda")
-            flame_params = {"betas": shape_param.unsqueeze(0).to("cuda")}
+            flame_params = {
+                "betas": shape_param.unsqueeze(0).to("cuda"),
+                "expr": torch.zeros(1, 100, device="cuda"),
+                "rotation": torch.zeros(1, 1, 3, device="cuda"),
+                "neck_pose": torch.zeros(1, 1, 3, device="cuda"),
+                "jaw_pose": torch.zeros(1, 1, 3, device="cuda"),
+                "eyes_pose": torch.zeros(1, 1, 6, device="cuda"),
+                "translation": torch.zeros(1, 1, 3, device="cuda"),
+            }
 
             res = model.infer_single_view(
                 image_in,

@@ -17,6 +17,21 @@
   --font-mono: var(--font-jetbrains-mono), monospace;
 }
 
+[data-theme="light"] {
+  --color-bg: #f5f5f7;
+  --color-surface: #ffffff;
+  --color-elevated: #e8e8ec;
+  --color-border: #d4d4da;
+  --color-border-active: #a0a0b0;
+  --color-text: #1a1a2e;
+  --color-text-muted: #6b6b7b;
+  --color-text-dim: #a0a0b0;
+  --color-primary: #3a7bd5;
+  --color-primary-hover: #2a5cb0;
+  --color-accent: #8b5cf6;
+  color-scheme: light;
+}
+
 *,
 *::before,
 *::after {
