@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SplatEdit, SplatEditSdf, SplatEditSdfType } from '@sparkjsdev/spark';
 import { CameraSphere } from './dimensions/CameraSphere';
 import { CursorTracking } from './dimensions/CursorTracking';
 import { GhostEffect } from './dimensions/GhostEffect';
@@ -28,6 +29,7 @@ export class SplatWidget extends HTMLElement {
   private flyReaction = 0;
   private config: WidgetConfig | null = null;
   private frameCount = 0;
+  private blinkEdit: { left: SplatEditSdf; right: SplatEditSdf; edit: SplatEdit } | null = null;
 
   static get observedAttributes(): string[] {
     return ['src', 'config', 'background', 'width', 'height', 'bones', 'weights'];
@@ -64,6 +66,7 @@ export class SplatWidget extends HTMLElement {
 
       this.spark = await createSparkInstance(this, src, bgColor, bonesUrl, weightsUrl);
       this.events.attachClick(this);
+      this.setupBlinkEdits();
       this.dispatchEvent(new CustomEvent('splatload', { bubbles: true }));
 
       this.startRenderLoop();
@@ -80,6 +83,37 @@ export class SplatWidget extends HTMLElement {
 
   setState(name: string): void {
     this.stateMachine?.transitionTo(name);
+  }
+
+  private setupBlinkEdits(): void {
+    if (!this.spark || this.spark.bones.length < 5) return;
+    const mesh = this.spark.splatMesh as unknown as THREE.Object3D & { edits: SplatEdit[] | null };
+
+    const leftEyePos = this.spark.bones[3].pos;
+    const rightEyePos = this.spark.bones[4].pos;
+
+    const leftSdf = new SplatEditSdf({
+      type: SplatEditSdfType.SPHERE,
+      radius: 0.015,
+    });
+    leftSdf.position.set(leftEyePos[0], leftEyePos[1], leftEyePos[2]);
+
+    const rightSdf = new SplatEditSdf({
+      type: SplatEditSdfType.SPHERE,
+      radius: 0.015,
+    });
+    rightSdf.position.set(rightEyePos[0], rightEyePos[1], rightEyePos[2]);
+
+    const edit = new SplatEdit({
+      sdfs: [leftSdf, rightSdf],
+      softEdge: 0.005,
+    });
+    edit.visible = false;
+
+    mesh.add(edit);
+    if (!mesh.edits) mesh.edits = [];
+    mesh.edits.push(edit);
+    this.blinkEdit = { left: leftSdf, right: rightSdf, edit };
   }
 
   private startRenderLoop(): void {
@@ -110,6 +144,19 @@ export class SplatWidget extends HTMLElement {
       // Dimension 2 + 5: Expressions + cursor tracking via SplatSkinning
       if (this.spark.skinning && this.spark.bones.length > 0) {
         this.applySkinning(this.spark.skinning, this.spark.bones, frame);
+      }
+
+      // Blink via SplatEdit — hide eye splats briefly
+      if (this.blinkEdit) {
+        const blink = this.autoBlink.getWeights();
+        const blinkVal = blink.eyeBlinkLeft ?? 0;
+        if (blinkVal > 0.01) {
+          this.blinkEdit.edit.visible = true;
+          this.blinkEdit.left.opacity = 1 - blinkVal;
+          this.blinkEdit.right.opacity = 1 - blinkVal;
+        } else {
+          this.blinkEdit.edit.visible = false;
+        }
       }
 
       // Render
