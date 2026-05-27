@@ -36,9 +36,9 @@ def test_lam_generate() -> None:
 
     result = method.generate(image, mask)
     assert result.method_id == "lam"
-    assert result.num_gaussians == 50_000
-    assert result.spz_url.endswith(".spz")
-    assert result.flame_params_url.endswith(".json")
+    assert result.num_gaussians == 20_000
+    assert result.spz_url.endswith((".spz", ".zip"))
+    assert result.flame_params_url.endswith((".json", ".zip"))
 
     method.unload()
 

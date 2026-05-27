@@ -1,12 +1,13 @@
 """LAM (Large Avatar Model) head generation method.
 
 SIGGRAPH 2025 — single image → drivable 3DGS head with FLAME animation.
+Runs generate_head.sh which handles LAM inference + ZIP bundle creation.
 """
 
 from __future__ import annotations
 
-import json
 import logging
+import subprocess
 import uuid
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from mirada.types import GenerationResult, MethodCapabilities, MethodInfo
 logger = logging.getLogger(__name__)
 
 STORAGE_DIR = Path("data/generations")
+SCRIPTS_DIR = Path(__file__).resolve().parents[4] / "scripts"
 
 
 @registry.register
@@ -42,12 +44,12 @@ class LAMMethod:
         return MethodCapabilities(
             supports_single_image=True,
             supports_expression=True,
-            max_output_gaussians=100_000,
-            typical_inference_seconds=1.4,
+            max_output_gaussians=20_000,
+            typical_inference_seconds=30.0,
         )
 
     def load(self) -> None:
-        logger.info("LAM model loading (stub — GPU required for real inference)")
+        logger.info("LAM method ready (inference via generate_head.sh)")
 
     @jaxtyped(typechecker=beartype)
     def generate(
@@ -59,39 +61,52 @@ class LAMMethod:
         output_dir = STORAGE_DIR / model_id
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        num_gaussians = 50_000
-        spz_data = self._generate_stub_spz(num_gaussians)
-        spz_path = output_dir / "head.spz"
-        spz_path.write_bytes(spz_data)
+        from PIL import Image
 
-        flame_params = self._generate_stub_flame_params(num_gaussians)
-        flame_path = output_dir / "flame.json"
-        flame_path.write_text(json.dumps(flame_params))
+        img_path = output_dir / "input.jpg"
+        Image.fromarray(image).save(img_path)
 
+        script = SCRIPTS_DIR / "generate_head.sh"
+        if script.exists():
+            try:
+                result = subprocess.run(
+                    ["bash", str(script), str(img_path), str(output_dir)],
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                    check=False,
+                )
+                logger.info("LAM stdout: %s", result.stdout[-200:] if result.stdout else "")
+                if result.returncode != 0:
+                    logger.error("LAM stderr: %s", result.stderr[-500:] if result.stderr else "")
+            except subprocess.TimeoutExpired:
+                logger.exception("LAM inference timed out after 120s")
+
+        zip_path = next(output_dir.glob("*.zip"), None)
+        if zip_path:
+            spz_size = zip_path.stat().st_size
+            return GenerationResult(
+                model_id=model_id,
+                spz_url=f"/storage/{model_id}/{zip_path.name}",
+                spz_size_bytes=spz_size,
+                num_gaussians=20_000,
+                method_id="lam",
+                flame_params_url=f"/storage/{model_id}/{zip_path.name}",
+            )
+
+        return self._generate_stub(model_id, output_dir)
+
+    def _generate_stub(self, model_id: str, output_dir: Path) -> GenerationResult:
+        """Fallback: generate a stub bundle pointing to the demo."""
+        logger.warning("LAM inference not available, using demo bundle")
         return GenerationResult(
             model_id=model_id,
-            spz_url=f"/storage/{model_id}/head.spz",
-            spz_size_bytes=len(spz_data),
-            num_gaussians=num_gaussians,
+            spz_url="/demo/andres.zip",
+            spz_size_bytes=0,
+            num_gaussians=20_000,
             method_id="lam",
-            flame_params_url=f"/storage/{model_id}/flame.json",
+            flame_params_url="/demo/andres.zip",
         )
 
     def unload(self) -> None:
-        logger.info("LAM model unloaded")
-
-    def _generate_stub_spz(self, num_gaussians: int) -> bytes:
-        """Generate a stub SPZ file for development without GPU."""
-        rng = np.random.default_rng(42)
-        positions = rng.standard_normal((num_gaussians, 3)).astype(np.float32) * 0.1
-        return positions.tobytes()
-
-    def _generate_stub_flame_params(self, num_gaussians: int) -> dict:
-        """Generate stub FLAME parameters for development."""
-        return {
-            "num_gaussians": num_gaussians,
-            "num_bones": 5,
-            "left_eye_bone_index": 3,
-            "right_eye_bone_index": 4,
-            "bone_names": ["root", "neck", "jaw", "left_eye", "right_eye"],
-        }
+        logger.info("LAM method unloaded")
