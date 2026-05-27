@@ -7,17 +7,20 @@
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 15 App Router, TypeScript strict, CSS Modules |
-| 3D Rendering | Spark 2.0 (@sparkjsdev/spark), Three.js, WebGL2 |
-| Segmentation | SAM 3 ONNX (client-side WebGPU) + server fallback |
-| Backend (GPU) | Python 3.11, FastAPI, uv + pyproject.toml |
+| 3D Rendering | LAM_WebRender (gaussian-splat-renderer-for-lam), WebGL |
+| Backend (GPU) | Python 3.10, FastAPI, uv + pyproject.toml |
 | Head Generation | LAM (SIGGRAPH 2025) — swappable via HeadGenerationMethod protocol |
-| Animation | FLAME LBS (client-side, no neural network) |
-| Compression | SPZ v4 (Niantic) — ~10x over PLY |
-| Deploy | Docker + Caddy + GitHub Actions SSH |
+| Animation | ARKit blendshapes via FLAME mesh (client-side, 60fps) |
+| Face Detection | readPixels after WebGL render (pixel-perfect) |
+| Compression | @playcanvas/splat-transform (PLY → SPZ) |
+| Deploy | Docker (CUDA) + Caddy + GitHub Actions SSH |
 
 ## Monorepo
 
-npm workspace: `apps/web/` (Next.js). Backend: `backend/` (Python, not an npm workspace).
+- `apps/web/` — Next.js frontend (npm workspace)
+- `backend/` — FastAPI GPU service (Python, NOT npm workspace)
+- `packages/lam-renderer/` — LAM_WebRender submodule (built with Vite)
+- `backend/vendor/LAM/` — LAM submodule
 
 ## Commands
 
@@ -39,7 +42,27 @@ cd backend
 uv sync
 uv run uvicorn mirada.api.app:create_app --factory --reload --port 8000
 uv run pytest
-uv run pre-commit run --all-files
+uv run ruff check src/ tests/
+```
+
+### Renderer
+
+```bash
+npm run build:renderer   # Build + patch + deploy to apps/web/public/demo/
+```
+
+### GPU Setup (on gcloud-h100)
+
+```bash
+cd backend
+bash scripts/setup-gpu.sh   # torch, CUDA extensions, LAM weights, Blender, FBX SDK
+```
+
+### Docker
+
+```bash
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## Key Rules
@@ -49,12 +72,13 @@ uv run pre-commit run --all-files
 3. **Server Components by default** — `'use client'` only for interactive
 4. **Python: uv only** — pip is FORBIDDEN
 5. **Swappable methods** — all head generation goes through HeadGenerationMethod protocol
-6. **SPZ compression** — all models compressed to <2MB before serving to client
-7. **Client-side animation** — FLAME LBS runs in browser, no server roundtrip for gaze
-8. **Port 4001** — dev and production
+6. **Client-side animation** — ARKit blendshapes run in browser, no server roundtrip
+7. **Port 4001** — frontend dev and production
+8. **Port 8000** — backend API
+9. **Renderer patches** — setExpression + readPixels injected via `scripts/build-renderer.sh`
 
 ## Design System
 
-- Background: `#0A0A0F` / Surface: `#12121A` / Elevated: `#1E1E2A`
-- Primary: `#60A5FA` (blue) / Accent: `#F59E0B` (amber)
+- Background: `#08080C` / Surface: `#0E0E14` / Elevated: `#16161F`
+- Primary: `#7EB8F0` / Accent: `#C4A0F0`
 - Fonts: Space Grotesk (heading/body) + JetBrains Mono (code)
