@@ -21,6 +21,8 @@ declare module '@mkkellogg/gaussian-splats-3d' {
     logLevel?: LogLevel;
     sharedMemoryForWorkers?: boolean;
     gpuAcceleratedSort?: boolean;
+    initialCameraPosition?: [number, number, number];
+    initialCameraLookAt?: [number, number, number];
     renderer?: unknown;
     camera?: unknown;
   }
@@ -28,6 +30,7 @@ declare module '@mkkellogg/gaussian-splats-3d' {
   export interface AddSceneOptions {
     showLoadingUI?: boolean;
     progressiveLoad?: boolean;
+    splatAlphaRemovalThreshold?: number;
     position?: [number, number, number];
     rotation?: [number, number, number, number];
     scale?: [number, number, number];

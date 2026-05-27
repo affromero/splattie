@@ -17,7 +17,6 @@ export function SplatViewer({ spzUrl = '/demo/andres.ply' }: SplatViewerProps) {
     const container = containerRef.current;
     if (!container) return;
     if (container.clientWidth === 0 || container.clientHeight === 0) {
-      setStatusMsg('waiting for layout...');
       setTimeout(() => initViewer(), 100);
       return;
     }
@@ -26,15 +25,15 @@ export function SplatViewer({ spzUrl = '/demo/andres.ply' }: SplatViewerProps) {
       setStatusMsg('loading viewer...');
       const GS = await import('@mkkellogg/gaussian-splats-3d');
 
-      setStatusMsg('creating viewer...');
       const viewer = new GS.Viewer({
         selfDrivenMode: true,
         useBuiltInControls: true,
         rootElement: container,
         sceneRevealMode: GS.SceneRevealMode.Instant,
-        logLevel: GS.LogLevel.Info,
+        logLevel: GS.LogLevel.None,
         sharedMemoryForWorkers: false,
-        gpuAcceleratedSort: true,
+        initialCameraPosition: [0, 0, 0.4],
+        initialCameraLookAt: [0, 0, 0],
       });
 
       viewerRef.current = viewer;
@@ -42,6 +41,7 @@ export function SplatViewer({ spzUrl = '/demo/andres.ply' }: SplatViewerProps) {
       setStatusMsg('loading model...');
       await viewer.addSplatScene(spzUrl, {
         showLoadingUI: false,
+        splatAlphaRemovalThreshold: 5,
       });
 
       setStatus('ready');
@@ -49,7 +49,6 @@ export function SplatViewer({ spzUrl = '/demo/andres.ply' }: SplatViewerProps) {
     } catch (err) {
       setStatus('error');
       setStatusMsg(err instanceof Error ? err.message : String(err));
-      console.error('SplatViewer error:', err);
     }
   }, [spzUrl]);
 
@@ -60,7 +59,7 @@ export function SplatViewer({ spzUrl = '/demo/andres.ply' }: SplatViewerProps) {
         const viewer = viewerRef.current as { dispose?: () => void } | null;
         viewer?.dispose?.();
       } catch {
-        // ignore dispose errors
+        // ignore
       }
       viewerRef.current = null;
     };
