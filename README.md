@@ -107,7 +107,7 @@ Open [http://localhost:4002](http://localhost:4002).
 ```bash
 cd backend
 bash scripts/setup-gpu.sh
-uv run uvicorn mirada.api.app:create_app --factory --port 8000
+uv run uvicorn splattie.api.app:create_app --factory --port 8000
 ```
 
 ### Export Expression Basis
@@ -125,7 +125,7 @@ python3 scripts/export_expression_basis.py \
 splattie/
 ├── apps/web/                     # Next.js 15 frontend (port 4001)
 ├── backend/                      # FastAPI GPU service (port 8000)
-│   ├── src/mirada/               # API routes, LAM method, segmentation
+│   ├── src/splattie/             # API routes, LAM method, segmentation
 │   ├── vendor/LAM/               # LAM submodule (SIGGRAPH 2025, forked)
 │   └── scripts/
 │       ├── setup-gpu.sh          # GPU environment setup

@@ -1,4 +1,4 @@
-"""Shared Pydantic models for the Mirada API."""
+"""Shared Pydantic models for the Splattie API."""
 
 from pydantic import BaseModel
 

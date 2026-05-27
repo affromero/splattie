@@ -18,8 +18,8 @@ import numpy.typing as npt
 from beartype import beartype
 from jaxtyping import Bool, UInt8, jaxtyped
 
-from mirada.methods.registry import registry
-from mirada.types import GenerationResult, MethodCapabilities, MethodInfo
+from splattie.methods.registry import registry
+from splattie.types import GenerationResult, MethodCapabilities, MethodInfo
 
 logger = logging.getLogger(__name__)
 

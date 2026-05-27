@@ -8,9 +8,9 @@ import numpy as np
 from fastapi import APIRouter, UploadFile
 from PIL import Image
 
-from mirada.segmentation.sam3 import segment_head
-from mirada.storage.local import save_upload
-from mirada.types import SegmentationResult
+from splattie.segmentation.sam3 import segment_head
+from splattie.storage.local import save_upload
+from splattie.types import SegmentationResult
 
 router = APIRouter()
 

@@ -1,4 +1,4 @@
-# ── Mirada GPU Backend ────────────────────────────────────────────────
+# ── Splattie GPU Backend ────────────────────────────────────────────────
 # nvidia/cuda 12.1.1 + Python 3.10 + uv + Blender 4.2 + FBX SDK + LAM
 # ──────────────────────────────────────────────────────────────────────
 
@@ -114,4 +114,4 @@ RUN uv pip install -e /app/backend --no-build-isolation
 RUN mkdir -p /app/backend/data/uploads /app/backend/data/generations
 
 EXPOSE 8000
-CMD ["uvicorn", "mirada.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "splattie.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

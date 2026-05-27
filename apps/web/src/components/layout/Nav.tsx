@@ -10,7 +10,7 @@ export function Nav() {
   return (
     <nav className={styles.nav}>
       <Link href="/" className={styles.brand}>
-        mirada
+        splattie
       </Link>
       <div className={styles.links}>
         <Link

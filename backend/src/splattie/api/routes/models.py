@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from mirada.methods.registry import registry
+from splattie.methods.registry import registry
 
 router = APIRouter()
 

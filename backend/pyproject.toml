@@ -24,7 +24,7 @@ dependencies = [
   "python-multipart>=0.0.9",
   "uvicorn[standard]>=0.30.0",
 ]
-name = "mirada"
+name = "splattie"
 requires-python = ">=3.10"
 version = "0.1.0"
 
@@ -45,7 +45,7 @@ gpu = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mirada"]
+packages = ["src/splattie"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

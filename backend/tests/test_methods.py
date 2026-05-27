@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from mirada.methods.base import HeadGenerationMethod
-from mirada.methods.lam.method import LAMMethod
-from mirada.methods.registry import registry
+from splattie.methods.base import HeadGenerationMethod
+from splattie.methods.lam.method import LAMMethod
+from splattie.methods.registry import registry
 
 
 def test_lam_implements_protocol() -> None:

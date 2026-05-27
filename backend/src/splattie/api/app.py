@@ -9,14 +9,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 # Force LAM method registration on import
-import mirada.methods.lam.method  # noqa: F401
-from mirada.api.routes import generate, health, models, segment
+import splattie.methods.lam.method  # noqa: F401
+from splattie.api.routes import generate, health, models, segment
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
-        title="Mirada API",
+        title="Splattie API",
         description="3DGS head generation from a single photo",
         version="0.1.0",
     )

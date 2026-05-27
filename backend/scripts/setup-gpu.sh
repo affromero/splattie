@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== Mirada GPU Backend Setup ==="
+echo "=== Splattie GPU Backend Setup ==="
 echo "Requires: CUDA 12.x, Python 3.10+"
 
 cd "$(dirname "$0")/.."
@@ -49,4 +49,4 @@ print('Weights ready')
 "
 
 echo "=== Setup complete ==="
-echo "Run: uv run uvicorn mirada.api.app:create_app --factory --port 8000"
+echo "Run: uv run uvicorn splattie.api.app:create_app --factory --port 8000"

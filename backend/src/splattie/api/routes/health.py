@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from mirada.methods.registry import registry
+from splattie.methods.registry import registry
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ def _gpu_status() -> dict:
     vram_total_mb = torch.cuda.get_device_properties(0).total_mem // (1024 * 1024)
     vram_used_mb = torch.cuda.memory_allocated(0) // (1024 * 1024)
 
-    from mirada.methods.lam.method import _lam_model
+    from splattie.methods.lam.method import _lam_model
 
     return {
         "available": True,

@@ -33,7 +33,7 @@
   "author": "Andres Romero <me@afromero.co>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/affromero/mirada.git",
+    "url": "git+https://github.com/affromero/splattie.git",
     "directory": "packages/splattie-widget"
   },
   "license": "MIT",

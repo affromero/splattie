@@ -8,7 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from jaxtyping import Bool, UInt8
 
-from mirada.types import GenerationResult, MethodCapabilities, MethodInfo
+from splattie.types import GenerationResult, MethodCapabilities, MethodInfo
 
 
 @runtime_checkable

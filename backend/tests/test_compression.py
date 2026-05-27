@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mirada.compression.spz import compress_ply_to_spz
+from splattie.compression.spz import compress_ply_to_spz
 
 
 def test_compress_fallback(tmp_path: Path) -> None:

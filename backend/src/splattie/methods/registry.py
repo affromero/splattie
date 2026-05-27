@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mirada.types import MethodInfo
+from splattie.types import MethodInfo
 
 if TYPE_CHECKING:
-    from mirada.methods.base import HeadGenerationMethod
+    from splattie.methods.base import HeadGenerationMethod
 
 
 class MethodRegistry:

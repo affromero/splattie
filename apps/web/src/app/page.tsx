@@ -7,7 +7,7 @@ export default function Home() {
     <main className={styles.page}>
       <section className={styles.hero}>
         <Image src="/logo.svg" alt="" width={64} height={60} className={styles.logo} />
-        <h1 className={styles.title}>Mirada</h1>
+        <h1 className={styles.title}>Splattie</h1>
         <p className={styles.subtitle}>
           A 3D head from a single photo. Eyes that follow you.
         </p>

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from PIL import Image
 
-from mirada.methods.registry import registry
+from splattie.methods.registry import registry
 
 router = APIRouter()
 

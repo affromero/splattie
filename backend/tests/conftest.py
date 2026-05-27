@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from mirada.api.app import create_app
+from splattie.api.app import create_app
 
 
 @pytest.fixture

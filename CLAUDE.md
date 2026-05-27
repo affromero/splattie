@@ -1,4 +1,4 @@
-# CLAUDE.md — Mirada
+# CLAUDE.md — Splattie
 
 > Upload a photo. Get a 3D head whose eyes follow your cursor.
 
@@ -40,7 +40,7 @@ npm run ci           # lint + type-check + test + build
 ```bash
 cd backend
 uv sync
-uv run uvicorn mirada.api.app:create_app --factory --reload --port 8000
+uv run uvicorn splattie.api.app:create_app --factory --reload --port 8000
 uv run pytest
 uv run ruff check src/ tests/
 ```
