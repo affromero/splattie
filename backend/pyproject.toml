@@ -57,6 +57,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 ignore = [
+  "ANN202",
   "ANN401",
   "ARG002",
   "BLE001",
@@ -78,6 +79,7 @@ ignore = [
   "PLC0415",
   "PLR0913",
   "PLR2004",
+  "PLW0603",
   "S603",
   "S607",
   "T201",
