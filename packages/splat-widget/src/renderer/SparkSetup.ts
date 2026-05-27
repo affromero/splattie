@@ -176,7 +176,7 @@ export async function createSparkInstance(
     const sigmaByBone = new Map<number, Sigma3>();
     for (const vb of virtualBones) {
       sigmaByBone.set(vb.idx, mouthBoneNames.has(vb.name)
-        ? [0.035, 0.015, 0.035]
+        ? [0.035, 0.02, 0.035]
         : [0.02, 0.02, 0.02]);
     }
 
@@ -188,7 +188,17 @@ export async function createSparkInstance(
         const px = splatPositions[i * 3];
         const py = splatPositions[i * 3 + 1];
         const pz = splatPositions[i * 3 + 2];
+        const jawW = origWeights[2] ?? 0;
+        const eyeLW = origWeights[3] ?? 0;
+        const eyeRW = origWeights[4] ?? 0;
+        const eyeW = Math.max(eyeLW, eyeRW);
+
         for (const vb of virtualBones) {
+          if (vb.name.startsWith('brow') && eyeW > 0.35) continue;
+          if (vb.name.startsWith('mouth') && jawW < 0.15) continue;
+          if (vb.name.startsWith('cheek') && jawW < 0.1 && eyeW > 0.3) continue;
+          if (vb.name === 'noseBridge' && eyeW > 0.4) continue;
+
           const dx = px - vb.pos[0], dy = py - vb.pos[1], dz = pz - vb.pos[2];
           const [sx, sy, sz] = sigmaByBone.get(vb.idx) ?? [0.02, 0.02, 0.02];
           const nd2 = (dx * dx) / (2 * sx * sx) + (dy * dy) / (2 * sy * sy) + (dz * dz) / (2 * sz * sz);
