@@ -45,16 +45,25 @@
   .section-body { overflow: hidden; }
   .section-body.collapsed { display: none; }
 
-  .slider-row { display: flex; align-items: center; gap: 0.25rem; margin: 0.15rem 0; }
-  .slider-row label { width: 52px; color: #666; flex-shrink: 0; font-size: 0.65rem; }
-  .slider-row input[type=range] { flex: 1; accent-color: #7eb8f0; height: 14px; }
-  .slider-row .val { width: 36px; text-align: right; color: #555; font-size: 0.6rem; }
+  .slider-group { margin: 0.3rem 0; }
+  .slider-top { display: flex; align-items: center; justify-content: space-between; }
+  .slider-top label { color: #666; font-size: 0.65rem; }
+  .slider-top .val-controls {
+    display: flex; align-items: center; gap: 3px;
+  }
+  .slider-top .val {
+    color: #7eb8f0; font-size: 0.65rem; min-width: 40px; text-align: right;
+    background: #1a1a24; padding: 1px 4px; border-radius: 2px;
+  }
   .pm-btn {
-    width: 16px; height: 16px; background: #1e1e2a; border: 1px solid #333;
-    color: #666; font: 10px monospace; cursor: pointer; line-height: 14px;
-    text-align: center; padding: 0; flex-shrink: 0;
+    width: 14px; height: 14px; background: #1e1e2a; border: 1px solid #333;
+    color: #555; font: 9px monospace; cursor: pointer; line-height: 12px;
+    text-align: center; padding: 0; flex-shrink: 0; border-radius: 2px;
   }
   .pm-btn:hover { color: #aaa; border-color: #555; }
+  .slider-group input[type=range] {
+    width: 100%; accent-color: #7eb8f0; height: 12px; margin-top: 2px;
+  }
 
   .export-btn {
     width: 100%; margin-top: 1rem; padding: 0.5rem;
@@ -199,15 +208,35 @@
     }
 
     function addSlider(label, obj, key, min, max, step, arrayIdx, defaultVal) {
-      const row = document.createElement('div');
-      row.className = 'slider-row';
+      const group = document.createElement('div');
+      group.className = 'slider-group';
+
+      const top = document.createElement('div');
+      top.className = 'slider-top';
 
       const lbl = document.createElement('label');
       lbl.textContent = label;
 
+      const controls = document.createElement('div');
+      controls.className = 'val-controls';
+
       const minus = document.createElement('button');
       minus.className = 'pm-btn';
       minus.textContent = '−';
+
+      const val = document.createElement('span');
+      val.className = 'val';
+
+      const plus = document.createElement('button');
+      plus.className = 'pm-btn';
+      plus.textContent = '+';
+
+      controls.appendChild(minus);
+      controls.appendChild(val);
+      controls.appendChild(plus);
+
+      top.appendChild(lbl);
+      top.appendChild(controls);
 
       const input = document.createElement('input');
       input.type = 'range';
@@ -215,12 +244,13 @@
       input.max = max;
       input.step = step;
 
-      const plus = document.createElement('button');
-      plus.className = 'pm-btn';
-      plus.textContent = '+';
-
-      const val = document.createElement('span');
-      val.className = 'val';
+      const fmt = (v) => {
+        const n = Number(v);
+        if (step < 0.005) return n.toFixed(4);
+        if (step < 0.05) return n.toFixed(3);
+        if (step < 0.5) return n.toFixed(2);
+        return n.toFixed(1);
+      };
 
       const getValue = () => arrayIdx !== undefined ? obj[key][arrayIdx] : obj[key];
       const setValue = (v) => {
@@ -229,24 +259,21 @@
         else obj[key] = v;
         configured.add(currentState);
         input.value = v;
-        val.textContent = v.toFixed(step < 0.01 ? 4 : step < 0.1 ? 3 : 2);
+        val.textContent = fmt(v);
         applyConfig();
       };
 
       input.value = getValue();
-      val.textContent = Number(getValue()).toFixed(step < 0.01 ? 4 : step < 0.1 ? 3 : 2);
+      val.textContent = fmt(getValue());
 
       input.oninput = () => setValue(parseFloat(input.value));
       minus.onclick = () => setValue(getValue() - step);
       plus.onclick = () => setValue(getValue() + step);
       input.ondblclick = () => { if (defaultVal !== undefined) setValue(defaultVal); };
 
-      row.appendChild(lbl);
-      row.appendChild(minus);
-      row.appendChild(input);
-      row.appendChild(plus);
-      row.appendChild(val);
-      getContainer().appendChild(row);
+      group.appendChild(top);
+      group.appendChild(input);
+      getContainer().appendChild(group);
     }
 
     function applyConfig() {
