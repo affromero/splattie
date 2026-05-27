@@ -16,11 +16,26 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Splattie — 3D heads that follow your gaze',
-  description: 'Upload a photo. Get a 3D head whose eyes follow you.',
+  title: 'Splattie - Interactive 3D avatars from a single photo',
+  description: 'Turn any portrait into a living 3D avatar for your website. Eyes follow visitors. One line of HTML.',
+  metadataBase: new URL('https://splattie.app'),
   icons: {
     icon: '/favicon.svg',
     apple: '/logo.svg',
+  },
+  openGraph: {
+    title: 'Splattie - Interactive 3D avatars from a single photo',
+    description: 'Turn any portrait into a living 3D avatar for your website. Eyes follow visitors. One line of HTML.',
+    url: 'https://splattie.app',
+    siteName: 'Splattie',
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Splattie - Interactive 3D avatars' }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Splattie - Interactive 3D avatars from a single photo',
+    description: 'Turn any portrait into a living 3D avatar. Eyes follow visitors. One line of HTML.',
+    images: ['/og.png'],
   },
 };
 

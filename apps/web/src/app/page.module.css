@@ -11,8 +11,14 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 4rem 2rem 0;
+  padding: 5rem 2rem 0;
   gap: 1.5rem;
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .title {
@@ -88,19 +94,21 @@
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   cursor: pointer;
-  transition: border-color 0.2s, transform 0.2s;
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
   padding: 0;
   width: 100%;
 }
 
 .card:hover {
   border-color: var(--color-border-active);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .cardActive {
   border-color: var(--color-primary);
   transform: none;
+  box-shadow: 0 0 0 1px var(--color-primary), 0 4px 16px rgba(126, 184, 240, 0.15);
 }
 
 .cardActive:hover {
@@ -112,6 +120,11 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.3s ease;
+}
+
+.card:hover .cardImage {
+  transform: scale(1.03);
 }
 
 .credit {
@@ -135,6 +148,12 @@
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .editorHeader {

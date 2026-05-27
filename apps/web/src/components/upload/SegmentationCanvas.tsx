@@ -80,7 +80,7 @@ export function SegmentationCanvas({ imageUrl, onSegmented }: SegmentationCanvas
       <p className={styles.hint}>
         {points.length === 0
           ? 'Click on the head to segment it'
-          : `${points.length} point(s) selected — click to refine`}
+          : `${points.length} point(s) selected - click to refine`}
       </p>
     </div>
   );

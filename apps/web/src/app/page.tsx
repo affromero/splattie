@@ -91,7 +91,7 @@ export default function Home() {
           <div className={styles.editorSection} ref={editorRef}>
             <div className={styles.editorHeader}>
               <span className={styles.editorLabel}>
-                Editor &mdash; {activeFace.photographer}
+                Editor - {activeFace.photographer}
               </span>
               <button className={styles.editorClose} onClick={() => setActiveFace(null)}>
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
