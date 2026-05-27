@@ -1,6 +1,3 @@
 [submodule "backend/vendor/LAM"]
 	path = backend/vendor/LAM
 	url = git@github.com:affromero/LAM.git
-[submodule "packages/lam-renderer"]
-	path = packages/lam-renderer
-	url = git@github.com:affromero/LAM_WebRender.git
