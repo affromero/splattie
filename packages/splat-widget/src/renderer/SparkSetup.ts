@@ -194,7 +194,7 @@ export async function createSparkInstance(
         const eyeW = Math.max(eyeLW, eyeRW);
 
         for (const vb of virtualBones) {
-          if (vb.name.startsWith('brow') && eyeW > 0.35) continue;
+          if (vb.name.startsWith('brow') && (eyeW > 0.12 || py < vb.pos[1] - 0.005)) continue;
           if (vb.name.startsWith('mouth') && jawW < 0.15) continue;
           if (vb.name.startsWith('cheek') && jawW < 0.1 && eyeW > 0.3) continue;
           if (vb.name === 'noseBridge' && eyeW > 0.4) continue;
