@@ -3,4 +3,4 @@
 	url = https://github.com/aigc3d/LAM.git
 [submodule "packages/lam-renderer"]
 	path = packages/lam-renderer
-	url = https://github.com/aigc3d/LAM_WebRender.git
+	url = https://github.com/affromero/LAM_WebRender.git
