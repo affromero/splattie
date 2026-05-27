@@ -5,19 +5,6 @@
 
   .main { flex: 1; display: flex; flex-direction: column; }
   .main > splat-widget { flex: 1; }
-  .preview-bar {
-    height: 130px; background: #08080c; border-top: 2px solid #2a2a3a;
-    display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.5rem 0.5rem 0;
-  }
-  .preview-bar .preview-label {
-    color: #333; font-size: 0.5rem; writing-mode: vertical-rl;
-    text-transform: uppercase; letter-spacing: 0.15em; padding: 0 0.25rem;
-    border-right: 1px solid #1e1e2a;
-  }
-  .preview-bar splat-widget {
-    flex: 1; height: 100%;
-    border: 1px solid #1e1e2a; border-radius: 4px;
-  }
 
   .panel {
     width: 260px;
@@ -33,7 +20,8 @@
     flex: 1; padding: 0.35rem; background: #1e1e2a; border: 1px solid #2a2a3a;
     color: #555; font: inherit; cursor: pointer; text-align: center; position: relative;
   }
-  .state-btn.active { color: #7eb8f0; border-color: #7eb8f0; }
+  .state-btn.editing { color: #7eb8f0; border-color: #7eb8f0; }
+  .state-btn.live { box-shadow: 0 0 0 1px #60d080 inset; }
   .state-btn.configured::after {
     content: ''; position: absolute; top: 3px; right: 3px;
     width: 5px; height: 5px; border-radius: 50%; background: #60d080;
@@ -106,24 +94,12 @@
   <div class="main">
     <splat-widget
       id="widget"
-      editor-mode
       src="/andres.ply"
       bones="/bone_tree.json"
       weights="/lbs_weight_20k.json"
       config="/states.json"
       background="#0e0e14"
     ></splat-widget>
-    <div class="preview-bar">
-      <span class="preview-label">live</span>
-      <splat-widget
-        id="preview"
-        src="/andres.ply"
-        bones="/bone_tree.json"
-        weights="/lbs_weight_20k.json"
-        config="/states.json"
-        background="#0e0e14"
-      ></splat-widget>
-    </div>
   </div>
 
   <div class="panel" id="panel"></div>
@@ -133,7 +109,6 @@
     import * as JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
     const widget = document.getElementById('widget');
-    const preview = document.getElementById('preview');
     const panel = document.getElementById('panel');
 
     let config = null;
@@ -145,9 +120,14 @@
     widget.addEventListener('splatload', async () => {
       config = await fetch('/states.json').then(r => r.json());
       defaults = JSON.parse(JSON.stringify(config));
-      widget._stateMachine.frozen = true;
-      widget._stateMachine.forceState('idle');
       buildPanel();
+
+      setInterval(() => {
+        const live = widget._stateMachine?.activeStateName;
+        document.querySelectorAll('.state-btn').forEach(btn => {
+          btn.classList.toggle('live', btn.textContent === live);
+        });
+      }, 200);
     });
 
     function buildPanel() {
@@ -155,15 +135,17 @@
 
       const statesDiv = document.createElement('div');
       statesDiv.className = 'states';
+      const liveState = widget._stateMachine?.activeStateName;
       for (const name of Object.keys(config.states)) {
         const btn = document.createElement('button');
-        btn.className = 'state-btn' + (name === currentState ? ' active' : '') + (configured.has(name) ? ' configured' : '');
+        btn.className = 'state-btn'
+          + (name === currentState ? ' editing' : '')
+          + (name === liveState ? ' live' : '')
+          + (configured.has(name) ? ' configured' : '');
         btn.textContent = name;
         btn.onclick = () => {
           currentState = name;
-          widget._stateMachine?.forceState(name);
           buildPanel();
-          applyConfig();
         };
         statesDiv.appendChild(btn);
       }
@@ -457,17 +439,7 @@
 
     function applyConfig() {
       if (!widget._stateMachine) return;
-      const state = config.states[currentState];
-      const frame = widget._stateMachine.currentFrame;
-      Object.assign(frame.ghost, state.ghost);
-      Object.assign(frame.camera, state.camera);
-      frame.rotation = [...state.rotation];
-      Object.assign(frame.tracking, state.tracking);
-      if (state.expression) Object.assign(frame.expression, state.expression);
-
-      if (preview?._stateMachine) {
-        preview._stateMachine.updateStates(JSON.parse(JSON.stringify(config.states)));
-      }
+      widget._stateMachine.updateStates(JSON.parse(JSON.stringify(config.states)));
     }
 
     async function exportSplattie() {
