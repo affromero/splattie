@@ -42,9 +42,12 @@ export class StateMachine {
     this.states = states;
     if (this.states[this.currentName]) {
       this.fromState = this.states[this.currentName];
-      if (!this.targetName) {
-        this.currentFrame = { ...this.fromState };
-      }
+    }
+    if (this.targetName && this.states[this.targetName]) {
+      this.targetState = this.states[this.targetName];
+    }
+    if (!this.targetName && this.states[this.currentName]) {
+      this.currentFrame = { ...this.states[this.currentName] };
     }
   }
 
