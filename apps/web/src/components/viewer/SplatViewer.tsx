@@ -25,14 +25,15 @@ export function SplatViewer({ spzUrl = '/demo/andres.ply' }: SplatViewerProps) {
       setStatusMsg('loading viewer...');
       const GS = await import('@mkkellogg/gaussian-splats-3d');
 
+      setStatusMsg('creating viewer...');
       const viewer = new GS.Viewer({
         selfDrivenMode: true,
         useBuiltInControls: true,
         rootElement: container,
         sceneRevealMode: GS.SceneRevealMode.Instant,
-        logLevel: GS.LogLevel.None,
+        logLevel: GS.LogLevel.Debug,
         sharedMemoryForWorkers: false,
-        initialCameraPosition: [0, 0, 0.4],
+        initialCameraPosition: [0, 0.02, 0.5],
         initialCameraLookAt: [0, 0, 0],
       });
 
@@ -41,7 +42,10 @@ export function SplatViewer({ spzUrl = '/demo/andres.ply' }: SplatViewerProps) {
       setStatusMsg('loading model...');
       await viewer.addSplatScene(spzUrl, {
         showLoadingUI: false,
-        splatAlphaRemovalThreshold: 5,
+        splatAlphaRemovalThreshold: 1,
+        position: [0, 0, 0],
+        rotation: [0, 0, 0, 1],
+        scale: [1, 1, 1],
       });
 
       setStatus('ready');
@@ -49,6 +53,7 @@ export function SplatViewer({ spzUrl = '/demo/andres.ply' }: SplatViewerProps) {
     } catch (err) {
       setStatus('error');
       setStatusMsg(err instanceof Error ? err.message : String(err));
+      console.error('SplatViewer init error:', err);
     }
   }, [spzUrl]);
 
