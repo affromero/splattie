@@ -49,6 +49,9 @@ export function Nav() {
         splattie
       </Link>
       <div className={styles.links}>
+        <a href="/editor.html" className={styles.link}>
+          editor
+        </a>
         {SELF_HOST ? (
           <Link href="/create" className={styles.link}>
             create

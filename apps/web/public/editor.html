@@ -29,6 +29,38 @@
     width: 5px; height: 5px; border-radius: 50%; background: #60d080;
   }
 
+  .copy-row { margin-bottom: 0.75rem; }
+  .copy-btn {
+    width: 100%; padding: 0.3rem; background: #1a1a24; border: 1px solid #2a2a3a;
+    color: #777; font: inherit; font-size: 0.62rem; cursor: pointer; border-radius: 2px;
+    letter-spacing: 0.02em;
+  }
+  .copy-btn:hover { color: #7eb8f0; border-color: #7eb8f0; }
+
+  .dropzone {
+    flex: 1; margin: 1.5rem; border: 1px dashed #2a2a3a; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    color: #555; text-align: center; transition: border-color 0.15s, color 0.15s;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: #7eb8f0; }
+  .dz-title { font-size: 0.8rem; color: #888; margin-bottom: 0.3rem; }
+  .dropzone:hover .dz-title, .dropzone.drag .dz-title { color: #7eb8f0; }
+  .dz-sub { font-size: 0.65rem; }
+  .dz-btn {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; background: #7eb8f0; border: none;
+    color: #0e0e14; font: inherit; font-weight: bold; font-size: 0.7rem;
+    cursor: pointer; border-radius: 3px;
+  }
+  .dz-btn:hover { opacity: 0.9; }
+
+  .stage-msg {
+    flex: 1; margin: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;
+    align-items: center; justify-content: center; text-align: center;
+    color: #888; font-size: 0.8rem; padding: 1rem;
+  }
+  .stage-msg.error { color: #f0a0a0; }
+  .stage-msg .stage-text { max-width: 340px; line-height: 1.5; }
+
   .section-header {
     display: flex; align-items: center; justify-content: space-between;
     margin: 0.6rem 0 0.15rem; cursor: pointer; user-select: none;
@@ -75,6 +107,15 @@
   }
   .export-btn:hover { opacity: 0.9; }
 
+  .footer-actions { display: flex; gap: 6px; margin-top: 1rem; }
+  .secondary-btn {
+    flex: 1; padding: 0.5rem; background: #1a1a24; border: 1px solid #2a2a3a;
+    color: #888; font: inherit; font-size: 0.7rem; cursor: pointer; border-radius: 2px;
+  }
+  .secondary-btn:hover { color: #aaa; border-color: #555; }
+  .secondary-btn.danger:hover { color: #f0a0a0; border-color: #5a3030; }
+  .footer-actions + .export-btn { margin-top: 6px; }
+
   @media (max-width: 600px) {
     body { flex-direction: column; }
     .panel { width: 100%; height: 40%; border-left: none; border-top: 1px solid #1e1e2a; }
@@ -86,35 +127,90 @@
 
   <script src="/splattie-widget.cdn.js"></script>
   <script type="module">
+    import { inspectSplattie } from '/splattie-format.js';
+
     const params = new URLSearchParams(location.search);
-    const src = params.get('src');
     const main = document.getElementById('main');
     const panel = document.getElementById('panel');
 
-    if (!src) {
-      panel.textContent = 'No ?src= parameter';
-    }
-
-    // Editor is cursor-driven by design. Do NOT add `editor-mode` here, and do
-    // NOT force a state transition on tab click. The state tab only chooses
-    // which state's sliders are shown for editing - the widget's actual state
-    // follows the cursor (hover -> hover, click -> click, leave -> idle). Edits
-    // become visible only when the widget is in the state being edited.
-    const widget = document.createElement('splattie-widget');
-    widget.id = 'widget';
-    widget.setAttribute('background', '#0e0e14');
-    widget.setAttribute('expression-basis', '/demos/expression_basis.bin');
-    if (src) widget.setAttribute('src', src);
-    widget.style.flex = '1';
-    main.appendChild(widget);
-
+    let currentSrc = params.get('src');
+    let widget = null;
+    let liveInterval = null;
     let config = null;
     let defaults = null;
     let currentState = 'idle';
     const configured = new Set();
     const collapsed = new Set(['flame blendshapes', 'transition']);
 
-    widget.addEventListener('splatload', () => {
+    // Editor is cursor-driven by design. Do NOT add `editor-mode` here, and do
+    // NOT force a state transition on tab click. The state tab only chooses
+    // which state's sliders are shown for editing - the widget's actual state
+    // follows the cursor (hover -> hover, click -> click, leave -> idle). Edits
+    // become visible only when the widget is in the state being edited.
+    //
+    // The widget only reads `src` in connectedCallback, so loading a new file
+    // means recreating the element rather than mutating the attribute.
+    function clearStage() {
+      if (liveInterval) { clearInterval(liveInterval); liveInterval = null; }
+      if (widget) { widget.remove(); widget = null; }
+      main.innerHTML = '';
+    }
+
+    function showStageMessage(text, isError) {
+      clearStage();
+      const box = document.createElement('div');
+      box.className = 'stage-msg' + (isError ? ' error' : '');
+      const line = document.createElement('div');
+      line.className = 'stage-text';
+      line.textContent = text;
+      box.appendChild(line);
+      if (isError) {
+        const retry = document.createElement('button');
+        retry.className = 'dz-btn';
+        retry.textContent = 'Try another file';
+        retry.onclick = showUploadZone;
+        box.appendChild(retry);
+      }
+      main.appendChild(box);
+      panel.innerHTML = '';
+      panel.textContent = isError ? 'Could not open this .splattie.' : 'Loading...';
+    }
+
+    // Validate the .splattie before handing it to the widget so we can explain
+    // *why* it was rejected (missing manifest, version mismatch, etc.) instead
+    // of failing silently the way the widget does on its own.
+    async function loadSource(srcUrl) {
+      showStageMessage('Loading .splattie...', false);
+      try {
+        const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+        const res = await fetch(srcUrl);
+        if (!res.ok) { showStageMessage(`Could not fetch the .splattie (HTTP ${res.status}).`, true); return; }
+        const zip = await JSZip.loadAsync(await res.arrayBuffer());
+        const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir);
+        const manifestEntry = zip.file('manifest.json');
+        const manifest = manifestEntry ? JSON.parse(await manifestEntry.async('text')) : null;
+        const expected = (window.SplattieWidget && window.SplattieWidget.VERSION) || null;
+        const result = inspectSplattie(manifest, names, expected);
+        if (!result.ok) { showStageMessage(result.message, true); return; }
+        mountWidget(srcUrl);
+      } catch (err) {
+        showStageMessage('Could not read .splattie: ' + (err && err.message ? err.message : String(err)), true);
+      }
+    }
+
+    function mountWidget(srcUrl) {
+      clearStage();
+      widget = document.createElement('splattie-widget');
+      widget.id = 'widget';
+      widget.setAttribute('background', '#0e0e14');
+      widget.setAttribute('expression-basis', '/demos/expression_basis.bin');
+      widget.setAttribute('src', srcUrl);
+      widget.style.flex = '1';
+      widget.addEventListener('splatload', onSplatLoad);
+      main.appendChild(widget);
+    }
+
+    function onSplatLoad() {
       const wConfig = widget.config;
       if (wConfig) {
         config = JSON.parse(JSON.stringify(wConfig));
@@ -126,13 +222,51 @@
       currentState = Object.keys(config.states)[0] || 'idle';
       configured.clear();
       buildPanel();
-      setInterval(() => {
+      liveInterval = setInterval(() => {
         const live = widget._stateMachine?.activeStateName;
         document.querySelectorAll('.state-btn').forEach(btn => {
           btn.classList.toggle('live', btn.textContent === live);
         });
       }, 100);
-    });
+    }
+
+    // Empty editor mode: no ?src= - let anyone drop in their own .splattie.
+    // The blob URL gets a `#...splattie` fragment so the widget takes its ZIP
+    // path (it keys off the URL containing ".splattie", like its splat hints).
+    function showUploadZone() {
+      clearStage();
+      panel.innerHTML = '';
+      panel.textContent = 'Upload a .splattie to edit it.';
+      const zone = document.createElement('div');
+      zone.className = 'dropzone';
+      const inner = document.createElement('div');
+      inner.innerHTML = '<div class="dz-title">Drop a .splattie here</div><div class="dz-sub">or</div>';
+      const button = document.createElement('button');
+      button.className = 'dz-btn';
+      button.textContent = 'Choose file';
+      inner.appendChild(button);
+      zone.appendChild(inner);
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.splattie,application/zip';
+      input.style.display = 'none';
+      zone.appendChild(input);
+      const open = (file) => {
+        if (!file) return;
+        currentSrc = URL.createObjectURL(file) + '#upload.splattie';
+        loadSource(currentSrc);
+      };
+      input.onchange = () => open(input.files && input.files[0]);
+      zone.onclick = () => input.click();
+      button.onclick = (e) => { e.stopPropagation(); input.click(); };
+      zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('drag'); };
+      zone.ondragleave = () => zone.classList.remove('drag');
+      zone.ondrop = (e) => { e.preventDefault(); zone.classList.remove('drag'); open(e.dataTransfer.files && e.dataTransfer.files[0]); };
+      main.appendChild(zone);
+    }
+
+    if (currentSrc) loadSource(currentSrc);
+    else showUploadZone();
 
     function buildPanel() {
       panel.innerHTML = '';
@@ -148,6 +282,23 @@
         statesDiv.appendChild(btn);
       }
       panel.appendChild(statesDiv);
+
+      // Cascade copy: idle is the base (-> hover + click), hover refines it (-> click),
+      // click is the end of the chain. Copy the downstream states only - the states that
+      // come after the current one in idle -> hover -> click order.
+      const stateNames = Object.keys(config.states);
+      const downstream = stateNames.slice(stateNames.indexOf(currentState) + 1);
+      if (downstream.length) {
+        const copyRow = document.createElement('div');
+        copyRow.className = 'copy-row';
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.textContent = `copy ${currentState} → ${downstream.join(' + ')}`;
+        copyBtn.title = `Copy ${currentState} settings to ${downstream.join(' and ')}`;
+        copyBtn.onclick = () => copyStateTo(downstream);
+        copyRow.appendChild(copyBtn);
+        panel.appendChild(copyRow);
+      }
 
       const state = config.states[currentState];
       const def = defaults.states[currentState];
@@ -187,6 +338,21 @@
         addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
         addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
       });
+
+      const footer = document.createElement('div');
+      footer.className = 'footer-actions';
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'secondary-btn';
+      resetBtn.textContent = 'Reset edits';
+      resetBtn.title = 'Revert all edits to the loaded file\'s original settings';
+      resetBtn.onclick = resetEdits;
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'secondary-btn danger';
+      clearBtn.textContent = 'Clear';
+      clearBtn.title = 'Unload this avatar and choose another file';
+      clearBtn.onclick = clearFile;
+      footer.append(resetBtn, clearBtn);
+      panel.appendChild(footer);
 
       const exportBtn = document.createElement('button');
       exportBtn.className = 'export-btn';
@@ -295,11 +461,45 @@
       widget._stateMachine.updateStates(JSON.parse(JSON.stringify(config.states)));
     }
 
+    // Copy the current state's full config onto the given downstream states.
+    // Mutates config only - the widget's live state still follows the cursor.
+    function copyStateTo(targets) {
+      const snapshot = JSON.parse(JSON.stringify(config.states[currentState]));
+      for (const target of targets) {
+        config.states[target] = JSON.parse(JSON.stringify(snapshot));
+        configured.add(target);
+      }
+      applyConfig();
+      buildPanel();
+    }
+
+    // Revert every edit back to the config the file loaded with.
+    function resetEdits() {
+      if (!defaults) return;
+      config = JSON.parse(JSON.stringify(defaults));
+      currentState = Object.keys(config.states)[0] || 'idle';
+      configured.clear();
+      applyConfig();
+      buildPanel();
+    }
+
+    // Unload the current avatar and return to the upload dropzone.
+    function clearFile() {
+      if (currentSrc && currentSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(currentSrc.split('#')[0]);
+      }
+      currentSrc = null;
+      config = null;
+      defaults = null;
+      configured.clear();
+      showUploadZone();
+    }
+
     async function exportSplattie() {
       const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
-      if (!src) return;
+      if (!currentSrc) return;
 
-      const res = await fetch(src);
+      const res = await fetch(currentSrc);
       const originalZip = await JSZip.loadAsync(await res.arrayBuffer());
       const newZip = new JSZip();
 
