@@ -68,6 +68,11 @@ def _load_model():
 
     config_path = VENDOR_LAM / "configs" / "inference" / "lam-20k-8gpu.yaml"
     cfg = OmegaConf.load(str(config_path))
+    # The config points at FLAME/SMPL-X assets via a cwd-relative
+    # "./model_zoo/human_parametric_models" path, which only resolves when the
+    # process runs from vendor/LAM. Absolutize it so the model loads no matter
+    # the working dir (the API server runs from backend/).
+    cfg.model.human_model_path = str(VENDOR_LAM / "model_zoo" / "human_parametric_models")
 
     logger.info("Building LAM model...")
     model = ModelLAM(**cfg.model).to("cuda")
