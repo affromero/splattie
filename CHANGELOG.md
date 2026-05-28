@@ -27,7 +27,7 @@
 - OG image and social meta tags for link previews
 - GPU batch pipeline (`backend/scripts/generate_splattie_batch.py`) for generating .splattie files from photos via LAM
 - Dockerfile for frontend deployment
-- Caddy config for splattie.app on Sotto
+- Caddy config for splattie.app deployment
 - Shared expression basis (50 FLAME PCA blendshapes) as a separate asset
 - Mobile gyroscope support for head tracking
 - `<splattie-widget>` web component with FLAME SplatSkinning, eye tracking, state machine

@@ -124,8 +124,8 @@ splattie/
 │   ├── scripts/generate_splattie_batch.py  # CLI batch generation
 │   └── vendor/LAM/                 # LAM submodule (SIGGRAPH 2025)
 ├── Dockerfile.backend              # GPU image
-├── Dockerfile.web                  # Web image (port 4001)
-└── Caddyfile.sotto                 # Reverse proxy for splattie.app
+├── apps/web/Dockerfile             # Web image (port 4001)
+└── deploy/Caddyfile                # Reverse proxy fragment for splattie.app
 ```
 
 | Component | Technology |

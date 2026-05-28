@@ -1,7 +1,0 @@
-splattie.afromero.co {
-    reverse_proxy localhost:4001
-}
-
-api.splattie.afromero.co {
-    reverse_proxy localhost:8000
-}
