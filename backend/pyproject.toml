@@ -49,6 +49,7 @@ gpu = [
   "loguru",
   "matplotlib",
   "moviepy>=1.0",
+  "ninja",
   "omegaconf>=2.3",
   "opencv-python-headless>=4.10",
   "pandas",
@@ -66,6 +67,16 @@ gpu = [
   "typeguard",
   "tyro",
   "xformers==0.0.26.post1"
+]
+# CUDA-from-source + chumpy: built from git/sdist with build isolation OFF so
+# they compile against the torch already in the env. uv builds these on
+# `uv sync --extra gpu --extra cuda` via no-build-isolation-package +
+# extra-build-dependencies below. (chumpy also needs the lam/method.py shim.)
+cuda = [
+  "chumpy",
+  "nvdiffrast",
+  "pytorch3d",
+  "simple-knn"
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -118,12 +129,27 @@ select = ["ALL"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D103", "S101"]
 
+[tool.uv]
+# Build these against the already-installed torch (they import torch at build
+# time). uv installs their extra-build-dependencies first, then builds them
+# without isolation — so they live in pyproject, not an ad-hoc pip step.
+no-build-isolation-package = ["pytorch3d", "nvdiffrast", "simple-knn", "chumpy"]
+
+[tool.uv.extra-build-dependencies]
+pytorch3d = ["torch", "ninja", "setuptools"]
+nvdiffrast = ["torch", "setuptools"]
+simple-knn = ["torch", "setuptools"]
+chumpy = ["pip", "setuptools"]
+
 [[tool.uv.index]]
 explicit = true
 name = "pytorch-cu121"
 url = "https://download.pytorch.org/whl/cu121"
 
 [tool.uv.sources]
+pytorch3d = {git = "https://github.com/facebookresearch/pytorch3d.git"}
+nvdiffrast = {git = "https://github.com/ShenhanQian/nvdiffrast", branch = "backface-culling"}
+simple-knn = {git = "https://github.com/camenduru/simple-knn"}
 torch = {index = "pytorch-cu121"}
 torchvision = {index = "pytorch-cu121"}
 xformers = {index = "pytorch-cu121"}

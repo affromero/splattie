@@ -6,34 +6,24 @@ echo "Requires: CUDA 12.x, Python 3.10+"
 
 cd "$(dirname "$0")/.."
 
-echo "[1/4] Installing Python deps via uv sync --extra gpu..."
-uv sync --extra gpu
+echo "[1/3] Installing all Python deps via uv sync --extra gpu --extra cuda..."
+# Everything is declared in pyproject — no pip. The `gpu` extra is wheels; the
+# `cuda` extra is the build-from-source pytorch3d/nvdiffrast/simple-knn + chumpy,
+# compiled by uv against the in-env torch via [tool.uv] no-build-isolation-package
+# + [tool.uv.extra-build-dependencies] + [tool.uv.sources]. A runtime shim in
+# lam/method.py restores the py3.11/numpy names chumpy 0.70 needs when FLAME's
+# flame2023.pkl unpickles.
+uv sync --extra gpu --extra cuda
 
-# chumpy is needed to unpickle FLAME's flame2023.pkl, but its build needs pip
-# at build time and breaks under uv's build isolation, so it's installed here
-# (not declared in pyproject). A runtime shim in lam/method.py restores the
-# py3.11/numpy>=1.24 names chumpy 0.70 expects.
-uv pip install chumpy
-
-echo "[2/4] Installing CUDA build-from-source extensions..."
-# These need --no-build-isolation so they share the active torch install
-# during their CUDA compilation. They are not in pyproject.toml because
-# uv's resolver builds them eagerly without seeing torch. Cython + ninja are
-# build tools needed by the FaceBoxes Cython ext and the CUDA builds.
-uv pip install Cython ninja
-uv pip install --no-build-isolation \
-  "git+https://github.com/camenduru/simple-knn/" \
-  "nvdiffrast@git+https://github.com/ShenhanQian/nvdiffrast@backface-culling" \
-  "git+https://github.com/facebookresearch/pytorch3d.git"
-
-echo "[3/4] Building FaceBoxes CUDA extension..."
-# build.py must run with the venv's python (make.sh hardcodes system python3,
-# which produces a .so for the wrong Python ABI).
+echo "[2/3] Building the FaceBoxes Cython extension (in-repo, not a package)..."
+# build.py must run with the venv's python (the repo's make.sh hardcodes system
+# python3, producing a .so for the wrong Python ABI).
+BACKEND_DIR="$PWD"
 cd vendor/LAM/external/landmark_detection/FaceBoxesV2/utils/
-uv run --project "$OLDPWD" python build.py build_ext --inplace
-cd "$OLDPWD"
+uv run --project "$BACKEND_DIR" python build.py build_ext --inplace
+cd "$BACKEND_DIR"
 
-echo "[4/4] Downloading model weights..."
+echo "[3/3] Downloading model weights..."
 uv run python <<'PY'
 import os
 import tarfile
