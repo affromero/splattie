@@ -110,6 +110,18 @@
     const configured = new Set();
     const collapsed = new Set(['flame blendshapes', 'transition']);
 
+    // Track what the cursor is doing on the head, independent of the widget's
+    // editor-locked state. Used to drive the "live" indicator dot on tabs.
+    let cursorLive = 'idle';
+    let clickResetTimer = null;
+    widget.addEventListener('splathover', () => { cursorLive = 'hover'; });
+    widget.addEventListener('splatleave', () => { cursorLive = 'idle'; });
+    widget.addEventListener('splatclick', () => {
+      cursorLive = 'click';
+      clearTimeout(clickResetTimer);
+      clickResetTimer = setTimeout(() => { cursorLive = 'idle'; }, 1000);
+    });
+
     widget.addEventListener('splatload', () => {
       const wConfig = widget.config;
       if (wConfig) {
@@ -123,11 +135,10 @@
       configured.clear();
       buildPanel();
       setInterval(() => {
-        const live = widget._stateMachine?.activeStateName;
         document.querySelectorAll('.state-btn').forEach(btn => {
-          btn.classList.toggle('live', btn.textContent === live);
+          btn.classList.toggle('live', btn.textContent === cursorLive);
         });
-      }, 200);
+      }, 100);
     });
 
     function buildPanel() {
