@@ -265,15 +265,17 @@ class LAMMethod:
                 get_shape_param=True,
             )
 
-            logger.info("Running LAM forward pass...")
+            # We only need the canonical gaussian model (cano_gs), not LAM's driving
+            # animation — the widget animates the FLAME rig client-side. So replicate
+            # just the pre-animation half of infer_single_view (forward_gs) and skip
+            # forward_animate_gs (which needs per-frame driving params we don't have).
+            logger.info("Running LAM forward pass (canonical gaussians only)...")
+            import math
+
+            from einops import rearrange
+
             with torch.no_grad():
                 image_in = img_tensor.unsqueeze(0).to("cuda", torch.float32)
-                dummy_c2ws = torch.eye(4).unsqueeze(0).unsqueeze(0).to("cuda")
-                focal = source_size / 2
-                dummy_intrs = (
-                    torch.tensor([[focal, 0, focal, 0, focal, focal, 0, 0, 1]]).reshape(1, 1, 3, 3).float().to("cuda")
-                )
-                dummy_bg = torch.ones(1, 1, 3).to("cuda")
                 flame_params = {
                     "betas": shape_param.unsqueeze(0).to("cuda"),
                     "expr": torch.zeros(1, 100, device="cuda"),
@@ -284,21 +286,32 @@ class LAMMethod:
                     "translation": torch.zeros(1, 1, 3, device="cuda"),
                 }
 
-                res = model.infer_single_view(
-                    image_in,
-                    None,
-                    None,
-                    render_c2ws=dummy_c2ws,
-                    render_intrs=dummy_intrs,
-                    render_bg_colors=dummy_bg,
-                    flame_params=flame_params,
+                query_points = None
+                if model.latent_query_points_type.startswith("e2e_flame"):
+                    query_points, flame_params = model.renderer.get_query_points(flame_params, device=image_in.device)
+                latent_points, image_feats = model.forward_latent_points(
+                    image_in[:, 0], camera=None, query_points=query_points
                 )
+                image_feats_bchw = rearrange(
+                    image_feats, "b (h w) c -> b c h w", h=int(math.sqrt(image_feats.shape[1]))
+                )
+                gs_model_list, _, _, _ = model.renderer.forward_gs(
+                    gs_hidden_features=latent_points,
+                    query_points=query_points,
+                    flame_data=flame_params,
+                    additional_features={
+                        "image_feats": image_feats,
+                        "image": image_in[:, 0],
+                        "image_feats_bchw": image_feats_bchw,
+                    },
+                )
+                cano_gs = gs_model_list[0]
 
             # Save the absolute-position PLY (rgb2sh=True, offset2xyz=False) — the
             # same flavor the demo batch builder ships and the widget renders. The
             # shared bundler then wraps it with the canonical FLAME rig + manifest
             # so the served .splattie matches a batch-built head demo in shape.
-            res["cano_gs_lst"][0].save_ply(str(ply_path), rgb2sh=True, offset2xyz=False)
+            cano_gs.save_ply(str(ply_path), rgb2sh=True, offset2xyz=False)
         logger.info("PLY saved: %s (%d KB)", ply_path.name, ply_path.stat().st_size // 1024)
 
         num_gaussians = count_ply_vertices(ply_path)
