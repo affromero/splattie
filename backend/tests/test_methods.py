@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -9,6 +11,9 @@ from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
 from splattie.methods.registry import registry
 from splattie.types import AssetType
+
+# A committed demo portrait — LAM's FLAME tracking needs a real face.
+_FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "thumbs" / "3762763.jpg"
 
 
 def cuda_available() -> bool:
@@ -55,13 +60,16 @@ def test_lam_generate_raises_without_gpu() -> None:
 
 
 @pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
+@pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
 def test_lam_generate_produces_bundle() -> None:
     """On a real GPU, generation produces a widget-loadable `.splattie` bundle."""
+    from PIL import Image
+
     method = LAMMethod()
     method.load()
 
-    image = np.zeros((256, 256, 3), dtype=np.uint8)
-    mask = np.ones((256, 256), dtype=np.bool_)
+    image = np.array(Image.open(_FACE_IMAGE).convert("RGB"))
+    mask = np.ones(image.shape[:2], dtype=np.bool_)
 
     result = method.generate(image, mask)
     assert result.method_id == "lam"

@@ -22,7 +22,7 @@ def _gpu_status() -> dict:
         return _NO_GPU
 
     device_name = torch.cuda.get_device_name(0)
-    vram_total_mb = torch.cuda.get_device_properties(0).total_mem // (1024 * 1024)
+    vram_total_mb = torch.cuda.get_device_properties(0).total_memory // (1024 * 1024)
     vram_used_mb = torch.cuda.memory_allocated(0) // (1024 * 1024)
 
     from splattie.methods.lam.method import _lam_model

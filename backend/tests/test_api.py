@@ -3,10 +3,21 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
 from PIL import Image
+
+# A committed demo portrait — LAM's FLAME tracking needs a real face.
+_FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "thumbs" / "3762763.jpg"
+
+
+def _face_png_bytes() -> io.BytesIO:
+    buf = io.BytesIO()
+    Image.open(_FACE_IMAGE).convert("RGB").save(buf, format="PNG")
+    buf.seek(0)
+    return buf
 
 
 def cuda_available() -> bool:
@@ -71,15 +82,11 @@ async def test_generate_from_upload_without_gpu_errors(client: AsyncClient) -> N
 
 
 @pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
+@pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
 async def test_generate_from_upload_produces_bundle(client: AsyncClient) -> None:
-    img = Image.new("RGB", (200, 200), (128, 128, 128))
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-
     response = await client.post(
         "/generate-from-upload",
-        files={"image": ("test.png", buf, "image/png")},
+        files={"image": ("face.png", _face_png_bytes(), "image/png")},
     )
     assert response.status_code == 200
     data = response.json()
@@ -88,15 +95,11 @@ async def test_generate_from_upload_produces_bundle(client: AsyncClient) -> None
 
 
 @pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
+@pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
 async def test_generate(client: AsyncClient) -> None:
-    img = Image.new("RGB", (200, 200), (128, 128, 128))
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-
     seg_response = await client.post(
         "/segment",
-        files={"image": ("test.png", buf, "image/png")},
+        files={"image": ("face.png", _face_png_bytes(), "image/png")},
     )
     seg_data = seg_response.json()
 
