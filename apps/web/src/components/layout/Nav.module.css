@@ -86,7 +86,8 @@
   line-height: 1;
 }
 
-.themeToggle {
+.themeToggle,
+.iconLink {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,9 +100,11 @@
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
   margin-left: 0.5rem;
+  text-decoration: none;
 }
 
-.themeToggle:hover {
+.themeToggle:hover,
+.iconLink:hover {
   color: var(--color-text);
   border-color: var(--color-border-active);
 }
