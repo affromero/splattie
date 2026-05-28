@@ -9,6 +9,12 @@ cd "$(dirname "$0")/.."
 echo "[1/4] Installing Python deps via uv sync --extra gpu..."
 uv sync --extra gpu
 
+# chumpy is needed to unpickle FLAME's flame2023.pkl, but its build needs pip
+# at build time and breaks under uv's build isolation, so it's installed here
+# (not declared in pyproject). A runtime shim in lam/method.py restores the
+# py3.11/numpy>=1.24 names chumpy 0.70 expects.
+uv pip install chumpy
+
 echo "[2/4] Installing CUDA build-from-source extensions..."
 # These need --no-build-isolation so they share the active torch install
 # during their CUDA compilation. They are not in pyproject.toml because
