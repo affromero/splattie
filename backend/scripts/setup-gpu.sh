@@ -18,16 +18,20 @@ uv pip install chumpy
 echo "[2/4] Installing CUDA build-from-source extensions..."
 # These need --no-build-isolation so they share the active torch install
 # during their CUDA compilation. They are not in pyproject.toml because
-# uv's resolver builds them eagerly without seeing torch.
+# uv's resolver builds them eagerly without seeing torch. Cython + ninja are
+# build tools needed by the FaceBoxes Cython ext and the CUDA builds.
+uv pip install Cython ninja
 uv pip install --no-build-isolation \
   "git+https://github.com/camenduru/simple-knn/" \
   "nvdiffrast@git+https://github.com/ShenhanQian/nvdiffrast@backface-culling" \
   "git+https://github.com/facebookresearch/pytorch3d.git"
 
 echo "[3/4] Building FaceBoxes CUDA extension..."
+# build.py must run with the venv's python (make.sh hardcodes system python3,
+# which produces a .so for the wrong Python ABI).
 cd vendor/LAM/external/landmark_detection/FaceBoxesV2/utils/
-sh make.sh
-cd ../../../../../..
+uv run --project "$OLDPWD" python build.py build_ext --inplace
+cd "$OLDPWD"
 
 echo "[4/4] Downloading model weights..."
 uv run python <<'PY'
