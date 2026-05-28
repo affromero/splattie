@@ -46,6 +46,12 @@
   .dz-title { font-size: 0.8rem; color: #888; margin-bottom: 0.3rem; }
   .dropzone:hover .dz-title, .dropzone.drag .dz-title { color: #7eb8f0; }
   .dz-sub { font-size: 0.65rem; }
+  .dz-btn {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; background: #7eb8f0; border: none;
+    color: #0e0e14; font: inherit; font-weight: bold; font-size: 0.7rem;
+    cursor: pointer; border-radius: 3px;
+  }
+  .dz-btn:hover { opacity: 0.9; }
 
   .section-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -166,9 +172,15 @@
       panel.innerHTML = '';
       panel.textContent = 'Upload a .splattie to edit it.';
       main.innerHTML = '';
-      const zone = document.createElement('label');
+      const zone = document.createElement('div');
       zone.className = 'dropzone';
-      zone.innerHTML = '<div><div class="dz-title">Drop a .splattie here</div><div class="dz-sub">or click to choose a file</div></div>';
+      const inner = document.createElement('div');
+      inner.innerHTML = '<div class="dz-title">Drop a .splattie here</div><div class="dz-sub">or</div>';
+      const button = document.createElement('button');
+      button.className = 'dz-btn';
+      button.textContent = 'Choose file';
+      inner.appendChild(button);
+      zone.appendChild(inner);
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.splattie,application/zip';
@@ -180,6 +192,8 @@
         mountWidget(currentSrc);
       };
       input.onchange = () => open(input.files && input.files[0]);
+      zone.onclick = () => input.click();
+      button.onclick = (e) => { e.stopPropagation(); input.click(); };
       zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('drag'); };
       zone.ondragleave = () => zone.classList.remove('drag');
       zone.ondrop = (e) => { e.preventDefault(); zone.classList.remove('drag'); open(e.dataTransfer.files && e.dataTransfer.files[0]); };
