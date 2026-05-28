@@ -22,13 +22,14 @@ from jaxtyping import Bool, UInt8, jaxtyped
 
 from splattie.methods.bundle_common import (
     DEFAULT_STATES_HEAD,
+    HEAD_RIG,
     build_manifest,
     bundle_splattie,
     count_ply_vertices,
     read_widget_version,
 )
 from splattie.methods.registry import registry
-from splattie.types import GenerationResult, MethodCapabilities, MethodInfo
+from splattie.types import AssetType, GenerationResult, MethodCapabilities, MethodInfo
 
 logger = logging.getLogger(__name__)
 
