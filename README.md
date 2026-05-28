@@ -4,21 +4,20 @@
 
 # Splattie
 
-**Upload a photo. Get a 3D head whose eyes follow you.**
+**Interactive 3D avatars from a single photo.**
 
-*Powered by LAM (SIGGRAPH 2025) + 3D Gaussian Splatting + FLAME animation*
+*Eyes follow visitors. Head reacts to hover. Runs at 60fps in any browser.*
 
-[![Stage](https://img.shields.io/badge/stage-prototype-orange)]()
-[![License](https://img.shields.io/badge/license-private-lightgrey)]()
+[![Live](https://img.shields.io/badge/live-splattie.app-7eb8f0)](https://splattie.app)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![npm](https://img.shields.io/npm/v/@afromero/splattie-widget?color=blue)](https://www.npmjs.com/package/@afromero/splattie-widget)
 [![CI](https://github.com/affromero/splattie/actions/workflows/ci.yml/badge.svg)](https://github.com/affromero/splattie/actions/workflows/ci.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![Spark](https://img.shields.io/badge/Spark_2.0-MIT-green?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjYiIGZpbGw9IiNmZmYiLz48L3N2Zz4=)](https://github.com/sparkjsdev/spark)
+[![Spark](https://img.shields.io/badge/Spark_2.0-MIT-green)](https://github.com/sparkjsdev/spark)
 [![Three.js](https://img.shields.io/badge/Three.js-r170-black?logo=three.js)](https://threejs.org)
-[![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![Docker](https://img.shields.io/badge/Docker-GPU-2496ED?logo=docker&logoColor=white)](https://docker.com)
-[![Tests](https://img.shields.io/badge/tests-63_passing-brightgreen)]()
 
 </div>
 
@@ -28,202 +27,152 @@
   <img src="demo.gif" alt="Splattie Demo" width="600" />
 </p>
 
-Splattie turns a single photograph into an interactive 3D gaussian splatting head. The eyes follow your cursor, the face blinks naturally, and reacts when you hover over it - all rendered client-side at 60fps.
-
-## How It Works
-
-1. **Upload** a photo with a visible face
-2. **Generate** a 3D head on the GPU backend using LAM (~30s on H100)
-3. **View** the interactive head - eyes follow your cursor, face reacts to hover
-
-## `<splattie-widget>` - Interactive 3DGS as a Web Component
-
-The core rendering is packaged as a standalone web component that makes gaussian splats reactive - like Rive or Lottie but for 3D.
+Splattie turns a single photograph into an **interactive 3D Gaussian Splatting head** that lives on your website. Eyes follow the cursor, the face blinks naturally, hover and click trigger smooth state transitions. Rendered client-side. One file, one tag.
 
 ```html
 <splattie-widget src="avatar.splattie"></splattie-widget>
+<script src="https://unpkg.com/@afromero/splattie-widget"></script>
 ```
 
-A `.splattie` file bundles everything: splats (PLY/SPZ), FLAME bones, LBS weights, expression basis, and interaction states. One file, one tag.
+## Why
 
-### Five Dimensions of State
+Spark renders splats. SuperSplat edits them. StorySplat hosts them. **Nothing makes them react.** Splattie is the interaction layer - a portable `.splattie` bundle plus a web component that reads it.
 
-Each interaction state (idle, hover, click) defines all five:
+## Try it
 
-| Dimension | What it controls | Implementation |
-|-----------|-----------------|----------------|
-| Ghost | Floating/bobbing motion | Sinusoidal mesh offset |
-| Expression | FLAME blendshapes + bone rotations | SplatSkinning (DQ) + expression basis |
-| Camera | Spherical position (theta/phi/radius) | Three.js PerspectiveCamera |
-| Rotation | Object pitch/yaw/roll | mesh.rotation |
-| Tracking | Cursor-following intensity (eyes, head) | Per-bone NDC projection |
+- **Hosted** - [splattie.app](https://splattie.app) - click any of the 6 demo portraits, play with the sliders, download the customised `.splattie`.
+- **Embed the widget** - `npm install @afromero/splattie-widget` and drop the tag on your page. The 6 demo `.splattie` files in [`apps/web/public/demos/`](apps/web/public/demos) are MIT-friendly (Pexels-licensed portraits).
+- **Self-host** with your own GPU - see below.
 
-### Expression System
+## Run it locally
 
-Two layers work together:
-
-- **SplatSkinning** (5 FLAME bones) - jaw open, neck pitch/yaw/roll, eye gaze, brow raise (virtual bones)
-- **Expression basis** (10 FLAME PCA coefficients) - smile, lip shapes, jaw movement, deforming all 20K splats coherently via per-splat position offsets
-
-### Visual State Editor
-
-An on-canvas editor with live sliders for all dimensions. Design idle → hover → click states, export as `.splattie` (ZIP bundle: PLY + bones + weights + states.json + expression_basis.bin).
-
-### `.splattie` Format
-
-A single embeddable file (like `.lottie` for Lottie):
-
-```
-avatar.splattie (ZIP)
-├── model.ply              # 20K gaussian splats
-├── bone_tree.json         # 5 FLAME bones
-├── lbs_weight_20k.json    # LBS weights per splat
-├── expression_basis.bin   # FLAME blendshape basis (2.3 MB)
-└── states.json            # Interaction state definitions
-```
-
-## Quick Start
-
-### Frontend (any machine)
+### Frontend only (no GPU, 1 minute)
 
 ```bash
+git clone https://github.com/affromero/splattie.git
+cd splattie
+git submodule update --init
 npm install
 npm run dev
 ```
 
-Open [http://localhost:4001](http://localhost:4001).
+Open [http://localhost:4001](http://localhost:4001). All 6 demo avatars work, the state editor works, downloads work. No backend needed.
 
-### Splat Widget Editor
+### Self-host the full app (with GPU)
+
+The hosted [splattie.app](https://splattie.app) doesn't expose the upload flow - that needs a GPU. If you have one, set `NEXT_PUBLIC_SELF_HOST=true` and the **Create** route lights up:
+
+```bash
+cp .env.example .env.local
+# edit .env.local:
+#   NEXT_PUBLIC_SELF_HOST=true
+#   NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# install GPU deps (CUDA 12.x, ~20 min — downloads LAM weights)
+cd backend
+bash scripts/setup-gpu.sh
+
+# run the backend
+uv run uvicorn splattie.api.app:create_app --factory --reload --port 8000
+
+# in another shell, run the frontend
+cd ../
+npm run dev
+```
+
+Now [http://localhost:4001/create](http://localhost:4001/create) accepts photos, generates a 3D head in ~30 s on an H100, and routes you to the state editor where you can tune the interactions and download the `.splattie`. No CLI required.
+
+### Widget development
 
 ```bash
 cd packages/splattie-widget
 npm run dev
 ```
 
-Open [http://localhost:4002](http://localhost:4002).
+Open [http://localhost:4002](http://localhost:4002). Hot-reload for the widget itself, sliders for all five state dimensions, drag-drop any `.splattie` to load it.
 
-### Backend (GPU server)
+## The `.splattie` format
 
-```bash
-cd backend
-bash scripts/setup-gpu.sh
-uv run uvicorn splattie.api.app:create_app --factory --port 8000
+A ZIP bundle with a required `manifest.json` declaring every asset and locking the format version to the widget version. Full spec: [`packages/splattie-widget/FORMAT.md`](packages/splattie-widget/FORMAT.md).
+
+```
+avatar.splattie
+├── manifest.json             # required - declares assets + formatVersion
+├── *.ply or *.spz            # required - Gaussian splats
+├── bone_tree.json            # optional - skeleton (FLAME 5 bones)
+├── lbs_weight_20k.json       # optional - per-splat skinning weights
+├── expression_basis.bin      # optional - FLAME PCA blendshape basis
+└── states.json               # optional - idle/hover/click definitions
 ```
 
-### Export Expression Basis
-
-```bash
-cd backend
-python3 scripts/export_expression_basis.py \
-  --output ../packages/splattie-widget/public/expression_basis.bin \
-  --num-expressions 10
-```
+Each state defines all five interaction dimensions: **ghost** (floating motion), **expression** (FLAME blendshapes + bones), **camera** (spherical position), **rotation** (object pitch/yaw/roll), **tracking** (cursor-follow intensity per bone).
 
 ## Architecture
 
 ```
 splattie/
-├── apps/web/                     # Next.js 15 frontend (port 4001)
-├── backend/                      # FastAPI GPU service (port 8000)
-│   ├── src/splattie/             # API routes, LAM method, segmentation
-│   ├── vendor/LAM/               # LAM submodule (SIGGRAPH 2025, forked)
-│   └── scripts/
-│       ├── setup-gpu.sh          # GPU environment setup
-│       └── export_expression_basis.py  # FLAME blendshape export
-├── packages/splattie-widget/        # <splattie-widget> web component
-│   ├── src/
-│   │   ├── SplatWidget.ts        # Custom element, render loop
-│   │   ├── renderer/SparkSetup.ts # Spark 2.0 + SplatSkinning init
-│   │   ├── state/StateMachine.ts  # State transitions + interpolation
-│   │   ├── features/
-│   │   │   ├── ExpressionBasis.ts # FLAME blendshape per-splat deformation
-│   │   │   └── AutoBlink.ts      # Natural random blinking
-│   │   ├── dimensions/           # Ghost, Camera, Rotation, Tracking
-│   │   └── interaction/          # CursorTracker, HitDetector, Events
-│   ├── public/                   # Demo assets (PLY, bones, weights, basis)
-│   └── tests/                    # 25 unit tests
-├── Dockerfile.backend            # GPU Docker image (~15GB)
-├── Dockerfile.web                # Frontend Docker image (~100MB)
-└── Caddyfile                     # Reverse proxy config
+├── apps/web/                       # Next.js 15 landing + editor (port 4001)
+│   └── src/app/                    # /, /create, /view/[id]
+├── packages/splattie-widget/       # <splattie-widget> web component (MIT)
+│   ├── src/                        # SplatWidget, StateMachine, dimensions
+│   └── FORMAT.md                   # .splattie format spec
+├── backend/                        # FastAPI GPU service (port 8000)
+│   ├── src/splattie/methods/lam/   # LAM head generation
+│   ├── scripts/setup-gpu.sh        # CUDA + LAM weights setup
+│   ├── scripts/generate_splattie_batch.py  # CLI batch generation
+│   └── vendor/LAM/                 # LAM submodule (SIGGRAPH 2025)
+├── Dockerfile.backend              # GPU image
+├── Dockerfile.web                  # Web image (port 4001)
+└── Caddyfile.sotto                 # Reverse proxy for splattie.app
 ```
 
 | Component | Technology |
 |-----------|-----------|
 | Frontend | Next.js 15, TypeScript strict, CSS Modules |
-| 3D Rendering | Spark 2.0 (MIT, by World Labs) + Three.js |
-| Animation | SplatSkinning (FLAME bones, dual quaternion) |
-| Blendshapes | FLAME expression basis (20K vertices, 10 PCA coefficients) |
+| Rendering | Spark 2.0 (World Labs, MIT) + Three.js |
+| Animation | FLAME SplatSkinning (dual quaternion) + PCA blendshapes |
 | Backend | FastAPI, Python 3.10, uv |
-| Head Generation | LAM (SIGGRAPH 2025) - swappable via HeadGenerationMethod protocol |
-| Face Detection | readPixels after WebGL render (pixel-perfect) |
-| Deploy | Docker + Caddy + GitHub Actions SSH |
+| Head generation | LAM (SIGGRAPH 2025) - swappable via the `HeadGenerationMethod` protocol |
+| Format | ZIP with `manifest.json`, version-locked to the widget |
 
-## API Endpoints
+## API
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `POST /generate-from-upload` | multipart | Upload photo → LAM → ZIP bundle |
-| `POST /segment` | multipart | Server-side SAM 3 segmentation |
-| `POST /generate` | SSE | Generate from image/mask URLs with progress |
-| `GET /models` | JSON | List available generation methods |
-| `GET /health` | JSON | Service status, GPU info, model loaded |
-| `GET /storage/{id}/{file}` | static | Serve generated assets |
+The widget exposes a simple custom-element API:
 
-## Development
-
-```bash
-# Frontend
-npm run ci                     # lint + type-check + test + build
-
-# Splat Widget
-cd packages/splattie-widget
-npm run dev                    # dev server on port 4002
-npx vitest run                 # 25 tests
-
-# Backend
-cd backend
-uv sync
-uv run pytest                  # 13 tests
-uv run ruff check src/ tests/
+```html
+<splattie-widget
+  src="avatar.splattie"
+  background="#0e0e14"
+  width="100%"
+  height="400px"
+></splattie-widget>
 ```
 
-## Environment
-
-Copy `.env.example` to `.env.local`:
-
-```bash
-cp .env.example .env.local
+```javascript
+widget.addEventListener('splatload',  () => {});
+widget.addEventListener('splathover', () => {});
+widget.addEventListener('splatclick', () => {});
+widget.setState('hover');
 ```
 
-Set `NEXT_PUBLIC_API_URL` to your GPU backend URL.
+React wrapper available via `@afromero/splattie-widget/react`. Full reference in the [widget README](packages/splattie-widget/README.md).
 
-## Submodules
+## Contributing
 
-Both submodules are forked under `affromero`:
-
-| Submodule | Path | Fork |
-|-----------|------|------|
-| LAM | `backend/vendor/LAM` | [affromero/LAM](https://github.com/affromero/LAM) |
-
-Model weights (`model_zoo/`) are not in git - download them into the submodule path on the GPU server via `bash scripts/setup-gpu.sh`.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Acknowledgements
 
 Splattie builds on outstanding open-source research:
 
-- **[LAM](https://github.com/aigc3d/LAM)** (SIGGRAPH 2025) - Large Avatar Model for single-image 3DGS head generation. By Zixuan Zeng, Jiahui Lei, Zhiwen Fan, Yinda Zhang, Kostas Daniilidis, Hao Su, Zhangyang Wang, and the AIGC3D team.
-- **[FLAME](https://flame.is.tue.mpg.de/)** (2017) - A learned model of 3D face shape, expression, and pose. By Tianye Li, Timo Bolkart, Michael J. Black, Hao Li, and Javier Romero. FLAME 2023 used here requires attribution per its license.
-- **[Spark 2.0](https://github.com/sparkjsdev/spark)** - MIT-licensed 3D Gaussian Splatting renderer for Three.js, by World Labs (Fei-Fei Li et al.). Provides SplatSkinning, SplatEdit, SPZ support, and LoD streaming.
-- **[Three.js](https://threejs.org/)** - 3D graphics library for the web.
-- **[3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/)** - Real-time radiance field rendering. By Bernhard Kerbl, Georgios Kopanas, Thomas Leimkühler, and George Drettakis (INRIA).
+- **[LAM](https://github.com/aigc3d/LAM)** (SIGGRAPH 2025) - Large Avatar Model for single-image 3DGS head generation. By Zixuan Zeng et al., AIGC3D.
+- **[FLAME](https://flame.is.tue.mpg.de/)** - 3D face shape, expression, and pose model. By Tianye Li, Timo Bolkart, Michael J. Black, Hao Li, Javier Romero.
+- **[Spark 2.0](https://github.com/sparkjsdev/spark)** - MIT-licensed 3DGS renderer for Three.js, by World Labs.
+- **[3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/)** - Real-time radiance field rendering. Kerbl, Kopanas, Leimkühler, Drettakis (INRIA).
+- Demo portraits from **[Pexels](https://www.pexels.com)** (free license, attribution on the landing page).
 
 ## License
 
-The `@affromero/splattie-widget` package is released under the **MIT License**.
+MIT for Splattie source code (this repo and the `@afromero/splattie-widget` package).
 
-The full Splattie application (this repo) includes dependencies with their own licenses:
-- **FLAME** - Non-commercial research license (requires attribution, no commercial use without separate agreement)
-- **LAM** - See [LAM LICENSE](https://github.com/aigc3d/LAM/blob/master/LICENSE)
-- **diff-gaussian-rasterization** (INRIA) - Non-commercial. Replace with [gsplat](https://github.com/nerfstudio-project/gsplat) (Apache 2.0) before commercial launch.
-- **Spark 2.0** - MIT
-- **Three.js** - MIT
+Third-party components - **LAM** and **FLAME** in particular - have their own non-commercial research terms. See [`NOTICE`](NOTICE) for the full breakdown before using Splattie in a commercial product.

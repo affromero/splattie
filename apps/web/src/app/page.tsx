@@ -1,8 +1,11 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './page.module.css';
+
+const SELF_HOST = process.env.NEXT_PUBLIC_SELF_HOST === 'true';
 
 interface DemoFace {
   id: string;
@@ -141,15 +144,27 @@ export default function Home() {
       </section>
 
       <section className={styles.uploadSection}>
-        <div className={styles.uploadBox}>
-          <h2 className={styles.uploadTitle}>Upload your own photo</h2>
-          <p className={styles.uploadSubtitle}>Coming soon</p>
-          <div className={styles.uploadPlaceholder}>
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <path d="M24 8v32M8 24h32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3" />
-            </svg>
+        {SELF_HOST ? (
+          <Link href="/create" className={styles.uploadBoxActive}>
+            <h2 className={styles.uploadTitle}>Upload your own photo</h2>
+            <p className={styles.uploadSubtitleActive}>Generate a 3D head on your local GPU</p>
+            <div className={styles.uploadPlaceholderActive}>
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                <path d="M24 8v32M8 24h32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+          </Link>
+        ) : (
+          <div className={styles.uploadBox}>
+            <h2 className={styles.uploadTitle}>Upload your own photo</h2>
+            <p className={styles.uploadSubtitle}>Coming soon</p>
+            <div className={styles.uploadPlaceholder}>
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                <path d="M24 8v32M8 24h32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3" />
+              </svg>
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       <footer className={styles.footer}>

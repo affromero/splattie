@@ -39,6 +39,8 @@ function ThemeToggle() {
   );
 }
 
+const SELF_HOST = process.env.NEXT_PUBLIC_SELF_HOST === 'true';
+
 export function Nav() {
   return (
     <nav className={styles.nav}>
@@ -47,10 +49,16 @@ export function Nav() {
         splattie
       </Link>
       <div className={styles.links}>
-        <span className={styles.linkDisabled}>
-          create
-          <span className={styles.badge}>soon</span>
-        </span>
+        {SELF_HOST ? (
+          <Link href="/create" className={styles.link}>
+            create
+          </Link>
+        ) : (
+          <span className={styles.linkDisabled}>
+            create
+            <span className={styles.badge}>soon</span>
+          </span>
+        )}
         <ThemeToggle />
       </div>
     </nav>
