@@ -41,6 +41,7 @@ cpu = [
 # installed by scripts/setup-gpu.sh because they need --no-build-isolation.
 gpu = [
   "accelerate",
+  "chumpy",
   "diffusers>=0.32",
   "einops",
   "face-detection-tflite",

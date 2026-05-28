@@ -49,6 +49,31 @@ def _patch_torch_load() -> None:
     torch.load = _patched
 
 
+def _patch_chumpy_compat() -> None:
+    """Restore stdlib/numpy names that chumpy 0.70 needs.
+
+    FLAME's ``flame2023.pkl`` unpickles chumpy objects, but chumpy 0.70 predates
+    Python 3.11 (which removed ``inspect.getargspec``) and numpy >= 1.24 (which
+    removed ``np.bool`` / ``np.int`` / …). Restore the shims so the pickle loads.
+    """
+    import inspect
+
+    import numpy as np
+
+    if not hasattr(inspect, "getargspec"):
+        inspect.getargspec = inspect.getfullargspec
+    for name, typ in {
+        "bool": bool,
+        "int": int,
+        "float": float,
+        "complex": complex,
+        "object": object,
+        "str": str,
+    }.items():
+        if not hasattr(np, name):
+            setattr(np, name, typ)
+
+
 def _load_model():
     """Load the LAM model once and cache it."""
     global _lam_model, _lam_config
@@ -61,6 +86,7 @@ def _load_model():
         sys.path.insert(0, lam_path)
 
     _patch_torch_load()
+    _patch_chumpy_compat()
 
     from lam.models.modeling_lam import ModelLAM
     from omegaconf import OmegaConf
