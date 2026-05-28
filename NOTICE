@@ -1,51 +1,83 @@
-Splattie - third-party components and licenses
+Splattie - third-party components and licensing
 
-This project bundles or depends on the following components under their own
-licenses. The MIT license covers only the Splattie-original code.
+This NOTICE breaks Splattie into commercial-safe components (everything Splattie
+authored, MIT) and bundled third-party components that have their own terms.
 
-------------------------------------------------------------------------------
+================================================================================
+MIT (commercial use OK)
+================================================================================
+
+Code authored for Splattie:
+
+- @afromero/splattie-widget npm package (packages/splattie-widget/)
+- .splattie format and manifest schema (packages/splattie-widget/FORMAT.md)
+- Web app (apps/web/)
+- Web app Dockerfile and Caddy config
+
+MIT-licensed runtime dependencies (used by the widget and web app):
+
+- Spark 2.0 (https://github.com/sparkjsdev/spark) - World Labs
+- Three.js (https://threejs.org) - mrdoob et al.
+- JSZip (https://stuk.github.io/jszip) - dual MIT / GPL v3
+- Next.js, React (Vercel, Meta) - MIT
+
+The widget, format, and demo `.splattie` files in apps/web/public/demos/ are
+commercial-use safe. Build commercial products with `<splattie-widget>` freely.
+
+================================================================================
+Demo portraits (Pexels free license)
+================================================================================
+
+apps/web/public/demos/*.splattie and apps/web/public/demos/thumbs/*.jpg
+
+  Source: https://www.pexels.com
+  License: Pexels free license - commercial use allowed, no attribution
+  required (we attribute anyway).
+  Photographers: Shiny Diamond, TUBARONES PHOTOGRAPHY, ShotPot,
+    Tima Miroshnichenko (x2), Daniel Hoffman Jackson.
+
+================================================================================
+Non-commercial third-party (reference GPU pipeline)
+================================================================================
+
+The backend (backend/) wraps LAM and FLAME to generate `.splattie` files from
+photos. These third-party components are restricted:
+
 LAM (Large Avatar Model)
   Source: https://github.com/aigc3d/LAM
-  License: see https://github.com/aigc3d/LAM/blob/main/LICENSE
-  Used as: git submodule at backend/vendor/LAM
-  Notes: LAM is research code. Check the upstream license before commercial use.
+  License: research-only. See upstream LICENSE.
+  Bundled as: git submodule at backend/vendor/LAM
 
 FLAME (Faces Learned with an Articulated Model and Expressions)
   Source: https://flame.is.tue.mpg.de
-  License: Non-commercial research license. Requires attribution.
-  Used as: model files downloaded by backend/scripts/setup-gpu.sh
-  Notes: Commercial use requires a separate agreement with MPI for
-  Intelligent Systems. The FLAME 2023 model is loaded by LAM.
+  License: non-commercial research license. Requires attribution.
+  Bundled as: model files downloaded by backend/scripts/setup-gpu.sh
+  Commercial license must be negotiated with MPI for Intelligent Systems.
 
 diff-gaussian-rasterization (INRIA)
   Source: https://github.com/graphdeco-inria/diff-gaussian-rasterization
-  License: Non-commercial. See upstream LICENSE.
-  Used as: pip dependency of LAM (CUDA extension)
-  Notes: Replace with gsplat (Apache 2.0) for commercial use.
+  License: non-commercial. See upstream LICENSE.
+  Used as: CUDA dependency of LAM.
 
-Spark 2.0
-  Source: https://github.com/sparkjsdev/spark
-  License: MIT
-  Used as: npm dependency (@sparkjsdev/spark)
+================================================================================
+Path to commercial use
+================================================================================
 
-Three.js
-  Source: https://threejs.org
-  License: MIT
-  Used as: npm dependency
+You have three options for using Splattie commercially:
 
-JSZip
-  Source: https://stuk.github.io/jszip
-  License: MIT or GPL v3
-  Used as: npm dependency
+1. Use only the widget + format. Generate `.splattie` files through your own
+   pipeline. The widget loads any `.splattie` that follows the spec - it does
+   not require LAM or FLAME at runtime.
 
-Demo portraits
-  Source: https://www.pexels.com
-  License: Pexels (free, no attribution required, attribution included anyway)
-  Located in: apps/web/public/demos/
-  Photographers: Shiny Diamond, TUBARONES PHOTOGRAPHY, ShotPot,
-  Tima Miroshnichenko (x2), Daniel Hoffman Jackson
-------------------------------------------------------------------------------
+2. License LAM and FLAME commercially with their respective authors (and
+   replace diff-gaussian-rasterization with gsplat, Apache 2.0).
 
-For the @afromero/splattie-widget npm package alone (MIT, no FLAME/LAM
-dependency at runtime), use the widget package directly:
-  https://www.npmjs.com/package/@afromero/splattie-widget
+3. Implement an alternative head-generation method behind the
+   `HeadGenerationMethod` protocol (see backend/src/splattie/methods/).
+   Suggested commercial-friendly stack:
+     - gsplat (Apache 2.0) instead of diff-gaussian-rasterization
+     - Your own head reconstruction model, or a commercially-licensed one
+     - Your own face model, or a commercially-licensed one
+
+The `.splattie` format itself is method-agnostic. `manifest.json.generator.method`
+declares which method produced the file; the widget does not care.

@@ -173,6 +173,16 @@ Splattie builds on outstanding open-source research:
 
 ## License
 
-MIT for Splattie source code (this repo and the `@afromero/splattie-widget` package).
+The Splattie source code is **MIT-licensed** and commercial-use safe:
 
-Third-party components - **LAM** and **FLAME** in particular - have their own non-commercial research terms. See [`NOTICE`](NOTICE) for the full breakdown before using Splattie in a commercial product.
+- the `<splattie-widget>` web component (`@afromero/splattie-widget` on npm)
+- the `.splattie` format and `manifest.json` schema
+- the web app (`apps/web/`)
+
+The reference GPU pipeline (`backend/`) wraps **LAM** and **FLAME**, which are non-commercial research components. The widget itself does not require LAM or FLAME at runtime - it only needs a valid `.splattie` file.
+
+**Three paths to commercial use** (see [`NOTICE`](NOTICE) for the full breakdown):
+
+1. **Widget-only** - use the widget freely; generate `.splattie` files through your own pipeline.
+2. **License upstream** - negotiate commercial terms with LAM and FLAME authors; swap `diff-gaussian-rasterization` (INRIA) for [gsplat](https://github.com/nerfstudio-project/gsplat) (Apache 2.0).
+3. **Drop-in replacement** - implement an alternative head-generation method behind the `HeadGenerationMethod` protocol in [`backend/src/splattie/methods/`](backend/src/splattie/methods/). The format is method-agnostic.
