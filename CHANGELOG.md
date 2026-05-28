@@ -17,6 +17,9 @@
 ### Fixed
 - README links to widget repo files now use absolute GitHub URLs (relative paths to submodule files don't render on GitHub).
 
+### Notes
+- **Editor design — cursor-driven, do not regress.** `apps/web/public/editor.html` does NOT set `editor-mode` on the widget. State transitions are driven by the actual cursor (hover the head → hover state, click → click state, leave → idle). The state tab is purely an editing selector — clicking a tab changes which state's sliders are shown, but does not transition the widget. Effects of edits are visible only when the widget is actually in that state. Adding `editor-mode` or force-transitioning on tab click breaks the testing flow.
+
 ## [0.1.0] - 2026-05-27
 
 ### Added

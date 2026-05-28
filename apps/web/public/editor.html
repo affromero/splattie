@@ -95,6 +95,11 @@
       panel.textContent = 'No ?src= parameter';
     }
 
+    // Editor is cursor-driven by design. Do NOT add `editor-mode` here, and do
+    // NOT force a state transition on tab click. The state tab only chooses
+    // which state's sliders are shown for editing - the widget's actual state
+    // follows the cursor (hover -> hover, click -> click, leave -> idle). Edits
+    // become visible only when the widget is in the state being edited.
     const widget = document.createElement('splattie-widget');
     widget.id = 'widget';
     widget.setAttribute('background', '#0e0e14');
