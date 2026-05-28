@@ -3,7 +3,8 @@
 
 Calls LAM's inference runner for each image (handles FLAME tracking + 3DGS
 reconstruction), then bundles the output PLY with shared FLAME skeleton
-assets into a .splattie ZIP.
+assets into a .splattie ZIP with a manifest.json that locks the format
+version to the widget package.json version.
 
 Usage (run from backend/vendor/LAM/):
     python ../../scripts/generate_splattie_batch.py \
@@ -14,20 +15,22 @@ Usage (run from backend/vendor/LAM/):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = SCRIPT_DIR.parent if SCRIPT_DIR.name == "scripts" else SCRIPT_DIR
+WIDGET_PKG_JSON = BACKEND_DIR.parent / "packages" / "splattie-widget" / "package.json"
 WIDGET_PUBLIC = BACKEND_DIR.parent / "packages" / "splattie-widget" / "public"
 
 SHARED_ASSETS = ["bone_tree.json", "lbs_weight_20k.json"]
 
 DEFAULT_STATES = {
-    "version": 1,
     "defaults": {
         "camera": {"theta": 0, "phi": 75, "radius": 0.5, "fov": 60},
         "autoBlink": {"interval": [2000, 7000], "duration": 150},
@@ -63,21 +66,47 @@ DEFAULT_STATES = {
 }
 
 
+def read_widget_version() -> str:
+    return json.loads(WIDGET_PKG_JSON.read_text())["version"]
+
+
+def count_ply_vertices(ply_path: Path) -> int:
+    with open(ply_path, "rb") as f:
+        for raw in f:
+            line = raw.decode("ascii", errors="ignore").strip()
+            if line.startswith("element vertex"):
+                return int(line.split()[-1])
+            if line == "end_header":
+                break
+    raise ValueError(f"No vertex count in PLY header: {ply_path}")
+
+
 def run_lam_inference(image_path: Path, name: str) -> Path:
     """Run LAM inference via CLI. Returns path to the generated offset PLY."""
     os.makedirs("tracking_output/preprocess", exist_ok=True)
     os.makedirs(f"tracking_output/export/{name}", exist_ok=True)
 
     import sys
+
     cmd = [
-        sys.executable, "-m", "lam.launch", "infer.lam",
-        "--config", "configs/inference/lam-20k-8gpu.yaml",
+        sys.executable,
+        "-m",
+        "lam.launch",
+        "infer.lam",
+        "--config",
+        "configs/inference/lam-20k-8gpu.yaml",
         "model_name=model_zoo/lam_models/releases/lam/lam-20k/step_045500/",
         f"image_input={image_path}",
-        "save_ply=true", "save_img=true", "export_video=true", "export_mesh=false",
-        "vis_motion=false", "render_fps=30",
+        "save_ply=true",
+        "save_img=true",
+        "export_video=true",
+        "export_mesh=false",
+        "vis_motion=false",
+        "render_fps=30",
         f"motion_seqs_dir=tracking_output/export/{name}/",
-        "motion_img_dir=null", "rank=0", "nodes=0",
+        "motion_img_dir=null",
+        "rank=0",
+        "nodes=0",
     ]
     env = os.environ.copy()
     env["CUDA_VISIBLE_DEVICES"] = env.get("CUDA_VISIBLE_DEVICES", "0")
@@ -100,19 +129,79 @@ def find_absolute_ply(name: str) -> Path:
     return ply_path
 
 
-def bundle_splattie(name: str, ply_path: Path, output_dir: Path) -> Path:
-    """Bundle PLY + shared assets into a .splattie ZIP."""
+def build_manifest(
+    name: str,
+    ply_path: Path,
+    source_image_path: Path,
+    widget_version: str,
+) -> dict:
+    source_hash = hashlib.sha256(source_image_path.read_bytes()).hexdigest()
+    num_gaussians = count_ply_vertices(ply_path)
+
+    return {
+        "format": "splattie",
+        "formatVersion": widget_version,
+        "generator": {
+            "method": "lam",
+            "methodVersion": "20k-siggraph2025",
+            "tool": "generate_splattie_batch.py",
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+        },
+        "avatar": {
+            "splat": {
+                "file": f"{name}.ply",
+                "format": "ply",
+                "numGaussians": num_gaussians,
+                "topology": "flame-20k",
+            },
+        },
+        "animation": {
+            "type": "lbs",
+            "skeleton": {"file": "bone_tree.json", "rig": "flame"},
+            "weights": {"file": "lbs_weight_20k.json"},
+            "expression": {"system": "flame-pca", "basis": None},
+        },
+        "widget": {"config": "states.json"},
+        "metadata": {
+            "sourceImageHash": f"sha256:{source_hash}",
+        },
+    }
+
+
+def bundle_splattie(
+    name: str,
+    ply_path: Path,
+    output_dir: Path,
+    source_image_path: Path,
+    widget_version: str,
+) -> Path:
+    """Bundle PLY + shared assets + manifest.json into a .splattie ZIP."""
     splattie_path = output_dir / f"{name}.splattie"
 
+    manifest = build_manifest(name, ply_path, source_image_path, widget_version)
+
+    # Validate every referenced file exists before writing the ZIP.
+    referenced: list[tuple[str, Path]] = [(manifest["avatar"]["splat"]["file"], ply_path)]
+    skeleton = manifest["animation"].get("skeleton")
+    if skeleton:
+        referenced.append((skeleton["file"], WIDGET_PUBLIC / skeleton["file"]))
+    weights = manifest["animation"].get("weights")
+    if weights:
+        referenced.append((weights["file"], WIDGET_PUBLIC / weights["file"]))
+    for arc_name, src in referenced:
+        if not src.exists():
+            raise FileNotFoundError(f"Manifest references {arc_name!r} but source {src} does not exist")
+
     with zipfile.ZipFile(str(splattie_path), "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.write(str(ply_path), f"{name}.ply")
+        zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+        zf.write(str(ply_path), manifest["avatar"]["splat"]["file"])
 
-        for asset_name in SHARED_ASSETS:
-            asset_path = WIDGET_PUBLIC / asset_name
-            if asset_path.exists():
-                zf.write(str(asset_path), asset_name)
+        if skeleton:
+            zf.write(str(WIDGET_PUBLIC / skeleton["file"]), skeleton["file"])
+        if weights:
+            zf.write(str(WIDGET_PUBLIC / weights["file"]), weights["file"])
 
-        zf.writestr("states.json", json.dumps(DEFAULT_STATES, indent=2))
+        zf.writestr(manifest["widget"]["config"], json.dumps(DEFAULT_STATES, indent=2))
 
     size_kb = splattie_path.stat().st_size // 1024
     print(f"  Bundle: {splattie_path} ({size_kb} KB)")
@@ -129,10 +218,10 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    image_files = sorted(
-        f for f in images_dir.iterdir()
-        if f.suffix.lower() in (".jpg", ".jpeg", ".png")
-    )
+    widget_version = read_widget_version()
+    print(f"Widget version: {widget_version}\n")
+
+    image_files = sorted(f for f in images_dir.iterdir() if f.suffix.lower() in (".jpg", ".jpeg", ".png"))
 
     if not image_files:
         print(f"No images found in {images_dir}")
@@ -147,8 +236,8 @@ def main():
         try:
             run_lam_inference(img_path, name)
             abs_ply = find_absolute_ply(name)
-            bundle_splattie(name, abs_ply, output_dir)
-            print(f"  OK\n")
+            bundle_splattie(name, abs_ply, output_dir, img_path, widget_version)
+            print("  OK\n")
         except Exception as e:
             print(f"  FAILED: {e}\n")
             continue
