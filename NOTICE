@@ -14,12 +14,14 @@ Code authored for Splattie:
 - Web app (apps/web/)
 - Web app Dockerfile and Caddy config
 
-MIT-licensed runtime dependencies (used by the widget and web app):
+MIT / Apache-2.0 runtime dependencies (commercial-safe):
 
-- Spark 2.0 (https://github.com/sparkjsdev/spark) - World Labs
-- Three.js (https://threejs.org) - mrdoob et al.
+- Spark 2.0 (https://github.com/sparkjsdev/spark) - World Labs, MIT
+- Three.js (https://threejs.org) - mrdoob et al., MIT
 - JSZip (https://stuk.github.io/jszip) - dual MIT / GPL v3
 - Next.js, React (Vercel, Meta) - MIT
+- gsplat (https://github.com/nerfstudio-project/gsplat) - Apache 2.0
+- LAM code itself (https://github.com/aigc3d/LAM) - Apache 2.0
 
 The widget, format, and demo `.splattie` files in apps/web/public/demos/ are
 commercial-use safe. Build commercial products with `<splattie-widget>` freely.
@@ -37,18 +39,19 @@ apps/web/public/demos/*.splattie and apps/web/public/demos/thumbs/*.jpg
     Tima Miroshnichenko (x2), Daniel Hoffman Jackson.
 
 ================================================================================
-GPU pipeline third-party (mixed licensing)
+GPU pipeline third-party
 ================================================================================
 
 The backend (backend/) wraps these components to generate `.splattie` files
-from photos. Their licenses differ:
+from photos:
 
 LAM (Large Avatar Model) - Apache 2.0 (commercial OK)
   Source: https://github.com/aigc3d/LAM
   License: Apache 2.0 (verified in backend/vendor/LAM/LICENSE)
-  Bundled as: git submodule at backend/vendor/LAM
+  Bundled as: git submodule at backend/vendor/LAM (our fork at
+    https://github.com/affromero/LAM swaps the rasterizer to gsplat).
   Notes: LAM code itself is commercial-friendly, but it loads FLAME at
-  runtime - FLAME's terms then apply to the combined system.
+  runtime; FLAME's terms then apply to the combined system.
 
 FLAME (Faces Learned with an Articulated Model and Expressions) - NON-COMMERCIAL
   Source: https://flame.is.tue.mpg.de
@@ -56,17 +59,6 @@ FLAME (Faces Learned with an Articulated Model and Expressions) - NON-COMMERCIAL
   Bundled as: model files downloaded by backend/scripts/setup-gpu.sh
   Commercial license: contact MPI for Intelligent Systems
   (https://flame.is.tue.mpg.de) before commercial use.
-
-diff-gaussian-rasterization (INRIA) - NON-COMMERCIAL (NOT INSTALLED BY DEFAULT)
-  Source: https://github.com/graphdeco-inria/diff-gaussian-rasterization
-  License: non-commercial. See upstream LICENSE.
-  Status: NOT installed by default. The LAM fork makes the rasterizer
-  import optional and returns placeholder zeros when missing; the canonical
-  gaussian splat output used by Splattie is unaffected. To install it
-  anyway (for training or full LAM rendering), set INSTALL_DIFF_RAST=1
-  before running backend/scripts/setup-gpu.sh.
-  Drop-in replacement: gsplat (Apache 2.0)
-  https://github.com/nerfstudio-project/gsplat
 
 ================================================================================
 Path to commercial use
@@ -78,15 +70,14 @@ You have three options for using Splattie commercially:
    pipeline. The widget loads any `.splattie` that follows the spec - it does
    not require LAM or FLAME at runtime.
 
-2. License LAM and FLAME commercially with their respective authors (and
-   replace diff-gaussian-rasterization with gsplat, Apache 2.0).
+2. License FLAME commercially with MPI for Intelligent Systems. The rest of
+   the stack (LAM Apache 2.0 + gsplat Apache 2.0 + Three.js MIT + Spark MIT)
+   is already commercial-safe.
 
 3. Implement an alternative head-generation method behind the
    `HeadGenerationMethod` protocol (see backend/src/splattie/methods/).
-   Suggested commercial-friendly stack:
-     - gsplat (Apache 2.0) instead of diff-gaussian-rasterization
-     - Your own head reconstruction model, or a commercially-licensed one
-     - Your own face model, or a commercially-licensed one
+   Bring your own commercially-licensed head reconstruction model and face
+   model. The rest of the stack stays the same.
 
 The `.splattie` format itself is method-agnostic. `manifest.json.generator.method`
 declares which method produced the file; the widget does not care.

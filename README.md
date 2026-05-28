@@ -181,10 +181,10 @@ The Splattie source code is **MIT-licensed** and commercial-use safe:
 - the `.splattie` format and `manifest.json` schema
 - the web app (`apps/web/`)
 
-The reference GPU pipeline (`backend/`) wraps **LAM** and **FLAME**, which are non-commercial research components. The widget itself does not require LAM or FLAME at runtime - it only needs a valid `.splattie` file.
+The reference GPU pipeline (`backend/`) wraps **LAM** (Apache 2.0) + **gsplat** (Apache 2.0) + **FLAME**. The only non-commercial piece is FLAME's face model. The widget itself does not require any of this at runtime - it only needs a valid `.splattie` file.
 
 **Three paths to commercial use** (see [`NOTICE`](NOTICE) for the full breakdown):
 
 1. **Widget-only** - use the widget freely; generate `.splattie` files through your own pipeline.
-2. **License upstream** - negotiate commercial terms with LAM and FLAME authors; swap `diff-gaussian-rasterization` (INRIA) for [gsplat](https://github.com/nerfstudio-project/gsplat) (Apache 2.0).
+2. **License FLAME** - contact [MPI for Intelligent Systems](https://flame.is.tue.mpg.de) for commercial FLAME terms. The rest of the stack is already Apache 2.0 / MIT.
 3. **Drop-in replacement** - implement an alternative head-generation method behind the `HeadGenerationMethod` protocol in [`backend/src/splattie/methods/`](backend/src/splattie/methods/). The format is method-agnostic.

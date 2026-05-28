@@ -13,14 +13,7 @@ echo "[2/4] Installing CUDA build-from-source extensions..."
 # These need --no-build-isolation so they share the active torch install
 # during their CUDA compilation. They are not in pyproject.toml because
 # uv's resolver builds them eagerly without seeing torch.
-# To also include diff-gaussian-rasterization (INRIA, non-commercial),
-# set INSTALL_DIFF_RAST=1.
-EXTRA_PKGS=""
-if [ "${INSTALL_DIFF_RAST:-0}" = "1" ]; then
-  EXTRA_PKGS="git+https://github.com/ashawkey/diff-gaussian-rasterization/"
-fi
 uv pip install --no-build-isolation \
-  $EXTRA_PKGS \
   "git+https://github.com/camenduru/simple-knn/" \
   "nvdiffrast@git+https://github.com/ShenhanQian/nvdiffrast@backface-culling" \
   "git+https://github.com/facebookresearch/pytorch3d.git"
