@@ -115,7 +115,7 @@
       if (wConfig) {
         config = JSON.parse(JSON.stringify(wConfig));
       } else {
-        config = { version: 1, defaults: { camera: { theta: 0, phi: 75, radius: 0.5, fov: 60 } },
+        config = { defaults: { camera: { theta: 0, phi: 75, radius: 0.5, fov: 60 } },
           states: { idle: {}, hover: {}, click: {} }, transitions: {} };
       }
       defaults = JSON.parse(JSON.stringify(config));
@@ -299,11 +299,25 @@
       const originalZip = await JSZip.loadAsync(await res.arrayBuffer());
       const newZip = new JSZip();
 
+      const manifestEntry = originalZip.file('manifest.json');
+      if (!manifestEntry) {
+        alert('Cannot export: original .splattie has no manifest.json. Regenerate the source bundle.');
+        return;
+      }
+      const manifest = JSON.parse(await manifestEntry.async('text'));
+      manifest.metadata = manifest.metadata || {};
+      manifest.metadata.lastEditedAt = new Date().toISOString();
+      manifest.metadata.editedBy = 'splattie-editor';
+
+      const configName = (manifest.widget && manifest.widget.config) || 'states.json';
+
       for (const [name, file] of Object.entries(originalZip.files)) {
-        if (name === 'states.json') continue;
+        if (file.dir) continue;
+        if (name === 'manifest.json' || name === configName) continue;
         newZip.file(name, await file.async('blob'));
       }
-      newZip.file('states.json', JSON.stringify(config, null, 2));
+      newZip.file('manifest.json', JSON.stringify(manifest, null, 2));
+      newZip.file(configName, JSON.stringify(config, null, 2));
 
       const blob = await newZip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
