@@ -53,6 +53,14 @@
   }
   .dz-btn:hover { opacity: 0.9; }
 
+  .stage-msg {
+    flex: 1; margin: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;
+    align-items: center; justify-content: center; text-align: center;
+    color: #888; font-size: 0.8rem; padding: 1rem;
+  }
+  .stage-msg.error { color: #f0a0a0; }
+  .stage-msg .stage-text { max-width: 340px; line-height: 1.5; }
+
   .section-header {
     display: flex; align-items: center; justify-content: space-between;
     margin: 0.6rem 0 0.15rem; cursor: pointer; user-select: none;
@@ -110,6 +118,8 @@
 
   <script src="/splattie-widget.cdn.js"></script>
   <script type="module">
+    import { inspectSplattie } from '/splattie-format.js';
+
     const params = new URLSearchParams(location.search);
     const main = document.getElementById('main');
     const panel = document.getElementById('panel');
@@ -131,10 +141,56 @@
     //
     // The widget only reads `src` in connectedCallback, so loading a new file
     // means recreating the element rather than mutating the attribute.
-    function mountWidget(srcUrl) {
+    function clearStage() {
       if (liveInterval) { clearInterval(liveInterval); liveInterval = null; }
-      if (widget) widget.remove();
+      if (widget) { widget.remove(); widget = null; }
       main.innerHTML = '';
+    }
+
+    function showStageMessage(text, isError) {
+      clearStage();
+      const box = document.createElement('div');
+      box.className = 'stage-msg' + (isError ? ' error' : '');
+      const line = document.createElement('div');
+      line.className = 'stage-text';
+      line.textContent = text;
+      box.appendChild(line);
+      if (isError) {
+        const retry = document.createElement('button');
+        retry.className = 'dz-btn';
+        retry.textContent = 'Try another file';
+        retry.onclick = showUploadZone;
+        box.appendChild(retry);
+      }
+      main.appendChild(box);
+      panel.innerHTML = '';
+      panel.textContent = isError ? 'Could not open this .splattie.' : 'Loading...';
+    }
+
+    // Validate the .splattie before handing it to the widget so we can explain
+    // *why* it was rejected (missing manifest, version mismatch, etc.) instead
+    // of failing silently the way the widget does on its own.
+    async function loadSource(srcUrl) {
+      showStageMessage('Loading .splattie...', false);
+      try {
+        const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+        const res = await fetch(srcUrl);
+        if (!res.ok) { showStageMessage(`Could not fetch the .splattie (HTTP ${res.status}).`, true); return; }
+        const zip = await JSZip.loadAsync(await res.arrayBuffer());
+        const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir);
+        const manifestEntry = zip.file('manifest.json');
+        const manifest = manifestEntry ? JSON.parse(await manifestEntry.async('text')) : null;
+        const expected = (window.SplattieWidget && window.SplattieWidget.VERSION) || null;
+        const result = inspectSplattie(manifest, names, expected);
+        if (!result.ok) { showStageMessage(result.message, true); return; }
+        mountWidget(srcUrl);
+      } catch (err) {
+        showStageMessage('Could not read .splattie: ' + (err && err.message ? err.message : String(err)), true);
+      }
+    }
+
+    function mountWidget(srcUrl) {
+      clearStage();
       widget = document.createElement('splattie-widget');
       widget.id = 'widget';
       widget.setAttribute('background', '#0e0e14');
@@ -169,9 +225,9 @@
     // The blob URL gets a `#...splattie` fragment so the widget takes its ZIP
     // path (it keys off the URL containing ".splattie", like its splat hints).
     function showUploadZone() {
+      clearStage();
       panel.innerHTML = '';
       panel.textContent = 'Upload a .splattie to edit it.';
-      main.innerHTML = '';
       const zone = document.createElement('div');
       zone.className = 'dropzone';
       const inner = document.createElement('div');
@@ -189,7 +245,7 @@
       const open = (file) => {
         if (!file) return;
         currentSrc = URL.createObjectURL(file) + '#upload.splattie';
-        mountWidget(currentSrc);
+        loadSource(currentSrc);
       };
       input.onchange = () => open(input.files && input.files[0]);
       zone.onclick = () => input.click();
@@ -200,7 +256,7 @@
       main.appendChild(zone);
     }
 
-    if (currentSrc) mountWidget(currentSrc);
+    if (currentSrc) loadSource(currentSrc);
     else showUploadZone();
 
     function buildPanel() {
