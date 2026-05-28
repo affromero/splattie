@@ -98,7 +98,6 @@
     const widget = document.createElement('splattie-widget');
     widget.id = 'widget';
     widget.setAttribute('background', '#0e0e14');
-    widget.setAttribute('editor-mode', '');
     widget.setAttribute('expression-basis', '/demos/expression_basis.bin');
     if (src) widget.setAttribute('src', src);
     widget.style.flex = '1';
@@ -109,18 +108,6 @@
     let currentState = 'idle';
     const configured = new Set();
     const collapsed = new Set(['flame blendshapes', 'transition']);
-
-    // Track what the cursor is doing on the head, independent of the widget's
-    // editor-locked state. Used to drive the "live" indicator dot on tabs.
-    let cursorLive = 'idle';
-    let clickResetTimer = null;
-    widget.addEventListener('splathover', () => { cursorLive = 'hover'; });
-    widget.addEventListener('splatleave', () => { cursorLive = 'idle'; });
-    widget.addEventListener('splatclick', () => {
-      cursorLive = 'click';
-      clearTimeout(clickResetTimer);
-      clickResetTimer = setTimeout(() => { cursorLive = 'idle'; }, 1000);
-    });
 
     widget.addEventListener('splatload', () => {
       const wConfig = widget.config;
@@ -135,8 +122,9 @@
       configured.clear();
       buildPanel();
       setInterval(() => {
+        const live = widget._stateMachine?.activeStateName;
         document.querySelectorAll('.state-btn').forEach(btn => {
-          btn.classList.toggle('live', btn.textContent === cursorLive);
+          btn.classList.toggle('live', btn.textContent === live);
         });
       }, 100);
     });
@@ -151,7 +139,7 @@
         const btn = document.createElement('button');
         btn.className = 'state-btn' + (name === currentState ? ' editing' : '') + (name === liveState ? ' live' : '') + (configured.has(name) ? ' configured' : '');
         btn.textContent = name;
-        btn.onclick = () => { currentState = name; widget._stateMachine?.transitionTo(name); buildPanel(); };
+        btn.onclick = () => { currentState = name; buildPanel(); };
         statesDiv.appendChild(btn);
       }
       panel.appendChild(statesDiv);
