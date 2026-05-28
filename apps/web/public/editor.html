@@ -29,6 +29,24 @@
     width: 5px; height: 5px; border-radius: 50%; background: #60d080;
   }
 
+  .copy-row { margin-bottom: 0.75rem; }
+  .copy-btn {
+    width: 100%; padding: 0.3rem; background: #1a1a24; border: 1px solid #2a2a3a;
+    color: #777; font: inherit; font-size: 0.62rem; cursor: pointer; border-radius: 2px;
+    letter-spacing: 0.02em;
+  }
+  .copy-btn:hover { color: #7eb8f0; border-color: #7eb8f0; }
+
+  .dropzone {
+    flex: 1; margin: 1.5rem; border: 1px dashed #2a2a3a; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    color: #555; text-align: center; transition: border-color 0.15s, color 0.15s;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: #7eb8f0; }
+  .dz-title { font-size: 0.8rem; color: #888; margin-bottom: 0.3rem; }
+  .dropzone:hover .dz-title, .dropzone.drag .dz-title { color: #7eb8f0; }
+  .dz-sub { font-size: 0.65rem; }
+
   .section-header {
     display: flex; align-items: center; justify-content: space-between;
     margin: 0.6rem 0 0.15rem; cursor: pointer; user-select: none;
@@ -87,34 +105,41 @@
   <script src="/splattie-widget.cdn.js"></script>
   <script type="module">
     const params = new URLSearchParams(location.search);
-    const src = params.get('src');
     const main = document.getElementById('main');
     const panel = document.getElementById('panel');
 
-    if (!src) {
-      panel.textContent = 'No ?src= parameter';
-    }
-
-    // Editor is cursor-driven by design. Do NOT add `editor-mode` here, and do
-    // NOT force a state transition on tab click. The state tab only chooses
-    // which state's sliders are shown for editing - the widget's actual state
-    // follows the cursor (hover -> hover, click -> click, leave -> idle). Edits
-    // become visible only when the widget is in the state being edited.
-    const widget = document.createElement('splattie-widget');
-    widget.id = 'widget';
-    widget.setAttribute('background', '#0e0e14');
-    widget.setAttribute('expression-basis', '/demos/expression_basis.bin');
-    if (src) widget.setAttribute('src', src);
-    widget.style.flex = '1';
-    main.appendChild(widget);
-
+    let currentSrc = params.get('src');
+    let widget = null;
+    let liveInterval = null;
     let config = null;
     let defaults = null;
     let currentState = 'idle';
     const configured = new Set();
     const collapsed = new Set(['flame blendshapes', 'transition']);
 
-    widget.addEventListener('splatload', () => {
+    // Editor is cursor-driven by design. Do NOT add `editor-mode` here, and do
+    // NOT force a state transition on tab click. The state tab only chooses
+    // which state's sliders are shown for editing - the widget's actual state
+    // follows the cursor (hover -> hover, click -> click, leave -> idle). Edits
+    // become visible only when the widget is in the state being edited.
+    //
+    // The widget only reads `src` in connectedCallback, so loading a new file
+    // means recreating the element rather than mutating the attribute.
+    function mountWidget(srcUrl) {
+      if (liveInterval) { clearInterval(liveInterval); liveInterval = null; }
+      if (widget) widget.remove();
+      main.innerHTML = '';
+      widget = document.createElement('splattie-widget');
+      widget.id = 'widget';
+      widget.setAttribute('background', '#0e0e14');
+      widget.setAttribute('expression-basis', '/demos/expression_basis.bin');
+      widget.setAttribute('src', srcUrl);
+      widget.style.flex = '1';
+      widget.addEventListener('splatload', onSplatLoad);
+      main.appendChild(widget);
+    }
+
+    function onSplatLoad() {
       const wConfig = widget.config;
       if (wConfig) {
         config = JSON.parse(JSON.stringify(wConfig));
@@ -126,13 +151,43 @@
       currentState = Object.keys(config.states)[0] || 'idle';
       configured.clear();
       buildPanel();
-      setInterval(() => {
+      liveInterval = setInterval(() => {
         const live = widget._stateMachine?.activeStateName;
         document.querySelectorAll('.state-btn').forEach(btn => {
           btn.classList.toggle('live', btn.textContent === live);
         });
       }, 100);
-    });
+    }
+
+    // Empty editor mode: no ?src= - let anyone drop in their own .splattie.
+    // The blob URL gets a `#...splattie` fragment so the widget takes its ZIP
+    // path (it keys off the URL containing ".splattie", like its splat hints).
+    function showUploadZone() {
+      panel.innerHTML = '';
+      panel.textContent = 'Upload a .splattie to edit it.';
+      main.innerHTML = '';
+      const zone = document.createElement('label');
+      zone.className = 'dropzone';
+      zone.innerHTML = '<div><div class="dz-title">Drop a .splattie here</div><div class="dz-sub">or click to choose a file</div></div>';
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.splattie,application/zip';
+      input.style.display = 'none';
+      zone.appendChild(input);
+      const open = (file) => {
+        if (!file) return;
+        currentSrc = URL.createObjectURL(file) + '#upload.splattie';
+        mountWidget(currentSrc);
+      };
+      input.onchange = () => open(input.files && input.files[0]);
+      zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('drag'); };
+      zone.ondragleave = () => zone.classList.remove('drag');
+      zone.ondrop = (e) => { e.preventDefault(); zone.classList.remove('drag'); open(e.dataTransfer.files && e.dataTransfer.files[0]); };
+      main.appendChild(zone);
+    }
+
+    if (currentSrc) mountWidget(currentSrc);
+    else showUploadZone();
 
     function buildPanel() {
       panel.innerHTML = '';
@@ -148,6 +203,23 @@
         statesDiv.appendChild(btn);
       }
       panel.appendChild(statesDiv);
+
+      // Cascade copy: idle is the base (-> hover + click), hover refines it (-> click),
+      // click is the end of the chain. Copy the downstream states only - the states that
+      // come after the current one in idle -> hover -> click order.
+      const stateNames = Object.keys(config.states);
+      const downstream = stateNames.slice(stateNames.indexOf(currentState) + 1);
+      if (downstream.length) {
+        const copyRow = document.createElement('div');
+        copyRow.className = 'copy-row';
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.textContent = `copy ${currentState} → ${downstream.join(' + ')}`;
+        copyBtn.title = `Copy ${currentState} settings to ${downstream.join(' and ')}`;
+        copyBtn.onclick = () => copyStateTo(downstream);
+        copyRow.appendChild(copyBtn);
+        panel.appendChild(copyRow);
+      }
 
       const state = config.states[currentState];
       const def = defaults.states[currentState];
@@ -295,11 +367,23 @@
       widget._stateMachine.updateStates(JSON.parse(JSON.stringify(config.states)));
     }
 
+    // Copy the current state's full config onto the given downstream states.
+    // Mutates config only - the widget's live state still follows the cursor.
+    function copyStateTo(targets) {
+      const snapshot = JSON.parse(JSON.stringify(config.states[currentState]));
+      for (const target of targets) {
+        config.states[target] = JSON.parse(JSON.stringify(snapshot));
+        configured.add(target);
+      }
+      applyConfig();
+      buildPanel();
+    }
+
     async function exportSplattie() {
       const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
-      if (!src) return;
+      if (!currentSrc) return;
 
-      const res = await fetch(src);
+      const res = await fetch(currentSrc);
       const originalZip = await JSZip.loadAsync(await res.arrayBuffer());
       const newZip = new JSZip();
 
