@@ -62,6 +62,8 @@ def _patch_chumpy_compat() -> None:
 
     if not hasattr(inspect, "getargspec"):
         inspect.getargspec = inspect.getfullargspec
+    # chumpy/__init__.py does `from numpy import bool, int, float, complex,
+    # object, unicode, str, ...` — all removed/renamed in modern numpy.
     for name, typ in {
         "bool": bool,
         "int": int,
@@ -69,6 +71,7 @@ def _patch_chumpy_compat() -> None:
         "complex": complex,
         "object": object,
         "str": str,
+        "unicode": str,
     }.items():
         if not hasattr(np, name):
             setattr(np, name, typ)
