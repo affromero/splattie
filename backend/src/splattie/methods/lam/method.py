@@ -72,16 +72,24 @@ def _load_flame_tracker():
 
     tracking_models = VENDOR_LAM / "model_zoo" / "flame_tracking_models"
     _TRACKING_DIR.mkdir(parents=True, exist_ok=True)
-    # The tracker's internal vhap/FLAME assets are cwd-relative to vendor/LAM.
-    with _chdir(VENDOR_LAM):
-        _flame_tracker = FlameTrackingSingleImage(
-            output_dir=str(_TRACKING_DIR),
-            alignment_model_path=str(tracking_models / "68_keypoints_model.pkl"),
-            vgghead_model_path=str(tracking_models / "vgghead" / "vgg_heads_l.trcd"),
-            human_matting_path=str(tracking_models / "matting" / "stylematte_synth.pt"),
-            facebox_model_path=str(tracking_models / "FaceBoxesV2.pth"),
-            detect_iris_landmarks=False,
-        )
+    # FlameTrackingSingleImage calls argparse.parse_args() internally; strip
+    # sys.argv to just the program name so it doesn't choke on the host process's
+    # args (pytest, uvicorn, …). Also chdir to vendor/LAM for its cwd-relative
+    # vhap/FLAME assets.
+    saved_argv = sys.argv
+    sys.argv = sys.argv[:1]
+    try:
+        with _chdir(VENDOR_LAM):
+            _flame_tracker = FlameTrackingSingleImage(
+                output_dir=str(_TRACKING_DIR),
+                alignment_model_path=str(tracking_models / "68_keypoints_model.pkl"),
+                vgghead_model_path=str(tracking_models / "vgghead" / "vgg_heads_l.trcd"),
+                human_matting_path=str(tracking_models / "matting" / "stylematte_synth.pt"),
+                facebox_model_path=str(tracking_models / "FaceBoxesV2.pth"),
+                detect_iris_landmarks=False,
+            )
+    finally:
+        sys.argv = saved_argv
     logger.info("FLAME tracker loaded")
     return _flame_tracker
 
