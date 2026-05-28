@@ -6,47 +6,54 @@ echo "Requires: CUDA 12.x, Python 3.10+"
 
 cd "$(dirname "$0")/.."
 
-echo "[1/5] Creating venv and installing base deps..."
+echo "[1/4] Installing Python deps via uv sync --extra gpu..."
 uv sync --extra gpu
 
-echo "[2/5] Installing PyTorch + xformers (CUDA 12.1)..."
-uv pip install torch==2.3.0 torchvision==0.18.0 --index-url https://download.pytorch.org/whl/cu121
-uv pip install xformers==0.0.26.post1 --index-url https://download.pytorch.org/whl/cu121
-
-echo "[3/5] Installing CUDA extensions (requires compilation)..."
+echo "[2/4] Installing CUDA build-from-source extensions..."
+# These need --no-build-isolation so they share the active torch install
+# during their CUDA compilation. They are not in pyproject.toml because
+# uv's resolver builds them eagerly without seeing torch.
+# To also include diff-gaussian-rasterization (INRIA, non-commercial),
+# set INSTALL_DIFF_RAST=1.
+EXTRA_PKGS=""
+if [ "${INSTALL_DIFF_RAST:-0}" = "1" ]; then
+  EXTRA_PKGS="git+https://github.com/ashawkey/diff-gaussian-rasterization/"
+fi
 uv pip install --no-build-isolation \
-  "git+https://github.com/ashawkey/diff-gaussian-rasterization/" \
+  $EXTRA_PKGS \
   "git+https://github.com/camenduru/simple-knn/" \
   "nvdiffrast@git+https://github.com/ShenhanQian/nvdiffrast@backface-culling" \
   "git+https://github.com/facebookresearch/pytorch3d.git"
 
-echo "[4/5] Installing LAM dependencies..."
-uv pip install --no-build-isolation \
-  face-detection-tflite scikit-image==0.20.0 "rembg[gpu]" chumpy accelerate \
-  huggingface-hub==0.23.2
-
-echo "[5/5] Building FaceBoxes extension..."
+echo "[3/4] Building FaceBoxes CUDA extension..."
 cd vendor/LAM/external/landmark_detection/FaceBoxesV2/utils/
 sh make.sh
 cd ../../../../../..
 
-echo "[6/6] Downloading model weights..."
-uv run python -c "
-from huggingface_hub import snapshot_download
+echo "[4/4] Downloading model weights..."
+uv run python <<'PY'
 import os
-lam_dir = 'vendor/LAM'
-os.makedirs(f'{lam_dir}/model_zoo/lam_models/releases/lam', exist_ok=True)
-snapshot_download('3DAIGC/LAM-20K', local_dir=f'{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k')
-os.makedirs(f'{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k/step_045500', exist_ok=True)
-os.symlink('../model.safetensors', f'{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k/step_045500/model.safetensors') if not os.path.exists(f'{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k/step_045500/model.safetensors') else None
-os.makedirs(f'{lam_dir}/model_zoo/human_parametric_models', exist_ok=True)
-snapshot_download('3DAIGC/LAM-assets', local_dir=f'{lam_dir}/model_zoo/human_parametric_models')
-import tarfile, glob
-for tar_path in glob.glob(f'{lam_dir}/model_zoo/human_parametric_models/*.tar'):
+import tarfile
+import glob
+from huggingface_hub import snapshot_download
+
+lam_dir = "vendor/LAM"
+os.makedirs(f"{lam_dir}/model_zoo/lam_models/releases/lam", exist_ok=True)
+snapshot_download("3DAIGC/LAM-20K", local_dir=f"{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k")
+
+step_dir = f"{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k/step_045500"
+os.makedirs(step_dir, exist_ok=True)
+link = f"{step_dir}/model.safetensors"
+if not os.path.exists(link):
+    os.symlink("../model.safetensors", link)
+
+os.makedirs(f"{lam_dir}/model_zoo/human_parametric_models", exist_ok=True)
+snapshot_download("3DAIGC/LAM-assets", local_dir=f"{lam_dir}/model_zoo/human_parametric_models")
+for tar_path in glob.glob(f"{lam_dir}/model_zoo/human_parametric_models/*.tar"):
     with tarfile.open(tar_path) as tf:
-        tf.extractall(f'{lam_dir}/model_zoo/human_parametric_models')
-print('Weights ready')
-"
+        tf.extractall(f"{lam_dir}/model_zoo/human_parametric_models")
+print("Weights ready")
+PY
 
 echo "=== Setup complete ==="
 echo "Run: uv run uvicorn splattie.api.app:create_app --factory --port 8000"

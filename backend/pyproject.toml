@@ -29,20 +29,48 @@ requires-python = ">=3.10"
 version = "0.1.0"
 
 [project.optional-dependencies]
+# CPU-only: enough to run the FastAPI server (GPU routes return 503).
+#   uv sync --extra cpu
+cpu = [
+  "plyfile",
+  "trimesh>=4.0",
+]
+# Full GPU pipeline: head-generation with LAM + FLAME. Requires CUDA 12.x.
+#   uv sync --extra gpu
+# Additional CUDA extensions (pytorch3d, nvdiffrast, simple-knn) are
+# installed by scripts/setup-gpu.sh because they need --no-build-isolation.
 gpu = [
-  "einops",
+  "accelerate",
   "diffusers>=0.32",
+  "einops",
+  "face-detection-tflite",
+  "huggingface-hub==0.23.2",
   "loguru",
   "moviepy>=1.0",
   "omegaconf>=2.3",
   "opencv-python-headless>=4.10",
   "plyfile",
+  "rembg",
   "safetensors",
+  "scikit-image==0.20.0",
   "scipy>=1.11,<1.12",
+  "torch==2.3.0",
+  "torchvision==0.18.0",
   "transformers>=4.41",
   "trimesh>=4.0",
   "tyro",
+  "xformers==0.0.26.post1",
 ]
+
+[[tool.uv.index]]
+explicit = true
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+
+[tool.uv.sources]
+torch = {index = "pytorch-cu121"}
+torchvision = {index = "pytorch-cu121"}
+xformers = {index = "pytorch-cu121"}
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/splattie"]

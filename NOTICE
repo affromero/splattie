@@ -37,27 +37,36 @@ apps/web/public/demos/*.splattie and apps/web/public/demos/thumbs/*.jpg
     Tima Miroshnichenko (x2), Daniel Hoffman Jackson.
 
 ================================================================================
-Non-commercial third-party (reference GPU pipeline)
+GPU pipeline third-party (mixed licensing)
 ================================================================================
 
-The backend (backend/) wraps LAM and FLAME to generate `.splattie` files from
-photos. These third-party components are restricted:
+The backend (backend/) wraps these components to generate `.splattie` files
+from photos. Their licenses differ:
 
-LAM (Large Avatar Model)
+LAM (Large Avatar Model) - Apache 2.0 (commercial OK)
   Source: https://github.com/aigc3d/LAM
-  License: research-only. See upstream LICENSE.
+  License: Apache 2.0 (verified in backend/vendor/LAM/LICENSE)
   Bundled as: git submodule at backend/vendor/LAM
+  Notes: LAM code itself is commercial-friendly, but it loads FLAME at
+  runtime - FLAME's terms then apply to the combined system.
 
-FLAME (Faces Learned with an Articulated Model and Expressions)
+FLAME (Faces Learned with an Articulated Model and Expressions) - NON-COMMERCIAL
   Source: https://flame.is.tue.mpg.de
   License: non-commercial research license. Requires attribution.
   Bundled as: model files downloaded by backend/scripts/setup-gpu.sh
-  Commercial license must be negotiated with MPI for Intelligent Systems.
+  Commercial license: contact MPI for Intelligent Systems
+  (https://flame.is.tue.mpg.de) before commercial use.
 
-diff-gaussian-rasterization (INRIA)
+diff-gaussian-rasterization (INRIA) - NON-COMMERCIAL (NOT INSTALLED BY DEFAULT)
   Source: https://github.com/graphdeco-inria/diff-gaussian-rasterization
   License: non-commercial. See upstream LICENSE.
-  Used as: CUDA dependency of LAM.
+  Status: NOT installed by default. The LAM fork makes the rasterizer
+  import optional and returns placeholder zeros when missing; the canonical
+  gaussian splat output used by Splattie is unaffected. To install it
+  anyway (for training or full LAM rendering), set INSTALL_DIFF_RAST=1
+  before running backend/scripts/setup-gpu.sh.
+  Drop-in replacement: gsplat (Apache 2.0)
+  https://github.com/nerfstudio-project/gsplat
 
 ================================================================================
 Path to commercial use
