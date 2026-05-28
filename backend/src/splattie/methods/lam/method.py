@@ -124,6 +124,7 @@ class LAMMethod:
         output_dir.mkdir(parents=True, exist_ok=True)
         return self._generate_with_lam(image, model_id, output_dir)
 
+    @jaxtyped(typechecker=beartype)
     def _generate_with_lam(
         self,
         image: UInt8[npt.NDArray[np.uint8], "h w 3"],

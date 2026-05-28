@@ -69,15 +69,17 @@ repos:
             additional_dependencies: [toml-sort>=0.23.1]
 
     # Ruff lints + formats the backend using backend/pyproject.toml
-    # (select = ["ALL"] + curated ignores already configured there).
+    # (select = ["ALL"] + curated ignores already configured there). Scoped to
+    # src/ + tests/ to match CI (`ruff check src/ tests/`); backend/scripts/ is
+    # operational glue the project deliberately leaves out of the lint gate.
     - repo: https://github.com/astral-sh/ruff-pre-commit
       rev: v0.14.9
       hooks:
           - id: ruff
             args: [--fix]
-            files: ^backend/.*\.py$
+            files: ^backend/(src|tests)/.*\.py$
           - id: ruff-format
-            files: ^backend/.*\.py$
+            files: ^backend/(src|tests)/.*\.py$
 
     - repo: local
       hooks:
@@ -117,7 +119,7 @@ repos:
             entry: scripts/hooks/check_array_annotations.sh
             language: system
             types: [python]
-            files: ^backend/.*\.py$
+            files: ^backend/(src|tests)/.*\.py$
             exclude: ^backend/src/splattie/methods/base\.py$
 
           # Frontend: lint + type-check the whole workspace (mirrors `npm run ci`
