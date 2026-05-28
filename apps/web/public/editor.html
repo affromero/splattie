@@ -140,7 +140,7 @@
         const btn = document.createElement('button');
         btn.className = 'state-btn' + (name === currentState ? ' editing' : '') + (name === liveState ? ' live' : '') + (configured.has(name) ? ' configured' : '');
         btn.textContent = name;
-        btn.onclick = () => { currentState = name; buildPanel(); };
+        btn.onclick = () => { currentState = name; widget._stateMachine?.transitionTo(name); buildPanel(); };
         statesDiv.appendChild(btn);
       }
       panel.appendChild(statesDiv);
