@@ -134,7 +134,7 @@ splattie/
 | Rendering | Spark 2.0 (World Labs, MIT) + Three.js |
 | Animation | FLAME SplatSkinning (dual quaternion) + PCA blendshapes |
 | Backend | FastAPI, Python 3.10, uv |
-| Head generation | LAM (SIGGRAPH 2025) - swappable via the `HeadGenerationMethod` protocol |
+| Asset generation | LAM (SIGGRAPH 2025) heads - swappable via the `AssetGenerationMethod` protocol (`asset_type`: head/body/object) |
 | Format | ZIP with `manifest.json`, version-locked to the widget |
 
 ## API
@@ -187,4 +187,4 @@ The reference GPU pipeline (`backend/`) wraps **LAM** (Apache 2.0) + **gsplat** 
 
 1. **Widget-only** - use the widget freely; generate `.splattie` files through your own pipeline.
 2. **License FLAME** - contact [MPI for Intelligent Systems](https://flame.is.tue.mpg.de) for commercial FLAME terms. The rest of the stack is already Apache 2.0 / MIT.
-3. **Drop-in replacement** - implement an alternative head-generation method behind the `HeadGenerationMethod` protocol in [`backend/src/splattie/methods/`](backend/src/splattie/methods/). The format is method-agnostic.
+3. **Drop-in replacement** - implement an alternative asset-generation method behind the `AssetGenerationMethod` protocol in [`backend/src/splattie/methods/`](backend/src/splattie/methods/), declaring its `asset_type` (head/body/object). The format is method-agnostic.

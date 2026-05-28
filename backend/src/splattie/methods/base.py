@@ -1,4 +1,4 @@
-"""Protocol for swappable head generation methods."""
+"""Protocol for swappable asset generation methods."""
 
 from __future__ import annotations
 
@@ -12,10 +12,11 @@ from splattie.types import GenerationResult, MethodCapabilities, MethodInfo
 
 
 @runtime_checkable
-class HeadGenerationMethod(Protocol):
-    """Contract for any 3DGS head generation backend.
+class AssetGenerationMethod(Protocol):
+    """Contract for any 3DGS asset generation backend (head, body, object).
 
     Adding a new method = implement this protocol + register in the registry.
+    The asset type is declared via ``MethodInfo.asset_type``.
     """
 
     @property
@@ -33,7 +34,7 @@ class HeadGenerationMethod(Protocol):
         image: UInt8[npt.NDArray[np.uint8], "h w 3"],
         mask: Bool[npt.NDArray[np.bool_], "h w"],
     ) -> GenerationResult:
-        """Generate a 3DGS head from a segmented image."""
+        """Generate a 3DGS asset from a segmented image."""
         ...
 
     def unload(self) -> None:

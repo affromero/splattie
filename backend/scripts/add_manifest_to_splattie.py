@@ -86,10 +86,12 @@ def build_manifest(
     has_states: bool,
     thumb_path: Path | None,
     widget_version: str,
+    asset_type: str,
 ) -> dict:
     manifest: dict = {
         "format": "splattie",
         "formatVersion": widget_version,
+        "assetType": asset_type,
         "generator": {
             "method": "lam",
             "methodVersion": "20k-siggraph2025",
@@ -129,7 +131,7 @@ def build_manifest(
     return manifest
 
 
-def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str) -> str:
+def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, asset_type: str) -> str:
     """Returns a short status string for logging."""
     stem = splattie_path.stem
 
@@ -138,8 +140,8 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str) -> str:
 
         if "manifest.json" in names:
             existing = json.loads(zf.read("manifest.json").decode("utf-8"))
-            if existing.get("formatVersion") == widget_version:
-                return f"skip (already v{widget_version})"
+            if existing.get("formatVersion") == widget_version and existing.get("assetType") == asset_type:
+                return f"skip (already v{widget_version}, {asset_type})"
 
         splat_entry, splat_format = find_splat_entry(zf)
         splat_bytes = zf.read(splat_entry)
@@ -162,6 +164,7 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str) -> str:
         has_states=has_states,
         thumb_path=thumb_path,
         widget_version=widget_version,
+        asset_type=asset_type,
     )
 
     tmp_path = splattie_path.with_suffix(splattie_path.suffix + ".tmp")
@@ -179,6 +182,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Add manifest.json to existing .splattie files")
     parser.add_argument("--splatties-dir", type=str, required=True)
     parser.add_argument("--thumbs-dir", type=str, required=True)
+    parser.add_argument("--asset-type", type=str, default="head", choices=["head", "body", "object"])
     args = parser.parse_args()
 
     splatties_dir = Path(args.splatties_dir).resolve()
@@ -199,7 +203,7 @@ def main() -> None:
         return
 
     for p in splatties:
-        status = rebundle(p, thumbs_dir, widget_version)
+        status = rebundle(p, thumbs_dir, widget_version, args.asset_type)
         print(f"  {p.name}: {status}")
 
     print(f"\nProcessed {len(splatties)} file(s).")

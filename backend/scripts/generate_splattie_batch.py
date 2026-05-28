@@ -15,70 +15,17 @@ Usage (run from backend/vendor/LAM/):
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import os
 import subprocess
-import zipfile
-from datetime import datetime, timezone
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-BACKEND_DIR = SCRIPT_DIR.parent if SCRIPT_DIR.name == "scripts" else SCRIPT_DIR
-WIDGET_PKG_JSON = BACKEND_DIR.parent / "packages" / "splattie-widget" / "package.json"
-WIDGET_PUBLIC = BACKEND_DIR.parent / "packages" / "splattie-widget" / "public"
-
-SHARED_ASSETS = ["bone_tree.json", "lbs_weight_20k.json"]
-
-DEFAULT_STATES = {
-    "defaults": {
-        "camera": {"theta": 0, "phi": 75, "radius": 0.5, "fov": 60},
-        "autoBlink": {"interval": [2000, 7000], "duration": 150},
-    },
-    "states": {
-        "idle": {
-            "ghost": {"amplitude": 0.003, "frequency": 0.4, "wobble": 0.2},
-            "expression": {},
-            "camera": {"theta": 0, "phi": 75, "radius": 0.5, "fov": 60},
-            "rotation": [0, 0, 0],
-            "tracking": {"eyes": 1.0, "head": 0.1},
-        },
-        "hover": {
-            "ghost": {"amplitude": 0.005, "frequency": 0.6, "wobble": 0.4},
-            "expression": {},
-            "camera": {"theta": 0, "phi": 75, "radius": 0.45, "fov": 60},
-            "rotation": [-2, 0, -1],
-            "tracking": {"eyes": 1.0, "head": 0.3},
-        },
-        "click": {
-            "ghost": {"amplitude": 0.001, "frequency": 1.0, "wobble": 0.1},
-            "expression": {},
-            "camera": {"theta": 0, "phi": 70, "radius": 0.4, "fov": 65},
-            "rotation": [3, 0, 0],
-            "tracking": {"eyes": 0.5, "head": 0.0},
-        },
-    },
-    "transitions": {
-        "idle->hover": {"duration": 0.3, "easing": "ease-out"},
-        "hover->idle": {"duration": 0.5, "easing": "ease-in"},
-        "*->click": {"duration": 0.1, "easing": "snap"},
-    },
-}
-
-
-def read_widget_version() -> str:
-    return json.loads(WIDGET_PKG_JSON.read_text())["version"]
-
-
-def count_ply_vertices(ply_path: Path) -> int:
-    with open(ply_path, "rb") as f:
-        for raw in f:
-            line = raw.decode("ascii", errors="ignore").strip()
-            if line.startswith("element vertex"):
-                return int(line.split()[-1])
-            if line == "end_header":
-                break
-    raise ValueError(f"No vertex count in PLY header: {ply_path}")
+from splattie.methods.bundle_common import (
+    DEFAULT_STATES_HEAD,
+    build_manifest,
+    bundle_splattie,
+    count_ply_vertices,
+    read_widget_version,
+)
 
 
 def run_lam_inference(image_path: Path, name: str) -> Path:
@@ -129,80 +76,29 @@ def find_absolute_ply(name: str) -> Path:
     return ply_path
 
 
-def build_manifest(
-    name: str,
-    ply_path: Path,
-    source_image_path: Path,
-    widget_version: str,
-) -> dict:
-    source_hash = hashlib.sha256(source_image_path.read_bytes()).hexdigest()
-    num_gaussians = count_ply_vertices(ply_path)
-
-    return {
-        "format": "splattie",
-        "formatVersion": widget_version,
-        "generator": {
-            "method": "lam",
-            "methodVersion": "20k-siggraph2025",
-            "tool": "generate_splattie_batch.py",
-            "createdAt": datetime.now(timezone.utc).isoformat(),
-        },
-        "avatar": {
-            "splat": {
-                "file": f"{name}.ply",
-                "format": "ply",
-                "numGaussians": num_gaussians,
-                "topology": "flame-20k",
-            },
-        },
-        "animation": {
-            "type": "lbs",
-            "skeleton": {"file": "bone_tree.json", "rig": "flame"},
-            "weights": {"file": "lbs_weight_20k.json"},
-            "expression": {"system": "flame-pca", "basis": None},
-        },
-        "widget": {"config": "states.json"},
-        "metadata": {
-            "sourceImageHash": f"sha256:{source_hash}",
-        },
-    }
-
-
-def bundle_splattie(
+def bundle_head_splattie(
     name: str,
     ply_path: Path,
     output_dir: Path,
     source_image_path: Path,
     widget_version: str,
 ) -> Path:
-    """Bundle PLY + shared assets + manifest.json into a .splattie ZIP."""
+    """Bundle a LAM head PLY + shared FLAME rig + manifest into a `.splattie` ZIP."""
     splattie_path = output_dir / f"{name}.splattie"
-
-    manifest = build_manifest(name, ply_path, source_image_path, widget_version)
-
-    # Validate every referenced file exists before writing the ZIP.
-    referenced: list[tuple[str, Path]] = [(manifest["avatar"]["splat"]["file"], ply_path)]
-    skeleton = manifest["animation"].get("skeleton")
-    if skeleton:
-        referenced.append((skeleton["file"], WIDGET_PUBLIC / skeleton["file"]))
-    weights = manifest["animation"].get("weights")
-    if weights:
-        referenced.append((weights["file"], WIDGET_PUBLIC / weights["file"]))
-    for arc_name, src in referenced:
-        if not src.exists():
-            raise FileNotFoundError(f"Manifest references {arc_name!r} but source {src} does not exist")
-
-    with zipfile.ZipFile(str(splattie_path), "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("manifest.json", json.dumps(manifest, indent=2))
-        zf.write(str(ply_path), manifest["avatar"]["splat"]["file"])
-
-        if skeleton:
-            zf.write(str(WIDGET_PUBLIC / skeleton["file"]), skeleton["file"])
-        if weights:
-            zf.write(str(WIDGET_PUBLIC / weights["file"]), weights["file"])
-
-        zf.writestr(manifest["widget"]["config"], json.dumps(DEFAULT_STATES, indent=2))
-
+    manifest = build_manifest(
+        splat_filename=f"{name}.ply",
+        num_gaussians=count_ply_vertices(ply_path),
+        widget_version=widget_version,
+        asset_type=AssetType.HEAD,
+        rig=HEAD_RIG,
+        source_image_path=source_image_path,
+    )
+    bundle_splattie(
+        output_path=splattie_path,
+        splat_path=ply_path,
+        manifest=manifest,
+        states=DEFAULT_STATES_HEAD,
+    )
     size_kb = splattie_path.stat().st_size // 1024
     print(f"  Bundle: {splattie_path} ({size_kb} KB)")
     return splattie_path
@@ -236,7 +132,7 @@ def main():
         try:
             run_lam_inference(img_path, name)
             abs_ply = find_absolute_ply(name)
-            bundle_splattie(name, abs_ply, output_dir, img_path, widget_version)
+            bundle_head_splattie(name, abs_ply, output_dir, img_path, widget_version)
             print("  OK\n")
         except Exception as e:
             print(f"  FAILED: {e}\n")

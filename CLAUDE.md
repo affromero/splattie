@@ -9,7 +9,7 @@
 | Frontend | Next.js 15 App Router, TypeScript strict, CSS Modules |
 | 3D Rendering | LAM_WebRender (gaussian-splat-renderer-for-lam), WebGL |
 | Backend (GPU) | Python 3.10, FastAPI, uv + pyproject.toml |
-| Head Generation | LAM (SIGGRAPH 2025) — swappable via HeadGenerationMethod protocol |
+| Asset Generation | LAM (SIGGRAPH 2025) heads — swappable via AssetGenerationMethod protocol (`asset_type`: head/body/object) |
 | Animation | ARKit blendshapes via FLAME mesh (client-side, 60fps) |
 | Face Detection | readPixels after WebGL render (pixel-perfect) |
 | Compression | @playcanvas/splat-transform (PLY → SPZ) |
@@ -71,7 +71,7 @@ docker compose -f docker-compose.prod.yml up -d
 2. **TypeScript strict** — no `any`
 3. **Server Components by default** — `'use client'` only for interactive
 4. **Python: uv only** — pip is FORBIDDEN
-5. **Swappable methods** — all head generation goes through HeadGenerationMethod protocol
+5. **Swappable methods** — all asset generation goes through the `AssetGenerationMethod` protocol with an `asset_type` discriminator (head/body/object)
 6. **Client-side animation** — ARKit blendshapes run in browser, no server roundtrip
 7. **Port 4001** — frontend dev and production
 8. **Port 8000** — backend API

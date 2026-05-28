@@ -31,20 +31,24 @@ async def generate(request: Request) -> StreamingResponse:
 
 
 @router.post("/generate-from-upload")
-async def generate_from_upload(image: UploadFile) -> JSONResponse:
-    """Generate a 3DGS head directly from an uploaded image. Returns JSON."""
+async def generate_from_upload(image: UploadFile, method: str | None = None) -> JSONResponse:
+    """Generate a 3DGS asset directly from an uploaded image. Returns JSON.
+
+    The ``?method=<id>`` query param selects the generation method (e.g. ``lam``
+    for heads, ``lhm`` for bodies); defaults to the registry's default method.
+    """
     import io
 
     contents = await image.read()
     img = np.array(Image.open(io.BytesIO(contents)).convert("RGB"))
     mask = np.ones(img.shape[:2], dtype=np.bool_)
 
-    method_id = registry.default_method_id or "lam"
-    method = registry.get(method_id)
-    method.load()
+    method_id = method or registry.default_method_id or "lam"
+    gen = registry.get(method_id)
+    gen.load()
 
     start = time.monotonic()
-    result = method.generate(img, mask)
+    result = gen.generate(img, mask)
     elapsed = time.monotonic() - start
 
     return JSONResponse(
@@ -92,7 +96,7 @@ async def _generation_stream(
             "spzSizeBytes": result.spz_size_bytes,
             "numGaussians": result.num_gaussians,
             "methodId": result.method_id,
-            "flameParamsUrl": result.flame_params_url,
+            "rigParamsUrl": result.rig_params_url,
             "inferenceSeconds": round(elapsed, 2),
         },
     )

@@ -7,10 +7,8 @@ Calls LAM's Python API directly from vendor/LAM submodule.
 from __future__ import annotations
 
 import logging
-import shutil
 import sys
 import uuid
-import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +16,13 @@ import numpy.typing as npt
 from beartype import beartype
 from jaxtyping import Bool, UInt8, jaxtyped
 
+from splattie.methods.bundle_common import (
+    DEFAULT_STATES_HEAD,
+    build_manifest,
+    bundle_splattie,
+    count_ply_vertices,
+    read_widget_version,
+)
 from splattie.methods.registry import registry
 from splattie.types import GenerationResult, MethodCapabilities, MethodInfo
 
@@ -25,7 +30,6 @@ logger = logging.getLogger(__name__)
 
 STORAGE_DIR = Path("data/generations")
 VENDOR_LAM = Path(__file__).resolve().parents[4] / "vendor" / "LAM"
-VENDOR_WEBRENDER = Path(__file__).resolve().parents[4] / "vendor" / "LAM_WebRender"
 MODEL_ZOO = VENDOR_LAM / "model_zoo"
 
 _lam_model = None
@@ -91,6 +95,7 @@ class LAMMethod:
             description="Single image → drivable 3DGS head with FLAME LBS animation",
             paper_url="https://arxiv.org/abs/2502.17796",
             repo_url="https://github.com/aigc3d/LAM",
+            asset_type="head",
         )
 
     @property
@@ -103,10 +108,9 @@ class LAMMethod:
         )
 
     def load(self) -> None:
-        try:
-            _load_model()
-        except Exception:
-            logger.warning("LAM model not available (no GPU or missing weights)")
+        # No fallback: if the model can't load (no GPU / missing weights), let it
+        # raise so the caller returns a 500 instead of silently serving a demo.
+        _load_model()
 
     @jaxtyped(typechecker=beartype)
     def generate(
@@ -114,19 +118,15 @@ class LAMMethod:
         image: UInt8[npt.NDArray[np.uint8], "h w 3"],
         mask: Bool[npt.NDArray[np.bool_], "h w"],
     ) -> GenerationResult:
+        # No fallback: inference failure propagates as a 500 (no-fallback rule).
         model_id = uuid.uuid4().hex[:12]
         output_dir = STORAGE_DIR / model_id
         output_dir.mkdir(parents=True, exist_ok=True)
-
-        try:
-            return self._generate_with_lam(image, model_id, output_dir)
-        except Exception:
-            logger.exception("LAM inference failed, using demo fallback")
-            return self._fallback(model_id)
+        return self._generate_with_lam(image, model_id, output_dir)
 
     def _generate_with_lam(
         self,
-        image: npt.NDArray[np.uint8],
+        image: UInt8[npt.NDArray[np.uint8], "h w 3"],
         model_id: str,
         output_dir: Path,
     ) -> GenerationResult:
@@ -188,55 +188,43 @@ class LAMMethod:
                 flame_params=flame_params,
             )
 
-        bundle_dir = output_dir / model_id
-        bundle_dir.mkdir(exist_ok=True)
-
-        ply_path = bundle_dir / "offset.ply"
+        # Save the absolute-position PLY (rgb2sh=True, offset2xyz=False) — the same
+        # flavor the demo batch builder ships and the widget renders. The shared
+        # bundler then wraps it with the canonical FLAME rig + manifest so the
+        # served .splattie is byte-identical in shape to a batch-built head demo.
+        ply_path = output_dir / f"{model_id}.ply"
         cano_gs = res["cano_gs_lst"][0]
-        cano_gs.save_ply(str(ply_path), rgb2sh=False, offset2xyz=True)
+        cano_gs.save_ply(str(ply_path), rgb2sh=True, offset2xyz=False)
         logger.info("PLY saved: %s (%d KB)", ply_path.name, ply_path.stat().st_size // 1024)
 
-        demo_zip = VENDOR_WEBRENDER / "asset" / "arkit" / "p2-1.zip"
-        if demo_zip.exists():
-            import tempfile
-
-            with tempfile.TemporaryDirectory() as tmp:
-                import zipfile as zf
-
-                with zf.ZipFile(str(demo_zip), "r") as z:
-                    z.extractall(tmp)
-                demo_dir = Path(tmp) / "p2-1"
-                for fname in ["skin.glb", "animation.glb", "vertex_order.json"]:
-                    src = demo_dir / fname
-                    if src.exists():
-                        shutil.copy2(str(src), str(bundle_dir / fname))
-
-        zip_path = output_dir / f"{model_id}.zip"
-        with zipfile.ZipFile(str(zip_path), "w", zipfile.ZIP_DEFLATED) as zf:
-            for f in bundle_dir.iterdir():
-                zf.write(str(f), f"{model_id}/{f.name}")
-
-        zip_size = zip_path.stat().st_size
-        logger.info("ZIP bundle: %s (%d KB)", zip_path.name, zip_size // 1024)
-
-        return GenerationResult(
-            model_id=model_id,
-            spz_url=f"/storage/{model_id}/{model_id}.zip",
-            spz_size_bytes=zip_size,
-            num_gaussians=20_000,
-            method_id="lam",
-            flame_params_url=f"/storage/{model_id}/{model_id}.zip",
+        num_gaussians = count_ply_vertices(ply_path)
+        manifest = build_manifest(
+            splat_filename=f"{model_id}.ply",
+            num_gaussians=num_gaussians,
+            widget_version=read_widget_version(),
+            asset_type=AssetType.HEAD,
+            rig=HEAD_RIG,
+            generator_tool="lam/method.py",
+            source_image_path=img_path,
         )
+        splattie_path = output_dir / f"{model_id}.splattie"
+        bundle_splattie(
+            output_path=splattie_path,
+            splat_path=ply_path,
+            manifest=manifest,
+            states=DEFAULT_STATES_HEAD,
+        )
+        bundle_size = splattie_path.stat().st_size
+        logger.info("Bundle: %s (%d KB)", splattie_path.name, bundle_size // 1024)
 
-    def _fallback(self, model_id: str) -> GenerationResult:
-        logger.warning("Using demo bundle fallback")
+        bundle_url = f"/storage/{model_id}/{model_id}.splattie"
         return GenerationResult(
             model_id=model_id,
-            spz_url="/demo/andres.zip",
-            spz_size_bytes=0,
-            num_gaussians=20_000,
+            spz_url=bundle_url,
+            spz_size_bytes=bundle_size,
+            num_gaussians=num_gaussians,
             method_id="lam",
-            flame_params_url="/demo/andres.zip",
+            rig_params_url=bundle_url,
         )
 
     def unload(self) -> None:

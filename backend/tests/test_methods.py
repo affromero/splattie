@@ -1,23 +1,40 @@
-"""Head generation method tests."""
+"""Asset generation method tests."""
 
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
-from splattie.methods.base import HeadGenerationMethod
+from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
 from splattie.methods.registry import registry
+from splattie.types import AssetType
+
+
+def cuda_available() -> bool:
+    """Return True when torch and a CUDA device are present (real GPU runner)."""
+    try:
+        import torch
+
+        return torch.cuda.is_available()
+    except Exception:
+        return False
 
 
 def test_lam_implements_protocol() -> None:
     method = LAMMethod()
-    assert isinstance(method, HeadGenerationMethod)
+    assert isinstance(method, AssetGenerationMethod)
 
 
 def test_lam_info() -> None:
     method = LAMMethod()
     assert method.info.id == "lam"
     assert "SIGGRAPH" in method.info.name
+
+
+def test_lam_is_a_head_method() -> None:
+    assert LAMMethod().info.asset_type is AssetType.HEAD
+    assert LAMMethod().info.asset_type == "head"
 
 
 def test_lam_capabilities() -> None:
@@ -27,7 +44,19 @@ def test_lam_capabilities() -> None:
     assert caps.max_output_gaussians > 0
 
 
-def test_lam_generate() -> None:
+@pytest.mark.skipif(cuda_available(), reason="GPU present — covered by produces-bundle test")
+def test_lam_generate_raises_without_gpu() -> None:
+    """No-fallback contract: with no CUDA/weights, generation raises (no demo bundle)."""
+    method = LAMMethod()
+    image = np.zeros((256, 256, 3), dtype=np.uint8)
+    mask = np.ones((256, 256), dtype=np.bool_)
+    with pytest.raises(Exception):  # noqa: B017, PT011 - any failure is acceptable; the point is it does NOT fall back
+        method.generate(image, mask)
+
+
+@pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
+def test_lam_generate_produces_bundle() -> None:
+    """On a real GPU, generation produces a widget-loadable `.splattie` bundle."""
     method = LAMMethod()
     method.load()
 
@@ -36,9 +65,9 @@ def test_lam_generate() -> None:
 
     result = method.generate(image, mask)
     assert result.method_id == "lam"
-    assert result.num_gaussians == 20_000
-    assert result.spz_url.endswith((".spz", ".zip"))
-    assert result.flame_params_url.endswith((".json", ".zip"))
+    assert result.num_gaussians > 0
+    assert result.spz_url.endswith(".splattie")
+    assert result.rig_params_url.endswith(".splattie")
 
     method.unload()
 

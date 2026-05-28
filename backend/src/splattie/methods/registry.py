@@ -1,4 +1,4 @@
-"""Registry for available head generation methods."""
+"""Registry for available asset generation methods."""
 
 from __future__ import annotations
 
@@ -7,17 +7,17 @@ from typing import TYPE_CHECKING
 from splattie.types import MethodInfo
 
 if TYPE_CHECKING:
-    from splattie.methods.base import HeadGenerationMethod
+    from splattie.methods.base import AssetGenerationMethod
 
 
 class MethodRegistry:
-    """Singleton registry for head generation methods."""
+    """Singleton registry for asset generation methods."""
 
     def __init__(self) -> None:
-        self._methods: dict[str, type[HeadGenerationMethod]] = {}
-        self._instances: dict[str, HeadGenerationMethod] = {}
+        self._methods: dict[str, type[AssetGenerationMethod]] = {}
+        self._instances: dict[str, AssetGenerationMethod] = {}
 
-    def register(self, method_cls: type[HeadGenerationMethod]) -> type[HeadGenerationMethod]:
+    def register(self, method_cls: type[AssetGenerationMethod]) -> type[AssetGenerationMethod]:
         """Register a method class. Can be used as a decorator."""
         info = method_cls.__dict__.get("_info")
         if info is None:
@@ -28,7 +28,7 @@ class MethodRegistry:
         self._methods[method_id] = method_cls
         return method_cls
 
-    def get(self, method_id: str) -> HeadGenerationMethod:
+    def get(self, method_id: str) -> AssetGenerationMethod:
         """Get or create a method instance."""
         if method_id not in self._instances:
             if method_id not in self._methods:

@@ -4,8 +4,19 @@ from __future__ import annotations
 
 import io
 
+import pytest
 from httpx import AsyncClient
 from PIL import Image
+
+
+def cuda_available() -> bool:
+    """Return True when torch and a CUDA device are present (real GPU runner)."""
+    try:
+        import torch
+
+        return torch.cuda.is_available()
+    except Exception:
+        return False
 
 
 async def test_health(client: AsyncClient) -> None:
@@ -45,7 +56,22 @@ async def test_segment(client: AsyncClient) -> None:
     assert len(data["bbox"]) == 4
 
 
-async def test_generate_from_upload(client: AsyncClient) -> None:
+async def test_generate_from_upload_without_gpu_errors(client: AsyncClient) -> None:
+    """No-fallback contract at the API layer: with no GPU, /generate-from-upload errors."""
+    if cuda_available():
+        pytest.skip("GPU present — success path covered by test_generate_from_upload_produces_bundle")
+
+    img = Image.new("RGB", (200, 200), (128, 128, 128))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    with pytest.raises(Exception):  # noqa: B017, PT011 - any failure is fine; the point is NO silent fallback
+        await client.post("/generate-from-upload", files={"image": ("test.png", buf, "image/png")})
+
+
+@pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
+async def test_generate_from_upload_produces_bundle(client: AsyncClient) -> None:
     img = Image.new("RGB", (200, 200), (128, 128, 128))
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -58,9 +84,10 @@ async def test_generate_from_upload(client: AsyncClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert "modelId" in data
-    assert "zipUrl" in data
+    assert data["zipUrl"].endswith(".splattie")
 
 
+@pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
 async def test_generate(client: AsyncClient) -> None:
     img = Image.new("RGB", (200, 200), (128, 128, 128))
     buf = io.BytesIO()

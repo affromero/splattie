@@ -15,8 +15,10 @@ export interface GenerationResult {
   spzSizeBytes: number;
   numGaussians: number;
   methodId: string;
-  flameParamsUrl: string;
+  rigParamsUrl: string;
 }
+
+export type AssetType = 'head' | 'body' | 'object';
 
 export interface MethodInfo {
   id: string;
@@ -24,6 +26,7 @@ export interface MethodInfo {
   description: string;
   paperUrl: string;
   repoUrl: string;
+  assetType: AssetType;
 }
 
 export interface HealthResponse {
