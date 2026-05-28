@@ -34,6 +34,8 @@ Splattie turns a single photograph into an **interactive 3D Gaussian Splatting h
 <script src="https://unpkg.com/@afromero/splattie-widget"></script>
 ```
 
+This repo contains the **landing page**, the **GPU generation pipeline**, and the **`.splattie` format spec**. The web component itself lives in a separate repo: [**affromero/splattie-widget**](https://github.com/affromero/splattie-widget) (published as [`@afromero/splattie-widget`](https://www.npmjs.com/package/@afromero/splattie-widget) on npm). If you only want to embed an avatar on your site, you don't need this repo.
+
 ## Why
 
 Spark renders splats. SuperSplat edits them. StorySplat hosts them. **Nothing makes them react.** Splattie is the interaction layer - a portable `.splattie` bundle plus a web component that reads it.
@@ -93,7 +95,7 @@ Open [http://localhost:4002](http://localhost:4002). Hot-reload for the widget i
 
 ## The `.splattie` format
 
-A ZIP bundle with a required `manifest.json` declaring every asset and locking the format version to the widget version. Full spec: [`packages/splattie-widget/FORMAT.md`](packages/splattie-widget/FORMAT.md).
+A ZIP bundle with a required `manifest.json` declaring every asset and locking the format version to the widget version. Full spec: [FORMAT.md in the widget repo](https://github.com/affromero/splattie-widget/blob/main/FORMAT.md).
 
 ```
 avatar.splattie
@@ -155,7 +157,7 @@ widget.addEventListener('splatclick', () => {});
 widget.setState('hover');
 ```
 
-React wrapper available via `@afromero/splattie-widget/react`. Full reference in the [widget README](packages/splattie-widget/README.md).
+React wrapper available via `@afromero/splattie-widget/react`. Full reference in the [widget README](https://github.com/affromero/splattie-widget#readme).
 
 ## Contributing
 
