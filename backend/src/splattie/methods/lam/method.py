@@ -6,9 +6,13 @@ Calls LAM's Python API directly from vendor/LAM submodule.
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import os
 import sys
+import threading
 import uuid
+from collections.abc import Iterator
 from pathlib import Path
 
 import numpy as np
@@ -34,6 +38,51 @@ MODEL_ZOO = VENDOR_LAM / "model_zoo"
 
 _lam_model = None
 _lam_config = None
+_flame_tracker = None
+# LAM + its FLAME tracker read/write cwd-relative paths and share scratch dirs,
+# so inference is serialized and run from vendor/LAM.
+_inference_lock = threading.Lock()
+_TRACKING_DIR = (STORAGE_DIR / "_flame_tracking").resolve()
+
+
+@contextlib.contextmanager
+def _chdir(path: Path) -> Iterator[None]:
+    prev = Path.cwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(prev)
+
+
+def _load_flame_tracker():
+    """Load the FLAME single-image tracker once and cache it."""
+    global _flame_tracker
+    if _flame_tracker is not None:
+        return _flame_tracker
+
+    lam_path = str(VENDOR_LAM)
+    if lam_path not in sys.path:
+        sys.path.insert(0, lam_path)
+    _patch_torch_load()
+    _patch_chumpy_compat()
+
+    from tools.flame_tracking_single_image import FlameTrackingSingleImage
+
+    tracking_models = VENDOR_LAM / "model_zoo" / "flame_tracking_models"
+    _TRACKING_DIR.mkdir(parents=True, exist_ok=True)
+    # The tracker's internal vhap/FLAME assets are cwd-relative to vendor/LAM.
+    with _chdir(VENDOR_LAM):
+        _flame_tracker = FlameTrackingSingleImage(
+            output_dir=str(_TRACKING_DIR),
+            alignment_model_path=str(tracking_models / "68_keypoints_model.pkl"),
+            vgghead_model_path=str(tracking_models / "vgghead" / "vgg_heads_l.trcd"),
+            human_matting_path=str(tracking_models / "matting" / "stylematte_synth.pt"),
+            facebox_model_path=str(tracking_models / "FaceBoxesV2.pth"),
+            detect_iris_landmarks=False,
+        )
+    logger.info("FLAME tracker loaded")
+    return _flame_tracker
 
 
 def _patch_torch_load() -> None:
@@ -168,10 +217,12 @@ class LAMMethod:
         import torch
         from PIL import Image as PILImage
 
+        output_dir = output_dir.resolve()
         img_path = output_dir / "input.jpg"
         PILImage.fromarray(image).save(str(img_path))
 
         model, cfg = _load_model()
+        tracker = _load_flame_tracker()
         source_size = cfg.dataset.source_image_res
 
         lam_path = str(VENDOR_LAM)
@@ -179,57 +230,75 @@ class LAMMethod:
             sys.path.insert(0, lam_path)
         from lam.runners.infer.head_utils import preprocess_image
 
-        img_tensor, _, _, shape_param = preprocess_image(
-            str(img_path),
-            mask_path=None,
-            intr=None,
-            pad_ratio=0,
-            bg_color=1.0,
-            max_tgt_size=None,
-            aspect_standard=1.0,
-            enlarge_ratio=[1.0, 1.0],
-            render_tgt_size=source_size,
-            multiply=14,
-            need_mask=True,
-            get_shape_param=True,
-        )
-
-        logger.info("Running LAM forward pass...")
-        with torch.no_grad():
-            image_in = img_tensor.unsqueeze(0).to("cuda", torch.float32)
-            dummy_c2ws = torch.eye(4).unsqueeze(0).unsqueeze(0).to("cuda")
-            focal = source_size / 2
-            dummy_intrs = (
-                torch.tensor([[focal, 0, focal, 0, focal, focal, 0, 0, 1]]).reshape(1, 1, 3, 3).float().to("cuda")
-            )
-            dummy_bg = torch.ones(1, 1, 3).to("cuda")
-            flame_params = {
-                "betas": shape_param.unsqueeze(0).to("cuda"),
-                "expr": torch.zeros(1, 100, device="cuda"),
-                "rotation": torch.zeros(1, 1, 3, device="cuda"),
-                "neck_pose": torch.zeros(1, 1, 3, device="cuda"),
-                "jaw_pose": torch.zeros(1, 1, 3, device="cuda"),
-                "eyes_pose": torch.zeros(1, 1, 6, device="cuda"),
-                "translation": torch.zeros(1, 1, 3, device="cuda"),
-            }
-
-            res = model.infer_single_view(
-                image_in,
-                None,
-                None,
-                render_c2ws=dummy_c2ws,
-                render_intrs=dummy_intrs,
-                render_bg_colors=dummy_bg,
-                flame_params=flame_params,
-            )
-
-        # Save the absolute-position PLY (rgb2sh=True, offset2xyz=False) — the same
-        # flavor the demo batch builder ships and the widget renders. The shared
-        # bundler then wraps it with the canonical FLAME rig + manifest so the
-        # served .splattie is byte-identical in shape to a batch-built head demo.
         ply_path = output_dir / f"{model_id}.ply"
-        cano_gs = res["cano_gs_lst"][0]
-        cano_gs.save_ply(str(ply_path), rgb2sh=True, offset2xyz=False)
+
+        # LAM and its FLAME tracker use cwd-relative paths and a shared scratch
+        # dir, so serialize and run them from vendor/LAM.
+        with _inference_lock, _chdir(VENDOR_LAM):
+            # FLAME single-image fitting → cropped image + mask + shape params.
+            if tracker.preprocess(str(img_path)) != 0:
+                msg = "FLAME tracking preprocess failed (no face detected?)"
+                raise RuntimeError(msg)
+            if tracker.optimize() != 0:
+                msg = "FLAME tracking optimize failed"
+                raise RuntimeError(msg)
+            code, tracked_dir = tracker.export()
+            if code != 0:
+                msg = "FLAME tracking export failed"
+                raise RuntimeError(msg)
+            tracked_dir = Path(tracked_dir)
+            tracked_img = tracked_dir / "images" / "00000_00.png"
+            tracked_mask = tracked_dir / "fg_masks" / "00000_00.png"
+
+            img_tensor, _, _, shape_param = preprocess_image(
+                str(tracked_img),
+                mask_path=str(tracked_mask),
+                intr=None,
+                pad_ratio=0,
+                bg_color=1.0,
+                max_tgt_size=None,
+                aspect_standard=1.0,
+                enlarge_ratio=[1.0, 1.0],
+                render_tgt_size=source_size,
+                multiply=14,
+                need_mask=True,
+                get_shape_param=True,
+            )
+
+            logger.info("Running LAM forward pass...")
+            with torch.no_grad():
+                image_in = img_tensor.unsqueeze(0).to("cuda", torch.float32)
+                dummy_c2ws = torch.eye(4).unsqueeze(0).unsqueeze(0).to("cuda")
+                focal = source_size / 2
+                dummy_intrs = (
+                    torch.tensor([[focal, 0, focal, 0, focal, focal, 0, 0, 1]]).reshape(1, 1, 3, 3).float().to("cuda")
+                )
+                dummy_bg = torch.ones(1, 1, 3).to("cuda")
+                flame_params = {
+                    "betas": shape_param.unsqueeze(0).to("cuda"),
+                    "expr": torch.zeros(1, 100, device="cuda"),
+                    "rotation": torch.zeros(1, 1, 3, device="cuda"),
+                    "neck_pose": torch.zeros(1, 1, 3, device="cuda"),
+                    "jaw_pose": torch.zeros(1, 1, 3, device="cuda"),
+                    "eyes_pose": torch.zeros(1, 1, 6, device="cuda"),
+                    "translation": torch.zeros(1, 1, 3, device="cuda"),
+                }
+
+                res = model.infer_single_view(
+                    image_in,
+                    None,
+                    None,
+                    render_c2ws=dummy_c2ws,
+                    render_intrs=dummy_intrs,
+                    render_bg_colors=dummy_bg,
+                    flame_params=flame_params,
+                )
+
+            # Save the absolute-position PLY (rgb2sh=True, offset2xyz=False) — the
+            # same flavor the demo batch builder ships and the widget renders. The
+            # shared bundler then wraps it with the canonical FLAME rig + manifest
+            # so the served .splattie matches a batch-built head demo in shape.
+            res["cano_gs_lst"][0].save_ply(str(ply_path), rgb2sh=True, offset2xyz=False)
         logger.info("PLY saved: %s (%d KB)", ply_path.name, ply_path.stat().st_size // 1024)
 
         num_gaussians = count_ply_vertices(ply_path)
