@@ -44,6 +44,7 @@ gpu = [
   "diffusers>=0.32",
   "einops",
   "face-detection-tflite",
+  "gsplat",
   "huggingface-hub==0.23.2",
   "loguru",
   "moviepy>=1.0",
