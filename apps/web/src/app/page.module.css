@@ -85,6 +85,23 @@
   margin-top: 0.25rem;
 }
 
+.editorLink {
+  align-self: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.editorLink:hover {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
 /* Gallery */
 .gallerySection {
   display: flex;
@@ -328,23 +345,11 @@
   color: var(--color-text-dim);
 }
 
-/* Upload (coming soon) */
+/* Upload (self-host only) */
 .uploadSection {
   display: flex;
   justify-content: center;
   padding: 0 2rem;
-}
-
-.uploadBox {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 3rem 2rem;
-  border: 1px dashed var(--color-border);
-  max-width: 500px;
-  width: 100%;
-  opacity: 0.5;
 }
 
 .uploadBoxActive {
@@ -383,19 +388,6 @@
   font-size: 1rem;
   font-weight: 500;
   color: var(--color-text-muted);
-}
-
-.uploadSubtitle {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-}
-
-.uploadPlaceholder {
-  color: var(--color-text-dim);
-  margin-top: 0.5rem;
 }
 
 /* Footer */
