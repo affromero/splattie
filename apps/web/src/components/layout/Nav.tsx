@@ -52,15 +52,10 @@ export function Nav() {
         <a href="/editor.html" className={styles.link}>
           editor
         </a>
-        {SELF_HOST ? (
+        {SELF_HOST && (
           <Link href="/create" className={styles.link}>
             create
           </Link>
-        ) : (
-          <span className={styles.linkDisabled}>
-            create
-            <span className={styles.badge}>soon</span>
-          </span>
         )}
         <a
           href="https://github.com/affromero/splattie"

@@ -50,12 +50,13 @@ export default function Home() {
     <main className={styles.page}>
       <section className={styles.hero}>
         <h1 className={styles.title}>
-          One photo in.<br />
-          <span className={styles.titleAccent}>Interactive 3D avatar out.</span>
+          Edit the splat.<br />
+          <span className={styles.titleAccent}>Embed the avatar.</span>
         </h1>
         <p className={styles.subtitle}>
-          Turn any portrait into a living avatar for your website.
-          Eyes follow visitors. Head reacts to hover. One line of HTML.
+          An open-source, in-browser editor and web component for interactive
+          3D Gaussian-splat avatars. Tune the gaze, pose, and background, then
+          embed with one line of HTML. Eyes follow your visitors.
         </p>
         <div className={styles.heroBadges}>
           <a href="https://github.com/affromero/splattie" target="_blank" rel="noopener noreferrer" className={styles.badge}>
@@ -69,8 +70,11 @@ export default function Home() {
       </section>
 
       <section className={styles.gallerySection}>
-        <h2 className={styles.sectionTitle}>Try it</h2>
-        <p className={styles.sectionSubtitle}>Click a portrait to bring it to life</p>
+        <h2 className={styles.sectionTitle}>Try the editor</h2>
+        <p className={styles.sectionSubtitle}>Click any portrait to open it in the editor.</p>
+        <a href="/editor.html" className={styles.editorLink}>
+          Or drop in your own .splattie ↗
+        </a>
 
         <div className={styles.gallery}>
           {DEMO_FACES.map((face) => (
@@ -126,20 +130,20 @@ export default function Home() {
         <div className={styles.steps}>
           <div className={styles.step}>
             <div className={styles.stepNumber}>1</div>
-            <h3 className={styles.stepTitle}>Upload</h3>
-            <p className={styles.stepDesc}>Any front-facing portrait photo</p>
+            <h3 className={styles.stepTitle}>Open</h3>
+            <p className={styles.stepDesc}>Start from a demo, or drop your own .splattie into the editor</p>
           </div>
           <div className={styles.stepDivider} />
           <div className={styles.step}>
             <div className={styles.stepNumber}>2</div>
-            <h3 className={styles.stepTitle}>Generate</h3>
-            <p className={styles.stepDesc}>LAM reconstructs a 3D Gaussian head in ~30s</p>
+            <h3 className={styles.stepTitle}>Edit</h3>
+            <p className={styles.stepDesc}>Tune gaze, pose, idle motion, and background — all in the browser</p>
           </div>
           <div className={styles.stepDivider} />
           <div className={styles.step}>
             <div className={styles.stepNumber}>3</div>
             <h3 className={styles.stepTitle}>Embed</h3>
-            <p className={styles.stepDesc}>One line of HTML. Eyes follow visitors.</p>
+            <p className={styles.stepDesc}>One line of HTML. Eyes follow your visitors.</p>
           </div>
         </div>
       </section>
@@ -152,8 +156,8 @@ export default function Home() {
         </p>
       </section>
 
-      <section className={styles.uploadSection}>
-        {SELF_HOST ? (
+      {SELF_HOST && (
+        <section className={styles.uploadSection}>
           <Link href="/create" className={styles.uploadBoxActive}>
             <h2 className={styles.uploadTitle}>Upload your own photo</h2>
             <p className={styles.uploadSubtitleActive}>Generate a 3D head on your local GPU</p>
@@ -163,18 +167,8 @@ export default function Home() {
               </svg>
             </div>
           </Link>
-        ) : (
-          <div className={styles.uploadBox}>
-            <h2 className={styles.uploadTitle}>Upload your own photo</h2>
-            <p className={styles.uploadSubtitle}>Coming soon</p>
-            <div className={styles.uploadPlaceholder}>
-              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                <path d="M24 8v32M8 24h32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3" />
-              </svg>
-            </div>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <footer className={styles.footer}>
         <p>

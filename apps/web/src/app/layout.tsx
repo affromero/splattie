@@ -18,8 +18,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Splattie - Interactive 3D avatars from a single photo',
-  description: 'Turn any portrait into a living 3D avatar for your website. Eyes follow visitors. One line of HTML.',
+  title: 'Splattie - Editor & widget for interactive 3D avatars',
+  description: 'Open-source, in-browser editor and web component for interactive 3D Gaussian-splat avatars. Tune gaze, pose, and background, then embed with one line of HTML.',
   metadataBase: new URL(SITE_URL),
   alternates: { canonical: '/' },
   icons: {
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
     apple: '/logo.svg',
   },
   openGraph: {
-    title: 'Splattie - Interactive 3D avatars from a single photo',
-    description: 'Turn any portrait into a living 3D avatar for your website. Eyes follow visitors. One line of HTML.',
+    title: 'Splattie - Editor & widget for interactive 3D avatars',
+    description: 'Open-source, in-browser editor and web component for interactive 3D Gaussian-splat avatars. Tune gaze, pose, and background, then embed with one line of HTML.',
     url: SITE_URL,
     siteName: 'Splattie',
     images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Splattie - Interactive 3D avatars' }],
@@ -36,8 +36,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Splattie - Interactive 3D avatars from a single photo',
-    description: 'Turn any portrait into a living 3D avatar. Eyes follow visitors. One line of HTML.',
+    title: 'Splattie - Editor & widget for interactive 3D avatars',
+    description: 'In-browser editor and web component for interactive 3D Gaussian-splat avatars. Embed with one line of HTML.',
     images: ['/og.png'],
   },
   robots: { index: true, follow: true },
