@@ -14,7 +14,7 @@ from splattie.methods.registry import registry
 from splattie.types import AssetType
 
 # A committed demo portrait — LAM's FLAME tracking needs a real face.
-_FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "thumbs" / "3762763.jpg"
+_FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "heads" / "3762763.jpg"
 
 
 def cuda_available() -> bool:
