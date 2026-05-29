@@ -166,6 +166,89 @@
   color: var(--color-text-muted);
 }
 
+/* Per-category carousels */
+.categoryLabel {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  max-width: 1100px;
+  margin: 0.75rem auto 0;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.categoryHint {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--color-text-dim);
+}
+
+.carousel {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+}
+
+.carouselTrack {
+  display: flex;
+  width: max-content;
+  animation: carouselScroll 50s linear infinite;
+}
+
+.carousel[data-paused='true'] .carouselTrack,
+.carousel:hover .carouselTrack {
+  animation-play-state: paused;
+}
+
+@keyframes carouselScroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.carouselItem {
+  flex: 0 0 auto;
+  margin-right: 1rem;
+}
+
+.carouselCard {
+  position: relative;
+  width: 150px;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  padding: 0;
+  display: block;
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+}
+
+.carouselCard:hover {
+  border-color: var(--color-border-active);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.carouselImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carouselTrack {
+    animation: none;
+  }
+}
+
 /* Editor section below gallery */
 .editorSection {
   width: 100%;

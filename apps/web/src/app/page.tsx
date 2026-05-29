@@ -1,50 +1,103 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './page.module.css';
 
 const SELF_HOST = process.env.NEXT_PUBLIC_SELF_HOST === 'true';
 
-interface DemoFace {
+type Category = 'head' | 'body';
+
+interface Demo {
   id: string;
-  thumb: string;
-  splattie: string;
+  category: Category;
   photographer: string;
   pexelsUrl: string;
 }
 
-const DEMO_FACES: DemoFace[] = [
-  { id: '3762763', thumb: '/demos/thumbs/3762763.jpg', splattie: '/demos/3762763.splattie', photographer: 'Shiny Diamond', pexelsUrl: 'https://www.pexels.com/photo/3762763/' },
-  { id: '3754430', thumb: '/demos/thumbs/3754430.jpg', splattie: '/demos/3754430.splattie', photographer: 'TUBARONES PHOTOGRAPHY', pexelsUrl: 'https://www.pexels.com/photo/3754430/' },
-  { id: '7705909', thumb: '/demos/thumbs/7705909.jpg', splattie: '/demos/7705909.splattie', photographer: 'ShotPot', pexelsUrl: 'https://www.pexels.com/photo/7705909/' },
-  { id: '8727488', thumb: '/demos/thumbs/8727488.jpg', splattie: '/demos/8727488.splattie', photographer: 'Tima Miroshnichenko', pexelsUrl: 'https://www.pexels.com/photo/8727488/' },
-  { id: '8727554', thumb: '/demos/thumbs/8727554.jpg', splattie: '/demos/8727554.splattie', photographer: 'Tima Miroshnichenko', pexelsUrl: 'https://www.pexels.com/photo/8727554/' },
-  { id: '35466969', thumb: '/demos/thumbs/35466969.jpg', splattie: '/demos/35466969.splattie', photographer: 'Daniel Hoffman Jackson', pexelsUrl: 'https://www.pexels.com/photo/35466969/' },
+// Demos live in category subfolders: /demos/{heads,bodies}/<id>.{jpg,splattie}.
+const folder = (c: Category): string => (c === 'head' ? 'heads' : 'bodies');
+const demoThumb = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.jpg`;
+const demoSrc = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.splattie`;
+
+const DEMOS: Demo[] = [
+  // Heads (LAM)
+  { id: '3762763', category: 'head', photographer: 'Shiny Diamond', pexelsUrl: 'https://www.pexels.com/photo/3762763/' },
+  { id: '3754430', category: 'head', photographer: 'TUBARONES PHOTOGRAPHY', pexelsUrl: 'https://www.pexels.com/photo/3754430/' },
+  { id: '7705909', category: 'head', photographer: 'ShotPot', pexelsUrl: 'https://www.pexels.com/photo/7705909/' },
+  { id: '8727488', category: 'head', photographer: 'Tima Miroshnichenko', pexelsUrl: 'https://www.pexels.com/photo/8727488/' },
+  { id: '8727554', category: 'head', photographer: 'Tima Miroshnichenko', pexelsUrl: 'https://www.pexels.com/photo/8727554/' },
+  { id: '35466969', category: 'head', photographer: 'Daniel Hoffman Jackson', pexelsUrl: 'https://www.pexels.com/photo/35466969/' },
+  // Bodies (LHM)
+  { id: '6668809', category: 'body', photographer: 'N. Voitkevich', pexelsUrl: 'https://www.pexels.com/photo/6668809/' },
+  { id: '31894858', category: 'body', photographer: 'Andrea Musto', pexelsUrl: 'https://www.pexels.com/photo/31894858/' },
+  { id: '31969138', category: 'body', photographer: 'Sephina Cornwall', pexelsUrl: 'https://www.pexels.com/photo/31969138/' },
+  { id: '8217520', category: 'body', photographer: 'Mart Production', pexelsUrl: 'https://www.pexels.com/photo/8217520/' },
+  { id: '6211660', category: 'body', photographer: 'Dima Valkov', pexelsUrl: 'https://www.pexels.com/photo/6211660/' },
+  { id: '18516993', category: 'body', photographer: 'Foto Art Events', pexelsUrl: 'https://www.pexels.com/photo/18516993/' },
 ];
 
+const HEADS = DEMOS.filter((d) => d.category === 'head');
+const BODIES = DEMOS.filter((d) => d.category === 'body');
+
+function Carousel({
+  demos,
+  activeId,
+  paused,
+  onSelect,
+}: {
+  demos: Demo[];
+  activeId: string | null;
+  paused: boolean;
+  onSelect: (demo: Demo) => void;
+}) {
+  // Duplicate the list so the marquee loops seamlessly at translateX(-50%).
+  const loop = [...demos, ...demos];
+  return (
+    <div className={styles.carousel} data-paused={paused}>
+      <div className={styles.carouselTrack}>
+        {loop.map((demo, i) => (
+          <div key={`${demo.id}-${i}`} className={styles.carouselItem}>
+            <button
+              className={`${styles.carouselCard} ${activeId === demo.id ? styles.cardActive : ''}`}
+              onClick={() => onSelect(demo)}
+              aria-label={`Bring ${demo.category} by ${demo.photographer} to life`}
+            >
+              {/* Plain img (not next/image): the marquee duplicates nodes + lazy-loads. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={demoThumb(demo)} alt={`${demo.category} by ${demo.photographer}`} className={styles.carouselImg} loading="lazy" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
-  const [activeFace, setActiveFace] = useState<DemoFace | null>(null);
+  const [activeDemo, setActiveDemo] = useState<Demo | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
-  const handleCardClick = useCallback((face: DemoFace) => {
-    setActiveFace((prev) => (prev?.id === face.id ? null : face));
+  const handleSelect = useCallback((demo: Demo) => {
+    setActiveDemo((prev) => (prev?.id === demo.id ? null : demo));
   }, []);
 
   useEffect(() => {
-    if (activeFace && editorRef.current) {
-      editorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (activeDemo && editorRef.current) {
+      editorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [activeFace]);
+  }, [activeDemo]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setActiveFace(null);
+      if (e.key === 'Escape') setActiveDemo(null);
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Selecting any avatar pauses both carousels so the chosen one stays in view.
+  const paused = activeDemo !== null;
 
   return (
     <main className={styles.page}>
@@ -54,8 +107,8 @@ export default function Home() {
           <span className={styles.titleAccent}>Interactive 3D avatar out.</span>
         </h1>
         <p className={styles.subtitle}>
-          Turn any portrait into a living avatar for your website.
-          Eyes follow visitors. Head reacts to hover. One line of HTML.
+          Turn any portrait — or full body — into a living avatar for your website.
+          It looks at your visitors and reacts to hover. One line of HTML.
         </p>
         <div className={styles.heroBadges}>
           <a href="https://github.com/affromero/splattie" target="_blank" rel="noopener noreferrer" className={styles.badge}>
@@ -70,52 +123,32 @@ export default function Home() {
 
       <section className={styles.gallerySection}>
         <h2 className={styles.sectionTitle}>Try it</h2>
-        <p className={styles.sectionSubtitle}>Click a portrait to bring it to life</p>
+        <p className={styles.sectionSubtitle}>Click an avatar to bring it to life — the carousel pauses while you play</p>
 
-        <div className={styles.gallery}>
-          {DEMO_FACES.map((face) => (
-            <div key={face.id} className={styles.cardWrapper}>
-              <button
-                className={`${styles.card} ${activeFace?.id === face.id ? styles.cardActive : ''}`}
-                onClick={() => handleCardClick(face)}
-              >
-                <Image
-                  src={face.thumb}
-                  alt={`Portrait by ${face.photographer}`}
-                  width={400}
-                  height={500}
-                  className={styles.cardImage}
-                />
-              </button>
-              <a
-                href={face.pexelsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.credit}
-              >
-                {face.photographer}
-              </a>
-            </div>
-          ))}
-        </div>
+        <div className={styles.categoryLabel}>Heads<span className={styles.categoryHint}>eyes follow your cursor</span></div>
+        <Carousel demos={HEADS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
 
-        {activeFace && (
+        <div className={styles.categoryLabel}>Bodies<span className={styles.categoryHint}>head &amp; torso turn toward you</span></div>
+        <Carousel demos={BODIES} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
+
+        {activeDemo && (
           <div className={styles.editorSection} ref={editorRef}>
             <div className={styles.editorHeader}>
               <span className={styles.editorLabel}>
-                Editor - {activeFace.photographer}
+                Editor · {activeDemo.category} ·{' '}
+                <a href={activeDemo.pexelsUrl} target="_blank" rel="noopener noreferrer">{activeDemo.photographer}</a>
               </span>
-              <button className={styles.editorClose} onClick={() => setActiveFace(null)}>
+              <button className={styles.editorClose} onClick={() => setActiveDemo(null)} aria-label="Close editor">
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
                   <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
             </div>
             <iframe
-              key={activeFace.id}
-              src={`/editor.html?src=${activeFace.splattie}`}
+              key={activeDemo.id}
+              src={`/editor.html?src=${demoSrc(activeDemo)}`}
               className={styles.editorFrame}
-              title={`Editor for ${activeFace.photographer}'s portrait`}
+              title={`Editor for ${activeDemo.photographer}'s ${activeDemo.category}`}
             />
           </div>
         )}
@@ -127,19 +160,19 @@ export default function Home() {
           <div className={styles.step}>
             <div className={styles.stepNumber}>1</div>
             <h3 className={styles.stepTitle}>Upload</h3>
-            <p className={styles.stepDesc}>Any front-facing portrait photo</p>
+            <p className={styles.stepDesc}>A portrait or a full-body photo</p>
           </div>
           <div className={styles.stepDivider} />
           <div className={styles.step}>
             <div className={styles.stepNumber}>2</div>
             <h3 className={styles.stepTitle}>Generate</h3>
-            <p className={styles.stepDesc}>LAM reconstructs a 3D Gaussian head in ~30s</p>
+            <p className={styles.stepDesc}>LAM (heads) or LHM (bodies) reconstructs a 3D Gaussian avatar</p>
           </div>
           <div className={styles.stepDivider} />
           <div className={styles.step}>
             <div className={styles.stepNumber}>3</div>
             <h3 className={styles.stepTitle}>Embed</h3>
-            <p className={styles.stepDesc}>One line of HTML. Eyes follow visitors.</p>
+            <p className={styles.stepDesc}>One line of HTML. It reacts to your visitors.</p>
           </div>
         </div>
       </section>
@@ -156,7 +189,7 @@ export default function Home() {
         {SELF_HOST ? (
           <Link href="/create" className={styles.uploadBoxActive}>
             <h2 className={styles.uploadTitle}>Upload your own photo</h2>
-            <p className={styles.uploadSubtitleActive}>Generate a 3D head on your local GPU</p>
+            <p className={styles.uploadSubtitleActive}>Generate a 3D avatar on your local GPU</p>
             <div className={styles.uploadPlaceholderActive}>
               <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                 <path d="M24 8v32M8 24h32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -185,8 +218,8 @@ export default function Home() {
         </p>
         <p className={styles.footerMuted}>
           Built with <a href="https://github.com/aigc3d/LAM" target="_blank" rel="noopener noreferrer">LAM</a>{' '}
-          + <a href="https://sparkjs.dev" target="_blank" rel="noopener noreferrer">Spark</a>{' '}
-          + <a href="https://flame.is.tue.mpg.de" target="_blank" rel="noopener noreferrer">FLAME</a>{'. '}
+          + <a href="https://github.com/aigc3d/LHM" target="_blank" rel="noopener noreferrer">LHM</a>{' '}
+          + <a href="https://sparkjs.dev" target="_blank" rel="noopener noreferrer">Spark</a>{'. '}
           Photos from <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a>.
         </p>
       </footer>

@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
  * shows FLAME blendshape + eye-tracking controls — the body work (assetType branch,
  * optional tracking.eyes, lerpExpression guard) must not break heads.
  */
-const HEAD_SRC = '/demos/3762763.splattie';
+const HEAD_SRC = '/demos/heads/3762763.splattie';
 
 test('head .splattie renders and the editor shows blendshape controls', async ({ page }) => {
   const pageErrors: string[] = [];
