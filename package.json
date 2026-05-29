@@ -12,6 +12,7 @@
     "type-check": "npm run type-check -w apps/web",
     "test": "npm run test -w apps/web",
     "ci": "npm run ci -w apps/web",
-    "build:renderer": "bash scripts/build-renderer.sh"
+    "build:renderer": "bash scripts/build-renderer.sh",
+    "build:widget": "npm run build -w packages/splattie-widget && cp packages/splattie-widget/dist/splattie-widget.cdn.js apps/web/public/splattie-widget.cdn.js"
   }
 }
