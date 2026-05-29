@@ -31,7 +31,6 @@ export const metadata: Metadata = {
     description: 'Open-source, in-browser editor and web component for interactive 3D Gaussian-splat avatars. Tune gaze, pose, and background, then embed with one line of HTML.',
     url: SITE_URL,
     siteName: 'Splattie',
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Splattie - Interactive 3D avatars' }],
     type: 'website',
   },
   twitter: {
