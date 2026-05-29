@@ -51,6 +51,7 @@ gpu = [
   "moviepy>=1.0",
   "ninja",
   "omegaconf>=2.3",
+  "onnxruntime",
   "opencv-python-headless>=4.10",
   "pandas",
   "plyfile",
