@@ -1,0 +1,56 @@
+---
+# Splattie SELF-HOST stack (GPU "processing" backend).
+#
+# For self-hosters who want to generate their own avatars. Runs the full GPU
+# backend (LAM + CUDA: /generate, /segment) and a web UI with /create enabled
+# (SELF_HOST=true). Requires an NVIDIA GPU + the nvidia container runtime.
+# The public splattie.app deploy does NOT use this — see docker-compose.prod.yml.
+#
+# Build the GPU image once (slow, multi-GB) then bring up:
+#   doppler run -p splattie -c prd -- docker compose -f docker-compose.gpu.yml up -d --build
+# (or supply ADMIN_* via a local .env)
+services:
+    web:
+        build:
+            context: .
+            dockerfile: apps/web/Dockerfile
+            args:
+        # Point the browser at this host's GPU backend; override for remote.
+                NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+                NEXT_PUBLIC_SELF_HOST: 'true'
+        ports:
+            - 4001:4001
+        environment:
+            - BACKEND_INTERNAL_URL=http://gpu-backend:8000
+            - ADMIN_PASSWORD=${ADMIN_PASSWORD:?provide ADMIN_PASSWORD via Doppler or .env}
+            - SESSION_SECRET=${SESSION_SECRET:?provide SESSION_SECRET via Doppler or .env}
+            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Doppler or .env}
+            - GOOGLE_SITE_VERIFICATION=${GOOGLE_SITE_VERIFICATION:-}
+        depends_on:
+            - gpu-backend
+        restart: unless-stopped
+
+  # Processing backend (GPU): head generation with LAM + CUDA. Also serves
+  # analytics for the self-host instance (single backend here).
+    gpu-backend:
+        build:
+            context: .
+            dockerfile: backend/Dockerfile
+        ports:
+            - 8000:8000
+        environment:
+            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Doppler or .env}
+            - STATS_SALT=${STATS_SALT:-}
+        volumes:
+            - gpu-backend-data:/app/backend/data
+        restart: unless-stopped
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          count: 1
+                          capabilities: [gpu]
+
+volumes:
+    gpu-backend-data:
