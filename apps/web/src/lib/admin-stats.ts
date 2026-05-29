@@ -5,6 +5,7 @@ export interface StatsSummary {
   visitors: number;
   avatar_creates: number;
   avatar_views: number;
+  editor_opens: number;
   bots: number;
   pageviews_today: number;
   pageviews_7d: number;
@@ -17,6 +18,8 @@ export interface AdminStats {
   top_paths: { path: string; views: number }[];
   top_referrers: { referrer: string; count: number }[];
   devices: { device: string; count: number }[];
+  top_countries: { country: string; visitors: number }[];
+  demo_clicks: { id: string; clicks: number }[];
 }
 
 function backendBase(): string {

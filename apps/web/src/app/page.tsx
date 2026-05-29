@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { track } from '@/lib/track';
 import styles from './page.module.css';
 
 const SELF_HOST = process.env.NEXT_PUBLIC_SELF_HOST === 'true';
@@ -29,7 +30,11 @@ export default function Home() {
   const editorRef = useRef<HTMLDivElement>(null);
 
   const handleCardClick = useCallback((face: DemoFace) => {
-    setActiveFace((prev) => (prev?.id === face.id ? null : face));
+    setActiveFace((prev) => {
+      const next = prev?.id === face.id ? null : face;
+      if (next) track('demo_click', '/', { id: face.id });
+      return next;
+    });
   }, []);
 
   useEffect(() => {

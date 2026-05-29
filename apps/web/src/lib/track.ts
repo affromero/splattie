@@ -1,6 +1,9 @@
 import { API_URL } from '@/lib/api-client';
+import { resolveCountry } from '@/lib/tz-country';
 
-export type TrackType = 'pageview' | 'avatar_view' | 'avatar_create';
+export type TrackType = 'pageview' | 'avatar_view' | 'avatar_create' | 'demo_click' | 'editor_open';
+
+const countryCache: { value: string | null } = { value: null };
 
 /**
  * Fire-and-forget analytics beacon to the backend.
@@ -12,10 +15,12 @@ export type TrackType = 'pageview' | 'avatar_view' | 'avatar_create';
 export function track(type: TrackType, path: string, meta?: Record<string, unknown>): void {
   if (typeof window === 'undefined') return;
 
+  if (countryCache.value === null) countryCache.value = resolveCountry();
   const body = JSON.stringify({
     type,
     path,
     referrer: document.referrer || null,
+    country: countryCache.value || null,
     meta: meta ?? null,
   });
   const url = `${API_URL}/track`;

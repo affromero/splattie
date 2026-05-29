@@ -136,6 +136,61 @@ def test_old_events_outside_window_are_excluded(store: StatsStore) -> None:
     assert result["summary"]["pageviews"] == 1
 
 
+def test_country_breakdown_counts_unique_visitors(store: StatsStore) -> None:
+    now = int(time.time())
+    store.record(
+        event_type="pageview", path="/", referrer=None, ip="1.1.1.1", user_agent=DESKTOP_UA, country="CO", ts=now
+    )
+    store.record(
+        event_type="pageview", path="/x", referrer=None, ip="1.1.1.1", user_agent=DESKTOP_UA, country="CO", ts=now
+    )  # same visitor, still 1
+    store.record(
+        event_type="pageview", path="/", referrer=None, ip="2.2.2.2", user_agent=MOBILE_UA, country="US", ts=now
+    )
+
+    result = store.stats(days=30, now_ts=now)
+    assert {"country": "CO", "visitors": 1} in result["top_countries"]
+    assert {"country": "US", "visitors": 1} in result["top_countries"]
+
+
+def test_demo_clicks_grouped_by_id(store: StatsStore) -> None:
+    now = int(time.time())
+    for _ in range(3):
+        store.record(
+            event_type="demo_click",
+            path="/",
+            referrer=None,
+            ip="1.1.1.1",
+            user_agent=DESKTOP_UA,
+            meta={"id": "3762763"},
+            ts=now,
+        )
+    store.record(
+        event_type="demo_click",
+        path="/",
+        referrer=None,
+        ip="2.2.2.2",
+        user_agent=MOBILE_UA,
+        meta={"id": "7705909"},
+        ts=now,
+    )
+
+    result = store.stats(days=30, now_ts=now)
+    assert result["demo_clicks"][0] == {"id": "3762763", "clicks": 3}
+    assert {"id": "7705909", "clicks": 1} in result["demo_clicks"]
+
+
+def test_editor_opens_counted_and_bot_excluded(store: StatsStore) -> None:
+    now = int(time.time())
+    store.record(
+        event_type="editor_open", path="/editor.html", referrer=None, ip="1.1.1.1", user_agent=DESKTOP_UA, ts=now
+    )
+    store.record(event_type="editor_open", path="/editor.html", referrer=None, ip="3.3.3.3", user_agent=BOT_UA, ts=now)
+
+    result = store.stats(days=30, now_ts=now)
+    assert result["summary"]["editor_opens"] == 1
+
+
 # --- endpoint tests -------------------------------------------------------
 
 

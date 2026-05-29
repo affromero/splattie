@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -60,6 +61,7 @@ function Dashboard({ stats, days }: { stats: AdminStats; days: number }) {
         <Card label="Last 7 days" value={s.pageviews_7d} hint="pageviews" />
         <Card label="Avatars created" value={s.avatar_creates} hint={`last ${days}d`} />
         <Card label="Avatar views" value={s.avatar_views} hint={`last ${days}d`} />
+        <Card label="Editor opens" value={s.editor_opens} hint={`last ${days}d`} />
         <Card label="Bots filtered" value={s.bots} hint={`last ${days}d`} muted />
       </section>
 
@@ -84,7 +86,14 @@ function Dashboard({ stats, days }: { stats: AdminStats; days: number }) {
           rows={stats.devices.map((d) => [d.device, d.count])}
           empty="No data yet."
         />
+        <Table
+          title="Countries"
+          rows={stats.top_countries.map((c) => [`${flag(c.country)} ${c.country}`, c.visitors])}
+          empty="No country data yet."
+        />
       </div>
+
+      <DemoClicks items={stats.demo_clicks} />
     </>
   );
 }
@@ -175,6 +184,39 @@ function Table({
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function flag(code: string): string {
+  if (!/^[A-Za-z]{2}$/.test(code)) return '🌐';
+  return String.fromCodePoint(
+    ...[...code.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)
+  );
+}
+
+function DemoClicks({ items }: { items: AdminStats['demo_clicks'] }) {
+  return (
+    <div className={styles.tableCard}>
+      <h2 className={styles.panelTitle}>Demo clicks</h2>
+      {items.length === 0 ? (
+        <p className={styles.empty}>No demo clicks yet.</p>
+      ) : (
+        <div className={styles.thumbGrid}>
+          {items.map((d) => (
+            <div key={d.id} className={styles.thumbItem}>
+              <Image
+                src={`/demos/thumbs/${d.id}.jpg`}
+                alt={`Demo ${d.id}`}
+                width={56}
+                height={70}
+                className={styles.thumb}
+              />
+              <span className={styles.thumbCount}>{d.clicks.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

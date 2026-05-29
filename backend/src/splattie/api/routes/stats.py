@@ -55,6 +55,7 @@ class TrackPayload(BaseModel):
     type: str = Field(default="pageview", max_length=32)
     path: str = Field(default="/", max_length=512)
     referrer: str | None = Field(default=None, max_length=2048)
+    country: str | None = Field(default=None, max_length=32)
     meta: dict[str, Any] | None = None
 
 
@@ -77,6 +78,7 @@ async def track(request: Request, store: Store) -> Response:
         referrer=payload.referrer,
         ip=_client_ip(request),
         user_agent=request.headers.get("user-agent", ""),
+        country=payload.country,
         meta=payload.meta,
     )
     return Response(status_code=204)

@@ -5,6 +5,8 @@ Privacy notes:
 - Visitors are counted via a daily-rotating salted hash of (ip + user agent),
   so the same person is one "visitor" within a UTC day but cannot be tracked
   across days or reversed back to an IP.
+- Country is a coarse, client-supplied hint (derived from the browser's
+  timezone/locale), never from the IP.
 """
 
 from __future__ import annotations
@@ -91,10 +93,15 @@ class StatsStore:
                     referrer TEXT NOT NULL DEFAULT 'direct',
                     visitor TEXT NOT NULL DEFAULT '',
                     device TEXT NOT NULL DEFAULT 'desktop',
+                    country TEXT NOT NULL DEFAULT '',
                     meta TEXT
                 )
                 """
             )
+            # Migration: add `country` to event logs created before it existed.
+            columns = {row[1] for row in con.execute("PRAGMA table_info(events)").fetchall()}
+            if "country" not in columns:
+                con.execute("ALTER TABLE events ADD COLUMN country TEXT NOT NULL DEFAULT ''")
             con.execute("CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts)")
             con.execute("CREATE INDEX IF NOT EXISTS idx_events_type_ts ON events(type, ts)")
             con.commit()
@@ -109,6 +116,7 @@ class StatsStore:
         referrer: str | None,
         ip: str,
         user_agent: str,
+        country: str | None = None,
         meta: dict[str, Any] | None = None,
         ts: int | None = None,
     ) -> None:
@@ -117,7 +125,8 @@ class StatsStore:
         con = self._connect()
         try:
             con.execute(
-                "INSERT INTO events (ts, type, path, referrer, visitor, device, meta) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO events (ts, type, path, referrer, visitor, device, country, meta) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     ts,
                     event_type[:32],
@@ -125,6 +134,7 @@ class StatsStore:
                     referrer_host(referrer),
                     visitor_hash(ip, user_agent, ts),
                     classify_device(user_agent),
+                    (country or "")[:32],
                     json.dumps(meta) if meta else None,
                 ),
             )
@@ -163,6 +173,10 @@ class StatsStore:
                 "SELECT COUNT(*) FROM events WHERE type='avatar_view' AND device!='bot' AND ts>=?",
                 (since,),
             )
+            editor_opens = scalar(
+                "SELECT COUNT(*) FROM events WHERE type='editor_open' AND device!='bot' AND ts>=?",
+                (since,),
+            )
             bots = scalar(
                 "SELECT COUNT(*) FROM events WHERE device='bot' AND ts>=?",
                 (since,),
@@ -197,8 +211,8 @@ class StatsStore:
             top_referrers = [
                 {"referrer": row["referrer"], "count": int(row["c"])}
                 for row in cur.execute(
-                    "SELECT referrer, COUNT(*) c FROM events WHERE type='pageview' "
-                    "AND device!='bot' AND ts>=? GROUP BY referrer ORDER BY c DESC LIMIT 10",
+                    "SELECT referrer, COUNT(*) c FROM events WHERE type='pageview' AND device!='bot' "
+                    "AND ts>=? GROUP BY referrer ORDER BY c DESC LIMIT 10",
                     (since,),
                 ).fetchall()
             ]
@@ -210,6 +224,15 @@ class StatsStore:
                     (since,),
                 ).fetchall()
             ]
+            top_countries = [
+                {"country": row["country"], "visitors": int(row["c"])}
+                for row in cur.execute(
+                    "SELECT country, COUNT(DISTINCT visitor) c FROM events "
+                    "WHERE device!='bot' AND country!='' AND ts>=? "
+                    "GROUP BY country ORDER BY c DESC LIMIT 12",
+                    (since,),
+                ).fetchall()
+            ]
 
             return {
                 "range_days": days,
@@ -218,6 +241,7 @@ class StatsStore:
                     "visitors": visitors,
                     "avatar_creates": creates,
                     "avatar_views": avatar_views,
+                    "editor_opens": editor_opens,
                     "bots": bots,
                     "pageviews_today": pageviews_today,
                     "pageviews_7d": pageviews_7d,
@@ -226,6 +250,27 @@ class StatsStore:
                 "top_paths": top_paths,
                 "top_referrers": top_referrers,
                 "devices": devices,
+                "top_countries": top_countries,
+                "demo_clicks": self._demo_clicks(cur, since),
             }
         finally:
             con.close()
+
+    @staticmethod
+    def _demo_clicks(cur: sqlite3.Cursor, since: int) -> list[dict[str, Any]]:
+        """Count demo-portrait clicks by demo id (parsed from the event meta)."""
+        counts: dict[str, int] = {}
+        for row in cur.execute(
+            "SELECT meta FROM events WHERE type='demo_click' AND device!='bot' AND ts>=?",
+            (since,),
+        ).fetchall():
+            if not row["meta"]:
+                continue
+            try:
+                demo_id = json.loads(row["meta"]).get("id")
+            except (ValueError, TypeError):
+                demo_id = None
+            if isinstance(demo_id, str) and demo_id:
+                counts[demo_id] = counts.get(demo_id, 0) + 1
+        ranked = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:12]
+        return [{"id": demo_id, "clicks": clicks} for demo_id, clicks in ranked]
