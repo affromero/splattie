@@ -1,0 +1,141 @@
+# Strong pre-commit setup for the Splattie TS + Python monorepo.
+# Adapted from Hax-CV's config for a non-CUDA, TS+Python repo.
+#
+#   $ pre-commit install --install-hooks
+#   $ pre-commit run --all-files
+#
+# Deferred (need extra setup / don't fit this repo yet):
+#   - ty/mypy type-check: backend has no type-checker configured + torch is a
+#     GPU-only extra, so static type-checking floods on unresolved imports.
+#     Runs in CI instead (npm run type-check covers the frontend today).
+#   - CUDA loader / vendored-pyproject-pin / submodule-independence hooks:
+#     Hax-CV's `dependencies/` layout and CUDA-linker concerns don't map to
+#     splattie's single vendored LAM submodule.
+default_install_hook_types:
+    - pre-commit
+default_language_version:
+    python: python3
+
+# Never touch vendored submodules, built/generated artifacts, or lockfiles.
+exclude: |
+    (?x)^(
+      backend/vendor/.*|
+      packages/lam-renderer/.*|
+      apps/web/public/splattie-widget\.cdn\.js|
+      apps/web/public/demos/.*|
+      .*/node_modules/.*|
+      .*/\.next/.*|
+      .*/dist/.*|
+      uv\.lock|
+      package-lock\.json
+    )$
+
+repos:
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v6.0.0
+      hooks:
+          - id: trailing-whitespace
+          - id: end-of-file-fixer
+          - id: mixed-line-ending
+            args: [--fix, lf]
+          - id: check-yaml
+            exclude: ^\.pre-commit-config\.yaml$
+          - id: check-added-large-files
+            args: [--maxkb=2048]
+          - id: check-merge-conflict
+          - id: check-case-conflict
+          # apps/web/tsconfig.json is JSONC (has comments) — exclude from JSON hooks.
+          - id: check-json
+            exclude: ^apps/web/tsconfig\.json$
+          - id: check-toml
+          - id: pretty-format-json
+            args: [--autofix, --no-ensure-ascii, --no-sort-keys]
+            exclude: ^apps/web/tsconfig\.json$
+
+    - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
+      rev: 0.2.3
+      hooks:
+          - id: yamlfmt
+            exclude: ^\.pre-commit-config\.yaml$
+
+    - repo: local
+      hooks:
+          - id: toml-sort-fix
+            name: toml-sort-fix
+            entry: toml-sort
+            args: [--in-place]
+            language: python
+            types: [toml]
+            additional_dependencies: [toml-sort>=0.23.1]
+
+    # Ruff lints + formats the backend using backend/pyproject.toml
+    # (select = ["ALL"] + curated ignores already configured there). Scoped to
+    # src/ + tests/ to match CI (`ruff check src/ tests/`); backend/scripts/ is
+    # operational glue the project deliberately leaves out of the lint gate.
+    - repo: https://github.com/astral-sh/ruff-pre-commit
+      rev: v0.14.9
+      hooks:
+          - id: ruff
+            args: [--fix]
+            files: ^backend/(src|tests)/.*\.py$
+          - id: ruff-format
+            files: ^backend/(src|tests)/.*\.py$
+
+    - repo: local
+      hooks:
+          - id: check-file-line-count
+            name: check-file-line-count
+            description: Keeps source files under 1000 lines (CLAUDE.md). Split into focused modules instead.
+            entry: scripts/hooks/check_file_line_count.sh
+            language: system
+            files: ^(backend/src/|backend/scripts/|packages/splattie-widget/src/|apps/web/src/).*\.(py|ts|tsx)$
+
+          - id: check-getattr-setattr
+            name: check-getattr-setattr
+            description: Bans literal-string getattr/setattr — use obj.name / obj.name = value (static-analysis friendly).
+            entry: scripts/hooks/check_getattr_setattr.sh
+            language: system
+            types: [python]
+            files: ^backend/.*\.py$
+
+          - id: check-sys-path-manipulation
+            name: check-sys-path-manipulation
+            description: >-
+                Bans sys.path.insert/append/= in first-party code. Excludes the
+                files that must inject a vendored submodule (not uv workspace members):
+                lam/method.py, lhm/runtime.py, and the basis export scripts.
+            entry: scripts/hooks/check_sys_path_manipulation.sh
+            language: system
+            types: [python]
+            files: ^backend/.*\.py$
+            exclude: ^backend/(src/splattie/methods/(lam/method|lhm/runtime)\.py|scripts/export_(expression_basis|arkit_basis)\.py)$
+
+          - id: check-array-annotations
+            name: check-array-annotations
+            description: >-
+                Flags bare npt.NDArray[dtype]/np.ndarray/torch.Tensor in signatures;
+                CLAUDE.md mandates jaxtyping wrappers + @jaxtyped(typechecker=beartype).
+                Excludes base.py (Protocol declarations aren't decorated).
+            entry: scripts/hooks/check_array_annotations.sh
+            language: system
+            types: [python]
+            files: ^backend/(src|tests)/.*\.py$
+            exclude: ^backend/src/splattie/methods/base\.py$
+
+          # Frontend: lint + type-check the whole workspace (mirrors `npm run ci`
+          # minus test/build). Project-level, so no per-file passing.
+          - id: eslint
+            name: eslint (apps/web)
+            entry: bash -c 'npm run lint -w apps/web'
+            language: system
+            files: ^apps/web/.*\.(ts|tsx|js|jsx)$
+            pass_filenames: false
+            require_serial: true
+
+          - id: tsc
+            name: tsc --noEmit (apps/web + widget)
+            entry: bash -c 'npm run type-check -w apps/web && npm run build -w packages/splattie-widget >/dev/null'
+            language: system
+            files: ^(apps/web/src/|packages/splattie-widget/src/).*\.(ts|tsx)$
+            pass_filenames: false
+            require_serial: true
