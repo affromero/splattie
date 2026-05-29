@@ -6,7 +6,7 @@
 
 **Interactive 3D avatars from a single photo.**
 
-*Eyes follow visitors. Head reacts to hover. Runs at 60fps in any browser.*
+*Reacts to your cursor. Head responds to hover. Runs at 60fps in any browser.*
 
 [![Live](https://img.shields.io/badge/live-splattie.app-7eb8f0)](https://splattie.app)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -27,7 +27,7 @@
   <img src="demo.gif" alt="Splattie Demo" width="600" />
 </p>
 
-Splattie turns a single photograph into an **interactive 3D Gaussian Splatting head** that lives on your website. Eyes follow the cursor, the face blinks naturally, hover and click trigger smooth state transitions. Rendered client-side. One file, one tag.
+Splattie turns a single photograph into an **interactive 3D Gaussian Splatting head** that lives on your website. It reacts to your cursor, blinks naturally, and hover and click trigger smooth state transitions. Rendered client-side. One file, one tag.
 
 ```html
 <splattie-widget src="avatar.splattie"></splattie-widget>

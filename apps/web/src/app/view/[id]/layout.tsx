@@ -10,11 +10,11 @@ export async function generateMetadata({
   const { id } = await params;
   return {
     title: 'Interactive 3D avatar · Splattie',
-    description: 'An interactive 3D avatar whose eyes follow your cursor, made with Splattie.',
+    description: 'An interactive 3D avatar that reacts to your cursor, made with Splattie.',
     alternates: { canonical: `/view/${id}` },
     openGraph: {
       title: 'Interactive 3D avatar · Splattie',
-      description: 'Eyes follow your cursor. Made with Splattie.',
+      description: 'Reacts to your cursor. Made with Splattie.',
       url: `/view/${id}`,
     },
   };

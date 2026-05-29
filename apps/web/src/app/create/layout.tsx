@@ -6,11 +6,11 @@ import type { ReactNode } from 'react';
 export const metadata: Metadata = {
   title: 'Create your avatar · Splattie',
   description:
-    'Upload a photo and generate an interactive 3D avatar whose eyes follow your visitors. One line of HTML to embed.',
+    'Upload a photo and generate an interactive 3D avatar that reacts to your visitors. One line of HTML to embed.',
   alternates: { canonical: '/create' },
   openGraph: {
     title: 'Create your avatar · Splattie',
-    description: 'Turn a portrait into a living 3D avatar. Eyes follow visitors.',
+    description: 'Turn a portrait into a lifelike 3D avatar that reacts to your visitors.',
     url: '/create',
   },
 };
