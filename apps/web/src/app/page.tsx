@@ -93,6 +93,8 @@ export default function Home() {
                   alt={`Portrait by ${face.photographer}`}
                   width={400}
                   height={500}
+                  loading="lazy"
+                  sizes="(max-width: 640px) 45vw, (max-width: 932px) 30vw, 289px"
                   className={styles.cardImage}
                 />
               </button>
