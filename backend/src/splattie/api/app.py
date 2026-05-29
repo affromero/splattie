@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 
 # Force LAM method registration on import
 import splattie.methods.lam.method  # noqa: F401
-from splattie.api.routes import generate, health, models, segment
+from splattie.api.routes import generate, health, models, segment, stats
 
 
 def create_app() -> FastAPI:
@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
     app.include_router(segment.router)
     app.include_router(generate.router)
     app.include_router(models.router)
+    app.include_router(stats.router)
 
     @app.get("/storage/{model_id}/{filename}")
     async def serve_storage(model_id: str, filename: str) -> FileResponse:
