@@ -4,3 +4,7 @@
 [submodule "packages/splattie-widget"]
 	path = packages/splattie-widget
 	url = https://github.com/affromero/splattie-widget.git
+[submodule "backend/vendor/LHM"]
+	path = backend/vendor/LHM
+	url = https://github.com/affromero/LHM.git
+	branch = main
