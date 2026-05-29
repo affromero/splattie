@@ -6,7 +6,7 @@ export type TrackType = 'pageview' | 'avatar_view' | 'avatar_create';
  * Fire-and-forget analytics beacon to the backend.
  *
  * Sent as text/plain so it stays a CORS-simple request (no preflight) and works
- * with navigator.sendBeacon across the splattie.app -> api.splattie.ai origin.
+ * with navigator.sendBeacon across the splattie.app -> api.splattie.app origin.
  * Analytics must never throw into the page.
  */
 export function track(type: TrackType, path: string, meta?: Record<string, unknown>): void {
