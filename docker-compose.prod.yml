@@ -17,7 +17,7 @@ services:
             dockerfile: apps/web/Dockerfile
             args:
         # Baked into the client bundle at build time. The beacon posts here.
-                NEXT_PUBLIC_API_URL: https://api.splattie.ai
+                NEXT_PUBLIC_API_URL: https://api.splattie.app
                 NEXT_PUBLIC_SELF_HOST: 'false'
         ports:
             - 4001:4001

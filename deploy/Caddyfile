@@ -30,8 +30,8 @@ www.splattie.app {
 
 # Serving backend (analytics + health). The CPU "serving" backend container
 # publishes :8000 on this host. CORS is handled by FastAPI (allow_origins *).
-# DNS: api.splattie.ai must resolve to this server.
-api.splattie.ai {
+# DNS: api.splattie.app must resolve to this server.
+api.splattie.app {
 	reverse_proxy localhost:8000
 
 	header {

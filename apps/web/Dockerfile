@@ -13,7 +13,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # NEXT_PUBLIC_* are baked into the client bundle at build time. Default to the
 # public API host so the analytics beacon never falls back to localhost.
-ARG NEXT_PUBLIC_API_URL=https://api.splattie.ai
+ARG NEXT_PUBLIC_API_URL=https://api.splattie.app
 ARG NEXT_PUBLIC_SELF_HOST=false
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SELF_HOST=$NEXT_PUBLIC_SELF_HOST
