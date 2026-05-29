@@ -103,12 +103,12 @@ repos:
             description: >-
                 Bans sys.path.insert/append/= in first-party code. Excludes the
                 files that must inject a vendored submodule (not uv workspace members):
-                lam/method.py, lhm/runtime.py, and the expression-basis export script.
+                lam/method.py, lhm/runtime.py, and the basis export scripts.
             entry: scripts/hooks/check_sys_path_manipulation.sh
             language: system
             types: [python]
             files: ^backend/.*\.py$
-            exclude: ^backend/(src/splattie/methods/(lam/method|lhm/runtime)\.py|scripts/export_expression_basis\.py)$
+            exclude: ^backend/(src/splattie/methods/(lam/method|lhm/runtime)\.py|scripts/export_(expression_basis|arkit_basis)\.py)$
 
           - id: check-array-annotations
             name: check-array-annotations
