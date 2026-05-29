@@ -241,11 +241,38 @@
   border-color: var(--color-border-active);
 }
 
+.editorStage {
+  position: relative;
+  width: 100%;
+}
+
 .editorFrame {
   width: 100%;
   height: 500px;
   border: none;
   background: #0e0e14;
+  display: block;
+}
+
+/* Thumbnail shown over the frame until the splat reports it's live, so the
+   user never stares at a dark rectangle while the bundle loads. */
+.editorPoster {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.4s ease-out;
+}
+
+.editorPosterHidden {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorPoster {
+    transition: none;
+  }
 }
 
 @media (max-width: 640px) {
