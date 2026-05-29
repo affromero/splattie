@@ -19,6 +19,7 @@ import numpy.typing as npt
 from beartype import beartype
 from jaxtyping import Bool, UInt8, jaxtyped
 
+from splattie.methods.lhm.bundle import build_body_splattie
 from splattie.methods.lhm.runtime import VENDOR_LHM, chdir, inference_lock, load_inferrer
 from splattie.methods.registry import registry
 from splattie.types import AssetType, GenerationResult, MethodCapabilities, MethodInfo
@@ -105,22 +106,29 @@ class LHMMethod:
                 shape_param=betas,
             )
 
-        # infer_mesh names the output after the image stem: "<model_id>.jpg" -> "<model_id>.ply".
-        ply_path = output_dir / f"{model_id}.ply"
-        if not ply_path.exists():
-            msg = f"LHM infer_mesh did not produce {ply_path}"
-            raise FileNotFoundError(msg)
+            # infer_mesh names the output after the image stem ("<id>.jpg" -> "<id>.ply").
+            ply_path = output_dir / f"{model_id}.ply"
+            if not ply_path.exists():
+                msg = f"LHM infer_mesh did not produce {ply_path}"
+                raise FileNotFoundError(msg)
 
-        num_gaussians = _count_ply_vertices(ply_path)
-        logger.info("LHM body PLY saved: %s (%d gaussians)", ply_path.name, num_gaussians)
+            # Bundle the raw PLY + SMPL-X rig (skeleton + per-gaussian LBS weights) into
+            # a widget-loadable body .splattie (assetType=body).
+            bundle_path, num_gaussians = build_body_splattie(
+                ply_path=ply_path,
+                output_dir=output_dir,
+                model_id=model_id,
+                smplx_model=inferrer.model.renderer.smplx_model,
+                betas=np.asarray(betas, dtype=np.float32),
+                source_image_path=img_path,
+            )
 
-        # Raw .ply for now; the .splattie zip bundle + per-gaussian LBS weights land in
-        # 1.C (LHM bundle adapter), after which splattie_url points at a real bundle.
-        ply_url = f"/storage/{model_id}/{model_id}.ply"
+        logger.info("LHM body .splattie: %s (%d gaussians)", bundle_path.name, num_gaussians)
+        splattie_url = f"/storage/{model_id}/{bundle_path.name}"
         return GenerationResult(
             model_id=model_id,
-            splattie_url=ply_url,
-            splattie_size_bytes=ply_path.stat().st_size,
+            splattie_url=splattie_url,
+            splattie_size_bytes=bundle_path.stat().st_size,
             num_gaussians=num_gaussians,
             method_id="lhm",
         )
@@ -129,15 +137,3 @@ class LHMMethod:
         from splattie.methods.lhm.runtime import unload_model
 
         unload_model()
-
-
-def _count_ply_vertices(ply_path: Path) -> int:
-    with ply_path.open("rb") as f:
-        for raw in f:
-            line = raw.decode("ascii", errors="ignore").strip()
-            if line.startswith("element vertex"):
-                return int(line.split()[-1])
-            if line == "end_header":
-                break
-    msg = f"No vertex count in PLY header: {ply_path}"
-    raise ValueError(msg)
