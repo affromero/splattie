@@ -9,6 +9,7 @@ import pytest
 
 from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
+from splattie.methods.lhm.method import LHMMethod
 from splattie.methods.registry import registry
 from splattie.types import AssetType
 
@@ -93,3 +94,27 @@ def test_registry_get() -> None:
 
 def test_registry_default() -> None:
     assert registry.default_method_id == "lam"
+
+
+def test_lhm_implements_protocol() -> None:
+    assert isinstance(LHMMethod(), AssetGenerationMethod)
+
+
+def test_lhm_is_a_body_method() -> None:
+    assert LHMMethod().info.asset_type is AssetType.BODY
+    assert LHMMethod().info.asset_type == "body"
+
+
+def test_lhm_registered() -> None:
+    assert registry.get("lhm").info.id == "lhm"
+    assert registry.get("lhm").info.asset_type == "body"
+
+
+@pytest.mark.skipif(cuda_available(), reason="GPU present — covered by produces-bundle test")
+def test_lhm_generate_raises_without_gpu() -> None:
+    """No-fallback contract: body generation raises without CUDA/weights."""
+    method = LHMMethod()
+    image = np.zeros((256, 256, 3), dtype=np.uint8)
+    mask = np.ones((256, 256), dtype=np.bool_)
+    with pytest.raises(Exception):  # noqa: B017, PT011 - any failure is fine; no silent fallback
+        method.generate(image, mask)

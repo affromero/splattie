@@ -101,14 +101,14 @@ repos:
           - id: check-sys-path-manipulation
             name: check-sys-path-manipulation
             description: >-
-                Bans sys.path.insert/append/= in first-party code. Excludes the two
-                files that must inject the vendored LAM submodule (not a uv workspace
-                member): lam/method.py and the expression-basis export script.
+                Bans sys.path.insert/append/= in first-party code. Excludes the
+                files that must inject a vendored submodule (not uv workspace members):
+                lam/method.py, lhm/runtime.py, and the expression-basis export script.
             entry: scripts/hooks/check_sys_path_manipulation.sh
             language: system
             types: [python]
             files: ^backend/.*\.py$
-            exclude: ^backend/(src/splattie/methods/lam/method\.py|scripts/export_expression_basis\.py)$
+            exclude: ^backend/(src/splattie/methods/(lam/method|lhm/runtime)\.py|scripts/export_expression_basis\.py)$
 
           - id: check-array-annotations
             name: check-array-annotations

@@ -46,8 +46,9 @@ async def test_models(client: AsyncClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert data["default"] == "lam"
-    assert len(data["methods"]) == 1
-    assert data["methods"][0]["id"] == "lam"
+    by_id = {m["id"]: m for m in data["methods"]}
+    assert by_id["lam"]["assetType"] == "head"
+    assert by_id["lhm"]["assetType"] == "body"
 
 
 async def test_segment(client: AsyncClient) -> None:
