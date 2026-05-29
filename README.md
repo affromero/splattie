@@ -27,7 +27,7 @@
   <img src="demo.gif" alt="Splattie Demo" width="600" />
 </p>
 
-Splattie turns a single photograph into an **interactive 3D Gaussian Splatting head** that lives on your website. Eyes follow the cursor, the face blinks naturally, hover and click trigger smooth state transitions. Rendered client-side. One file, one tag.
+Splattie turns a single photograph into an **interactive 3D Gaussian Splatting head** that lives on your website. It reacts to your cursor, blinks naturally, and hover and click trigger smooth state transitions. Rendered client-side. One file, one tag.
 
 ```html
 <splattie-widget src="avatar.splattie"></splattie-widget>

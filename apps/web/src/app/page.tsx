@@ -56,7 +56,7 @@ export default function Home() {
         <p className={styles.subtitle}>
           An open-source, in-browser editor and web component for interactive
           3D Gaussian-splat avatars. Tune the gaze, pose, and background, then
-          embed with one line of HTML. Eyes follow your visitors.
+          embed with one line of HTML. It reacts to your visitors.
         </p>
         <div className={styles.heroBadges}>
           <a href="https://github.com/affromero/splattie" target="_blank" rel="noopener noreferrer" className={styles.badge}>
@@ -143,7 +143,7 @@ export default function Home() {
           <div className={styles.step}>
             <div className={styles.stepNumber}>3</div>
             <h3 className={styles.stepTitle}>Embed</h3>
-            <p className={styles.stepDesc}>One line of HTML. Eyes follow your visitors.</p>
+            <p className={styles.stepDesc}>One line of HTML. It reacts to your visitors.</p>
           </div>
         </div>
       </section>
