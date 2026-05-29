@@ -1,0 +1,42 @@
+# ── Splattie serving backend (CPU-only) ──────────────────────────────────
+# Lightweight FastAPI image for the always-on "serving" backend: visitor
+# analytics (/track, /admin/stats), /health, and static storage. The GPU
+# routes (/generate, /segment) are intentionally unavailable here — head
+# generation runs on the separate GPU "processing" backend
+# (backend/Dockerfile, see docker-compose.gpu.yml). Torch/CUDA are never
+# installed, so this image is small enough for a normal CPU VPS.
+# ──────────────────────────────────────────────────────────────────────────
+FROM python:3.10-slim AS base
+
+ENV PYTHONUNBUFFERED=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+WORKDIR /app/backend
+
+# Dependency layer (cached): base deps + the `cpu` extra (plyfile, trimesh).
+# No torch/CUDA — the GPU routes import those lazily and 503 when absent.
+COPY backend/pyproject.toml backend/.python-version ./
+COPY backend/uv.lock* ./
+RUN uv venv --python 3.10 .venv
+ENV PATH="/app/backend/.venv/bin:$PATH"
+ENV VIRTUAL_ENV="/app/backend/.venv"
+RUN uv sync --extra cpu --no-install-project
+
+# App source + editable install. Build isolation lets uv fetch the declared
+# build backend (hatchling); the GPU image pins it differently, but here the
+# slim base has no build deps preinstalled.
+COPY backend/src/ ./src/
+RUN uv pip install -e .
+
+RUN mkdir -p data/uploads data/generations
+
+EXPOSE 8000
+CMD ["uvicorn", "splattie.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

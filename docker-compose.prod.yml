@@ -1,28 +1,45 @@
 ---
+# Splattie PUBLIC serving stack (splattie.app).
+#
+# Web serves the landing page + static demo .splattie files (NO head
+# generation — SELF_HOST=false), and a lightweight CPU "serving" backend
+# handles visitor analytics (/track, /admin/stats) + /health.
+#
+# Head generation (/create) is for self-hosters only — see
+# docker-compose.gpu.yml for the GPU "processing" backend.
+#
+# Secrets are interpolated from a Doppler-fed environment
+# (doppler run … / a 0600 .env); none are committed.
 services:
     web:
         build:
             context: .
-            dockerfile: Dockerfile.web
+            dockerfile: apps/web/Dockerfile
+            args:
+        # Baked into the client bundle at build time. The beacon posts here.
+                NEXT_PUBLIC_API_URL: https://api.splattie.ai
+                NEXT_PUBLIC_SELF_HOST: 'false'
         ports:
             - 4001:4001
         environment:
-            - NEXT_PUBLIC_API_URL=https://api.splattie.ai
-      # Server-to-server URL the admin dashboard uses to read analytics.
+      # Server-side URL the admin dashboard uses to read analytics — the
+      # serving backend over the internal compose network.
             - BACKEND_INTERNAL_URL=http://backend:8000
-      # Admin panel auth — injected by Doppler in production
-      # (doppler run -- docker compose ...) or a local .env. Never committed.
+      # Admin panel auth — provided by Doppler (doppler run) or a local .env.
             - ADMIN_PASSWORD=${ADMIN_PASSWORD:?provide ADMIN_PASSWORD via Doppler or .env}
             - SESSION_SECRET=${SESSION_SECRET:?provide SESSION_SECRET via Doppler or .env}
             - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Doppler or .env}
       # Optional: Google Search Console verification token.
             - GOOGLE_SITE_VERIFICATION=${GOOGLE_SITE_VERIFICATION:-}
+        depends_on:
+            - backend
         restart: unless-stopped
 
+  # Serving backend (CPU-only): analytics + health. No GPU, no torch.
     backend:
         build:
             context: .
-            dockerfile: Dockerfile.backend
+            dockerfile: backend/Dockerfile.cpu
         ports:
             - 8000:8000
         environment:
@@ -33,13 +50,6 @@ services:
         volumes:
             - backend-data:/app/backend/data
         restart: unless-stopped
-        deploy:
-            resources:
-                reservations:
-                    devices:
-                        - driver: nvidia
-                          count: 1
-                          capabilities: [gpu]
 
 volumes:
     backend-data:

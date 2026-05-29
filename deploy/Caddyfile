@@ -27,3 +27,25 @@ splattie.app {
 www.splattie.app {
 	redir https://splattie.app{uri} permanent
 }
+
+# Serving backend (analytics + health). The CPU "serving" backend container
+# publishes :8000 on this host. CORS is handled by FastAPI (allow_origins *).
+# DNS: api.splattie.ai must resolve to this server.
+api.splattie.ai {
+	reverse_proxy localhost:8000
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		-Server
+	}
+
+	encode gzip zstd
+
+	log {
+		output file /var/log/caddy/splattie-api-access.log {
+			roll_size 50MiB
+			roll_keep 5
+		}
+	}
+}
