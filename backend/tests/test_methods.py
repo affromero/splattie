@@ -134,7 +134,7 @@ def test_lhm_generate_produces_body() -> None:
     result = method.generate(image, mask)
     assert result.method_id == "lhm"
     assert result.num_gaussians > 0
-    # 1.B emits a raw .ply; the .splattie bundle adapter (1.C) tightens this to .splattie.
-    assert result.splattie_url.endswith((".ply", ".splattie"))
+    # 1.C: the body method emits a widget-loadable .splattie (SMPL-X skeleton + weights).
+    assert result.splattie_url.endswith(".splattie")
 
     method.unload()
