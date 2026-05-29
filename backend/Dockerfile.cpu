@@ -30,9 +30,11 @@ ENV PATH="/app/backend/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/backend/.venv"
 RUN uv sync --extra cpu --no-install-project
 
-# App source + editable install.
+# App source + editable install. Build isolation lets uv fetch the declared
+# build backend (hatchling); the GPU image pins it differently, but here the
+# slim base has no build deps preinstalled.
 COPY backend/src/ ./src/
-RUN uv pip install -e . --no-build-isolation
+RUN uv pip install -e .
 
 RUN mkdir -p data/uploads data/generations
 
