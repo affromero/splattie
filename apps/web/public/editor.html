@@ -151,8 +151,11 @@
 
       const state = config.states[currentState];
       const def = defaults.states[currentState];
+      const isBody = widget.assetType === 'body';
 
-      addSection('expression', () => {
+      // FLAME blendshapes are head-only. Bodies set machine states via tracking
+      // (head/torso look-at), camera, ghost + rotation.
+      if (!isBody) addSection('expression', () => {
         if (!state.expression) state.expression = {};
         if (!def.expression) def.expression = {};
         const boneKeys = ['smile', 'mouthFrown', 'lipPucker', 'jawOpen', 'browRaiseL', 'browRaiseR', 'browFrownL', 'browFrownR', 'eyeSquint', 'cheekPuff', 'noseSneer', 'neckTilt', 'neckYaw', 'neckRoll', 'gazeX', 'gazeY'];
@@ -184,8 +187,14 @@
       });
 
       addSection('tracking', () => {
-        addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
-        addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
+        if (isBody) {
+          if (state.tracking.torso === undefined) state.tracking.torso = def.tracking.torso ?? 0;
+          addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head ?? 1);
+          addSlider('torso', state.tracking, 'torso', 0, 1, 0.01, undefined, def.tracking.torso ?? 0);
+        } else {
+          addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
+          addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
+        }
       });
 
       const exportBtn = document.createElement('button');

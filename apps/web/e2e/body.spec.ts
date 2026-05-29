@@ -52,4 +52,9 @@ test('body .splattie renders and follows the cursor (look-at)', async ({ page })
   expect(lookLeft.length).toBeGreaterThan(40_000);
   expect(lookRight.length).toBeGreaterThan(40_000);
   expect(Buffer.compare(lookLeft, lookRight)).not.toBe(0);
+
+  // Inline editor panel is body-aware (1.E): head/torso tracking controls, no FLAME
+  // blendshapes, and no head-config crash.
+  await expect(page.locator('#panel')).toContainText('torso');
+  expect(pageErrors.join('\n')).not.toContain('Cannot convert undefined');
 });
