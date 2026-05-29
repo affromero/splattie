@@ -10,7 +10,7 @@ export default function ViewPage() {
 
   return (
     <main className={styles.page}>
-      <SplatViewer viewerUrl={`/demo/viewer.html?zip=${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/storage/${modelId}/${modelId}.zip`} />
+      <SplatViewer viewerUrl={`/demo/viewer.html?zip=${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/storage/${modelId}/${modelId}.splattie`} />
     </main>
   );
 }

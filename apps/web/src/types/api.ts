@@ -11,11 +11,10 @@ export interface GenerationProgress {
 
 export interface GenerationResult {
   modelId: string;
-  spzUrl: string;
-  spzSizeBytes: number;
+  splattieUrl: string;
+  splattieSizeBytes: number;
   numGaussians: number;
   methodId: string;
-  rigParamsUrl: string;
 }
 
 export type AssetType = 'head' | 'body' | 'object';

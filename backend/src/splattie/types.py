@@ -61,14 +61,18 @@ class MethodCapabilities(CamelModel):
 
 
 class GenerationResult(CamelModel):
-    """Result of an asset generation request."""
+    """Result of an asset generation request.
+
+    The asset is a single `.splattie` zip bundle (manifest + splat file + rig files);
+    the widget loads it from one URL and unpacks the rig itself, so there is no
+    separate rig-params URL.
+    """
 
     model_id: str
-    spz_url: str
-    spz_size_bytes: int
+    splattie_url: str
+    splattie_size_bytes: int
     num_gaussians: int
     method_id: str
-    rig_params_url: str
 
 
 class SegmentationResult(CamelModel):

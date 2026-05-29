@@ -75,8 +75,7 @@ def test_lam_generate_produces_bundle() -> None:
     result = method.generate(image, mask)
     assert result.method_id == "lam"
     assert result.num_gaussians > 0
-    assert result.spz_url.endswith(".splattie")
-    assert result.rig_params_url.endswith(".splattie")
+    assert result.splattie_url.endswith(".splattie")
 
     method.unload()
 

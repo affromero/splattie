@@ -92,7 +92,7 @@ async def test_generate_from_upload_produces_bundle(client: AsyncClient) -> None
     assert response.status_code == 200
     data = response.json()
     assert "modelId" in data
-    assert data["spzUrl"].endswith(".splattie")
+    assert data["splattieUrl"].endswith(".splattie")
 
 
 @pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
@@ -117,4 +117,4 @@ async def test_generate(client: AsyncClient) -> None:
     assert "event: progress" in text
     assert "event: complete" in text
     assert '"modelId"' in text
-    assert '"spzUrl"' in text
+    assert '"splattieUrl"' in text

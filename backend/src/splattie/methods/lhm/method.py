@@ -114,15 +114,15 @@ class LHMMethod:
         num_gaussians = _count_ply_vertices(ply_path)
         logger.info("LHM body PLY saved: %s (%d gaussians)", ply_path.name, num_gaussians)
 
-        # Raw output for now; the .splattie bundle + per-gaussian LBS weights land in 1.C.
+        # Raw .ply for now; the .splattie zip bundle + per-gaussian LBS weights land in
+        # 1.C (LHM bundle adapter), after which splattie_url points at a real bundle.
         ply_url = f"/storage/{model_id}/{model_id}.ply"
         return GenerationResult(
             model_id=model_id,
-            spz_url=ply_url,
-            spz_size_bytes=ply_path.stat().st_size,
+            splattie_url=ply_url,
+            splattie_size_bytes=ply_path.stat().st_size,
             num_gaussians=num_gaussians,
             method_id="lhm",
-            rig_params_url=ply_url,
         )
 
     def unload(self) -> None:

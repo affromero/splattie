@@ -346,11 +346,10 @@ class LAMMethod:
         bundle_url = f"/storage/{model_id}/{model_id}.splattie"
         return GenerationResult(
             model_id=model_id,
-            spz_url=bundle_url,
-            spz_size_bytes=bundle_size,
+            splattie_url=bundle_url,
+            splattie_size_bytes=bundle_size,
             num_gaussians=num_gaussians,
             method_id="lam",
-            rig_params_url=bundle_url,
         )
 
     def unload(self) -> None:
