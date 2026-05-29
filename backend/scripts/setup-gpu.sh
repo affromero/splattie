@@ -25,26 +25,46 @@ cd "$BACKEND_DIR"
 
 echo "[3/3] Downloading model weights..."
 uv run python <<'PY'
-import os
-import tarfile
 import glob
+import os
+import shutil
+import tarfile
+
 from huggingface_hub import snapshot_download
 
 lam_dir = "vendor/LAM"
+
+# 1. LAM-20K head-reconstruction model.
 os.makedirs(f"{lam_dir}/model_zoo/lam_models/releases/lam", exist_ok=True)
 snapshot_download("3DAIGC/LAM-20K", local_dir=f"{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k")
-
 step_dir = f"{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k/step_045500"
 os.makedirs(step_dir, exist_ok=True)
 link = f"{step_dir}/model.safetensors"
 if not os.path.exists(link):
     os.symlink("../model.safetensors", link)
 
-os.makedirs(f"{lam_dir}/model_zoo/human_parametric_models", exist_ok=True)
-snapshot_download("3DAIGC/LAM-assets", local_dir=f"{lam_dir}/model_zoo/human_parametric_models")
-for tar_path in glob.glob(f"{lam_dir}/model_zoo/human_parametric_models/*.tar"):
+# 2. LAM-assets. Each tar already carries its own top-level prefix
+# (model_zoo/, assets/, pretrained_models/, thirdparties/), so extract into
+# lam_dir ITSELF. Extracting into a subdir double-nests everything (e.g.
+# model_zoo/human_parametric_models/model_zoo/flame_tracking_models/...).
+staging = f"{lam_dir}/.lam_assets_download"
+snapshot_download("3DAIGC/LAM-assets", local_dir=staging)
+for tar_path in glob.glob(f"{staging}/*.tar"):
     with tarfile.open(tar_path) as tf:
-        tf.extractall(f"{lam_dir}/model_zoo/human_parametric_models")
+        tf.extractall(lam_dir)
+
+# 3. flame_assets (flame2023.pkl + FLAME_masks/landmark_embedding/head_template)
+# is FLAME-license-gated and NOT in LAM-assets. Reuse the identical FLAME 2023
+# assets vendored with LHM (download LHM weights first). flame.py reads them from
+# model_zoo/human_parametric_models/flame_assets/.
+flame_src = "vendor/LHM/pretrained_models/human_model_files/flame_assets"
+flame_dst = f"{lam_dir}/model_zoo/human_parametric_models/flame_assets"
+if os.path.isdir(flame_src) and not os.path.exists(flame_dst):
+    os.makedirs(os.path.dirname(flame_dst), exist_ok=True)
+    shutil.copytree(flame_src, flame_dst)
+    print(f"Copied flame_assets from {flame_src}")
+elif not os.path.exists(flame_dst):
+    print(f"WARNING: {flame_dst} missing — populate with FLAME 2023 (license-gated) or fetch LHM weights first")
 print("Weights ready")
 PY
 
