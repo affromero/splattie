@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-import logging
 import subprocess
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+from klogr import get_logger
+
+logger = get_logger()
 
 
 def compress_ply_to_spz(ply_path: Path, spz_path: Path) -> Path:
     """Compress a PLY file to SPZ using @playcanvas/splat-transform.
 
-    Falls back to returning the PLY path if splat-transform is not available.
+    Hard-fails (raises RuntimeError) if splat-transform is unavailable or produces
+    no output. Never returns the raw PLY: a bundle stamped format="spz" that
+    actually holds a PLY would silently break the widget's loader.
     """
     try:
         subprocess.run(
@@ -21,9 +24,16 @@ def compress_ply_to_spz(ply_path: Path, spz_path: Path) -> Path:
             capture_output=True,
             text=True,
         )
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        logger.warning("splat-transform not available, returning raw PLY")
-        return ply_path
-    else:
-        logger.info("Compressed %s → %s (%d KB)", ply_path.name, spz_path.name, spz_path.stat().st_size // 1024)
-        return spz_path
+    except FileNotFoundError as exc:
+        msg = "splat-transform not found; install @playcanvas/splat-transform (npm)"
+        raise RuntimeError(msg) from exc
+    except subprocess.CalledProcessError as exc:
+        msg = f"splat-transform failed for {ply_path.name}: {exc.stderr or exc.stdout}"
+        raise RuntimeError(msg) from exc
+
+    if not spz_path.exists() or spz_path.stat().st_size == 0:
+        msg = f"splat-transform produced no SPZ output at {spz_path}"
+        raise RuntimeError(msg)
+
+    logger.info(f"Compressed {ply_path.name} → {spz_path.name} ({spz_path.stat().st_size // 1024} KB)")
+    return spz_path

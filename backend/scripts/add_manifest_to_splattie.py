@@ -19,13 +19,20 @@ Usage:
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import io
 import json
+import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+import tyro
+from klogr import get_logger
+
+from splattie.compression.spz import compress_ply_to_spz
+
+logger = get_logger()
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = SCRIPT_DIR.parent if SCRIPT_DIR.name == "scripts" else SCRIPT_DIR
@@ -129,27 +136,49 @@ def build_manifest(
     return manifest
 
 
-def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str) -> str:
+def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compress_spz: bool = False) -> str:
     """Returns a short status string for logging."""
     stem = splattie_path.stem
+    note = ""
 
     with zipfile.ZipFile(str(splattie_path), "r") as zf:
         names = set(zf.namelist())
 
-        if "manifest.json" in names:
-            existing = json.loads(zf.read("manifest.json").decode("utf-8"))
-            if existing.get("formatVersion") == widget_version:
-                return f"skip (already v{widget_version})"
+        existing = json.loads(zf.read("manifest.json").decode("utf-8")) if "manifest.json" in names else None
 
         splat_entry, splat_format = find_splat_entry(zf)
         splat_bytes = zf.read(splat_entry)
-        num_gaussians = count_ply_vertices_bytes(splat_bytes) if splat_format == "ply" else 0
+        # Count gaussians from the PLY *before* any compression; for an already-SPZ
+        # bundle, preserve the count recorded in the existing manifest.
+        if splat_format == "ply":
+            num_gaussians = count_ply_vertices_bytes(splat_bytes)
+        else:
+            num_gaussians = (existing or {}).get("avatar", {}).get("splat", {}).get("numGaussians", 0)
+
+        # Nothing to do only when the manifest is current AND we're not converting PLY->SPZ.
+        already_current = existing is not None and existing.get("formatVersion") == widget_version
+        if already_current and not (compress_spz and splat_format == "ply"):
+            return f"skip (already v{widget_version})"
 
         has_skeleton = "bone_tree.json" in names
         has_weights = "lbs_weight_20k.json" in names
         has_states = "states.json" in names
 
         payload: dict[str, bytes] = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
+
+    # Convert the PLY payload to SPZ in-place (hard-fails if splat-transform errors).
+    if compress_spz and splat_format == "ply":
+        with tempfile.TemporaryDirectory() as td:
+            ply_tmp = Path(td) / f"{stem}.ply"
+            spz_tmp = Path(td) / f"{stem}.spz"
+            ply_tmp.write_bytes(splat_bytes)
+            compress_ply_to_spz(ply_tmp, spz_tmp)
+            spz_bytes = spz_tmp.read_bytes()
+        del payload[splat_entry]
+        splat_entry = f"{stem}.spz"
+        splat_format = "spz"
+        payload[splat_entry] = spz_bytes
+        note = f", {len(splat_bytes) // 1024}KB ply -> {len(spz_bytes) // 1024}KB spz"
 
     thumb_path = find_thumb(thumbs_dir, stem)
     manifest = build_manifest(
@@ -172,38 +201,41 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str) -> str:
                 continue
             zf.writestr(name, data)
     tmp_path.replace(splattie_path)
-    return f"rebundled (v{widget_version}, {num_gaussians} gaussians)"
+    return f"rebundled (v{widget_version}, {num_gaussians} gaussians, format={splat_format}{note})"
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Add manifest.json to existing .splattie files")
-    parser.add_argument("--splatties-dir", type=str, required=True)
-    parser.add_argument("--thumbs-dir", type=str, required=True)
-    args = parser.parse_args()
+def main(splatties_dir: Path, thumbs_dir: Path, compress_spz: bool = False) -> None:
+    """Add manifest.json to every .splattie in a directory (rewrites in place).
 
-    splatties_dir = Path(args.splatties_dir).resolve()
-    thumbs_dir = Path(args.thumbs_dir).resolve()
+    Args:
+        splatties_dir: Directory of .splattie bundles to process.
+        thumbs_dir: Directory of source thumbnails (for sourceImageHash + attribution).
+        compress_spz: Convert PLY payloads to SPZ via splat-transform before re-bundling.
+
+    """
+    splatties_dir = splatties_dir.resolve()
+    thumbs_dir = thumbs_dir.resolve()
     if not splatties_dir.is_dir():
         raise SystemExit(f"Not a directory: {splatties_dir}")
     if not thumbs_dir.is_dir():
         raise SystemExit(f"Not a directory: {thumbs_dir}")
 
     widget_version = read_widget_version()
-    print(f"Widget version: {widget_version}")
-    print(f"Splatties dir:  {splatties_dir}")
-    print(f"Thumbs dir:     {thumbs_dir}\n")
+    logger.info(f"Widget version: {widget_version}")
+    logger.info(f"Splatties dir:  {splatties_dir}")
+    logger.info(f"Thumbs dir:     {thumbs_dir}\n")
 
     splatties = sorted(splatties_dir.glob("*.splattie"))
     if not splatties:
-        print(f"No .splattie files in {splatties_dir}")
+        logger.info(f"No .splattie files in {splatties_dir}")
         return
 
     for p in splatties:
-        status = rebundle(p, thumbs_dir, widget_version)
-        print(f"  {p.name}: {status}")
+        status = rebundle(p, thumbs_dir, widget_version, compress_spz=compress_spz)
+        logger.info(f"  {p.name}: {status}")
 
-    print(f"\nProcessed {len(splatties)} file(s).")
+    logger.info(f"\nProcessed {len(splatties)} file(s).")
 
 
 if __name__ == "__main__":
-    main()
+    tyro.cli(main)
