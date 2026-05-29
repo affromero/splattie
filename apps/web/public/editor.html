@@ -530,5 +530,29 @@
       a.click();
     }
   </script>
+    <script>
+    // editor_open analytics + privacy notice. The editor is fully client-side:
+    // the .splattie file is read and edited in the browser; nothing is uploaded.
+    (function () {
+      try {
+        var loc = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+        var m = loc.match(/-([A-Za-z]{2})(?:$|-)/);
+        var country = m ? m[1].toUpperCase() : '';
+        var bodyData = JSON.stringify({ type: 'editor_open', path: '/editor.html', country: country || null });
+        var url = 'https://api.splattie.app/track';
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([bodyData], { type: 'text/plain' }));
+        } else {
+          fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: bodyData, keepalive: true }).catch(function () {});
+        }
+      } catch (e) { /* analytics must never break the editor */ }
+      try {
+        var tip = document.createElement('div');
+        tip.textContent = 'Runs entirely in your browser \u2014 your file is never uploaded or stored.';
+        tip.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;max-width:320px;font:10px/1.4 ui-monospace,monospace;color:#7eb8f0;background:rgba(8,8,12,0.88);border:1px solid #1e1e2a;border-radius:4px;padding:6px 9px;pointer-events:none';
+        document.body.appendChild(tip);
+      } catch (e) {}
+    })();
+    </script>
 </body>
 </html>
