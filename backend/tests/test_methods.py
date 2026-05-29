@@ -117,3 +117,24 @@ def test_lhm_generate_raises_without_gpu() -> None:
     mask = np.ones((256, 256), dtype=np.bool_)
     with pytest.raises(Exception):  # noqa: B017, PT011 - any failure is fine; no silent fallback
         method.generate(image, mask)
+
+
+@pytest.mark.skipif(not cuda_available(), reason="LHM inference requires CUDA + weights")
+@pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
+def test_lhm_generate_produces_body() -> None:
+    """On a real GPU, LHM produces a canonical-pose body gaussian asset from one image."""
+    from PIL import Image
+
+    method = LHMMethod()
+    method.load()
+
+    image = np.array(Image.open(_FACE_IMAGE).convert("RGB"))
+    mask = np.ones(image.shape[:2], dtype=np.bool_)
+
+    result = method.generate(image, mask)
+    assert result.method_id == "lhm"
+    assert result.num_gaussians > 0
+    # 1.B emits a raw .ply; the .splattie bundle adapter (1.C) tightens this to .splattie.
+    assert result.splattie_url.endswith((".ply", ".splattie"))
+
+    method.unload()
