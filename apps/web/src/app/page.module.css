@@ -200,6 +200,13 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .hero,
+  .editorSection {
+    animation: none;
+  }
+}
+
 .editorHeader {
   display: flex;
   align-items: center;
