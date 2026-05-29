@@ -145,12 +145,14 @@
 
 .carouselItem {
   flex: 0 0 auto;
-  margin-right: 1rem;
+  margin-right: 0.75rem;
 }
 
 .carouselCard {
   position: relative;
-  width: 150px;
+  /* Small enough that partial cards peek at the edges (reads as a scrollable
+     strip, not a static row) and several small faces fit on a phone. */
+  width: clamp(84px, 24vw, 132px);
   aspect-ratio: 3 / 4;
   overflow: hidden;
   border: 1px solid var(--color-border);
