@@ -129,6 +129,8 @@
     poseOverlay.id = 'pose-overlay';
     main.appendChild(poseOverlay);
     let poseMode = false;
+    let poseRaf = 0;
+    let draggingChain = null;
 
     let config = null;
     let defaults = null;
@@ -166,7 +168,7 @@
         const btn = document.createElement('button');
         btn.className = 'state-btn' + (name === currentState ? ' editing' : '') + (name === liveState ? ' live' : '') + (configured.has(name) ? ' configured' : '');
         btn.textContent = name;
-        btn.onclick = () => { currentState = name; buildPanel(); if (poseMode) renderPoseHandles(); };
+        btn.onclick = () => { currentState = name; buildPanel(); if (poseMode) widget._stateMachine?.forceState(currentState); };
         statesDiv.appendChild(btn);
       }
       panel.appendChild(statesDiv);
@@ -235,10 +237,10 @@
           reset.className = 'pose-btn';
           reset.textContent = 'reset pose';
           reset.onclick = () => {
-            delete config.states[currentState].pose;
+            for (const name of Object.keys(config.states)) delete config.states[name].pose;
             configured.add(currentState);
             applyConfig();
-            if (poseMode) renderPoseHandles();
+            if (poseMode) { widget._stateMachine?.forceState(currentState); buildHandles(); }
           };
           getContainer().appendChild(reset);
         }
@@ -352,32 +354,70 @@
     }
 
     // ── Body IK pose authoring (drag handles over the canvas) ──
+    // The limb pose is one consistent stance written to every state, so it doesn't
+    // "change" when the live state flips (idle/hover/click); only the look-at varies.
+    function writePoseToAllStates(sol) {
+      for (const name of Object.keys(config.states)) {
+        const st = config.states[name];
+        if (!st.pose) st.pose = {};
+        for (const j of sol) st.pose[j.joint] = j.quat;
+      }
+      configured.add(currentState);
+      applyConfig();
+      widget._stateMachine?.forceState(currentState);
+    }
+
+    function clampToCanvas(sx, sy) {
+      const c = widget.querySelector('canvas');
+      const m = 12;
+      return [Math.max(m, Math.min(c.clientWidth - m, sx)), Math.max(m, Math.min(c.clientHeight - m, sy))];
+    }
+
     function setPoseMode(on) {
       poseMode = on;
       widget.poseAuthoring = on;            // freeze look-at so handles match the body
+      if (widget._stateMachine) widget._stateMachine.frozen = on; // no transitions while posing
       poseOverlay.classList.toggle('active', on);
-      if (on) renderPoseHandles(); else poseOverlay.innerHTML = '';
+      cancelAnimationFrame(poseRaf);
+      if (on) {
+        widget._stateMachine?.forceState(currentState);
+        buildHandles();
+        const loop = () => { updateHandlePositions(); poseRaf = requestAnimationFrame(loop); };
+        poseRaf = requestAnimationFrame(loop);
+      } else {
+        poseOverlay.innerHTML = '';
+      }
       buildPanel();
     }
 
-    function renderPoseHandles() {
-      if (!poseMode) return;
-      widget._stateMachine?.forceState(currentState); // show the state being posed
+    function buildHandles() {
       poseOverlay.innerHTML = '';
       const handles = widget.bodyIKHandles ? widget.bodyIKHandles() : [];
       for (const h of handles) {
         const dot = document.createElement('div');
         dot.className = 'ik-handle';
-        dot.style.left = h.sx + 'px';
-        dot.style.top = h.sy + 'px';
-        dot.title = h.chain;
+        dot.dataset.chain = h.chain;
+        dot.title = h.chain.replace('_', ' ');
         dot.onpointerdown = (e) => startPoseDrag(e, h.chain, dot);
         poseOverlay.appendChild(dot);
+      }
+      updateHandlePositions();
+    }
+
+    // Re-project handle positions each frame so they track the camera (radius/zoom)
+    // and the posed body; off-screen joints (e.g. feet) clamp to the canvas edge.
+    function updateHandlePositions() {
+      if (!poseMode || !widget.bodyIKHandles) return;
+      for (const h of widget.bodyIKHandles()) {
+        if (h.chain === draggingChain) continue;
+        const dot = poseOverlay.querySelector('[data-chain="' + h.chain + '"]');
+        if (dot) { const [x, y] = clampToCanvas(h.sx, h.sy); dot.style.left = x + 'px'; dot.style.top = y + 'px'; }
       }
     }
 
     function startPoseDrag(e, chain, dot) {
       e.preventDefault();
+      draggingChain = chain;
       dot.classList.add('dragging');
       dot.setPointerCapture(e.pointerId);
       const canvas = widget.querySelector('canvas');
@@ -385,21 +425,16 @@
         const rect = canvas.getBoundingClientRect();
         const sx = ev.clientX - rect.left, sy = ev.clientY - rect.top;
         const sol = widget.solveLimbToScreen(chain, sx, sy);
-        if (!sol) return;
-        const st = config.states[currentState];
-        if (!st.pose) st.pose = {};
-        for (const j of sol) st.pose[j.joint] = j.quat;
-        configured.add(currentState);
-        applyConfig();
-        widget._stateMachine?.forceState(currentState);
-        dot.style.left = sx + 'px';
-        dot.style.top = sy + 'px';
+        if (sol) writePoseToAllStates(sol);
+        const [cx, cy] = clampToCanvas(sx, sy);
+        dot.style.left = cx + 'px';
+        dot.style.top = cy + 'px';
       };
       const up = () => {
+        draggingChain = null;
         dot.classList.remove('dragging');
         document.removeEventListener('pointermove', move);
         document.removeEventListener('pointerup', up);
-        renderPoseHandles();
       };
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
