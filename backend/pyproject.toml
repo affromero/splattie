@@ -21,6 +21,7 @@ dependencies = [
   "numpy>=1.23,<2",
   "pillow>=10.0",
   "pydantic>=2.10",
+  "python-dotenv>=1.0",
   "python-multipart>=0.0.9",
   "uvicorn[standard]>=0.30.0"
 ]
