@@ -97,16 +97,6 @@ JOINTS_NAME: tuple[str, ...] = (
 # How many joints each gaussian binds to in the bundle (SMPL-X LBS is sparse).
 _TOP_K = 4
 
-# Arm-region joints: a gaussian is "arm" when its nearest joint is one of these (or a
-# finger). The lower arm (forearm + hand) is re-bound to the upper-arm chain down to
-# the elbow (_LOWER_ARM_TARGETS) so it swings as one rigid piece — see
-# reweight_lower_arm_rigid.
-_ARM_JOINTS = frozenset(
-    {"L_Collar", "R_Collar", "L_Shoulder", "R_Shoulder", "L_Elbow", "R_Elbow", "L_Wrist", "R_Wrist"}
-)
-_FINGER_TOKENS = ("Index", "Middle", "Pinky", "Ring", "Thumb")
-_LOWER_ARM_TARGETS = frozenset({"L_Collar", "R_Collar", "L_Shoulder", "R_Shoulder", "L_Elbow", "R_Elbow"})
-
 # The SMPL-X body rig: skeleton + per-gaussian weights are generated per body (the
 # skeleton is betas-specific), so the bundler writes them via rig_files.
 BODY_RIG = RigSpec(
@@ -218,90 +208,6 @@ def _smplx_parents(smplx_model: object) -> list[int]:
 
 
 @jaxtyped(typechecker=beartype)
-def parse_ply_xyz(data: bytes) -> Float[npt.NDArray[np.float32], "n 3"]:
-    """Read gaussian XYZ positions ``[N, 3]`` from a binary little-endian PLY blob.
-
-    The skinning re-weight needs per-gaussian positions in the same space as the
-    skeleton. Bodies are always binary little-endian PLY (gaussian splats); ascii is
-    unsupported. Properties are read by name, so extra channels (color, opacity,
-    scale, rotation) are tolerated.
-    """
-    marker = b"end_header\n"
-    header_end = data.index(marker) + len(marker)
-    header = data[:header_end].decode("ascii", errors="ignore")
-    if "format binary_little_endian" not in header:
-        msg = "parse_ply_xyz expects a binary little-endian PLY"
-        raise ValueError(msg)
-    np_of = {
-        "float": "<f4", "float32": "<f4", "double": "<f8", "float64": "<f8",
-        "uchar": "u1", "uint8": "u1", "char": "i1", "int8": "i1",
-        "ushort": "<u2", "uint16": "<u2", "short": "<i2", "int16": "<i2",
-        "uint": "<u4", "uint32": "<u4", "int": "<i4", "int32": "<i4",
-    }  # fmt: skip
-    n_verts = 0
-    fields: list[tuple[str, str]] = []
-    for line in header.splitlines():
-        parts = line.split()
-        if len(parts) >= 3 and parts[0] == "element" and parts[1] == "vertex":
-            n_verts = int(parts[2])
-        elif len(parts) >= 3 and parts[0] == "property" and parts[1] != "list":
-            fields.append((parts[2], np_of[parts[1]]))
-    arr = np.frombuffer(data, dtype=np.dtype(fields), count=n_verts, offset=header_end)
-    return np.stack([arr["x"], arr["y"], arr["z"]], axis=1).astype(np.float32)
-
-
-@jaxtyped(typechecker=beartype)
-def reweight_lower_arm_rigid(
-    positions: Float[npt.NDArray[np.float32], "n 3"],
-    skeleton: dict,
-    lbs_weights: dict,
-    *,
-    sigma: float = 0.10,
-) -> None:
-    """Re-bind arm-region gaussians to the upper-arm chain (down to the elbow).
-
-    The LHM gaussians are baked in the SMPL-X T-pose with approximate LBS, so the
-    resting pose's shoulder-down rotation stretches the lower arm into thin tendrils
-    reaching the feet. Re-binding every arm-region gaussian (classified by its nearest
-    joint) to the nearest of {collar, shoulder, elbow} with a Gaussian proximity
-    falloff makes the lower arm swing as one rigid piece — clean at any zoom. Leg/torso
-    gaussians (nearest joint outside the arm) are left untouched. Mutates
-    ``lbs_weights`` in place (its ``indices`` / ``weights`` lists).
-    """
-    names = skeleton["names"]
-    rest = np.asarray(skeleton["restPositions"], dtype=np.float32)  # [J, 3]
-    arm_class = np.array(
-        [i for i, n in enumerate(names) if n in _ARM_JOINTS or any(t in n for t in _FINGER_TOKENS)],
-        dtype=np.int64,
-    )
-    targets = np.array(sorted(i for i, n in enumerate(names) if n in _LOWER_ARM_TARGETS), dtype=np.int64)
-    k = int(lbs_weights["k"])
-    n = positions.shape[0]
-    idx = np.asarray(lbs_weights["indices"], dtype=np.int64).reshape(n, k)
-    wt = np.asarray(lbs_weights["weights"], dtype=np.float64).reshape(n, k)
-
-    dist2 = ((positions[:, None, :] - rest[None, :, :]) ** 2).sum(-1)  # [N, J]
-    is_arm = np.isin(dist2.argmin(axis=1), arm_class)  # nearest joint is arm-region
-
-    take = min(k, targets.size)
-    fall = np.exp(-((np.sqrt(dist2[:, targets]) / sigma) ** 2))  # [N, T] proximity falloff
-    order = np.argsort(-fall, axis=1)[:, :take]  # closest targets per gaussian
-    top = np.take_along_axis(fall, order, axis=1)
-    underflow = top.sum(axis=1) <= 1e-12  # too far for any falloff -> nearest target only
-    top[underflow] = 0.0
-    top[underflow, 0] = 1.0
-    top /= top.sum(axis=1, keepdims=True)
-    glob = targets[order]  # [N, take] global joint indices
-
-    idx[is_arm, :take] = glob[is_arm]
-    wt[is_arm, :take] = top[is_arm]
-    if take < k:
-        wt[is_arm, take:] = 0.0
-    lbs_weights["indices"] = idx.reshape(-1).tolist()
-    lbs_weights["weights"] = np.round(wt, 6).reshape(-1).tolist()
-
-
-@jaxtyped(typechecker=beartype)
 def build_body_splattie(
     *,
     ply_path: Path,
@@ -316,10 +222,6 @@ def build_body_splattie(
     Returns (bundle_path, num_gaussians).
     """
     skeleton, lbs_weights = extract_body_rig(smplx_model, np.asarray(betas, dtype=np.float32))
-    # Re-skin the lower arms rigidly to the elbow so the resting pose's shoulder-down
-    # rotation swings them as solid limbs instead of stretching the photo-avatar's
-    # gaussians toward the feet (clean only at the baked T-pose otherwise).
-    reweight_lower_arm_rigid(parse_ply_xyz(ply_path.read_bytes()), skeleton, lbs_weights)
 
     skeleton_path = output_dir / BODY_RIG.skeleton_file
     weights_path = output_dir / BODY_RIG.weights_file
