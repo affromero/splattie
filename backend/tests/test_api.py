@@ -35,10 +35,10 @@ async def test_health(client: AsyncClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
-    assert "lam" in data["methods_loaded"]
+    assert "lam" in data["methodsLoaded"]
     assert isinstance(data["gpu"], dict)
     assert "available" in data["gpu"]
-    assert "model_loaded" in data["gpu"]
+    assert "modelLoaded" in data["gpu"]
 
 
 async def test_models(client: AsyncClient) -> None:
@@ -63,8 +63,8 @@ async def test_segment(client: AsyncClient) -> None:
     )
     assert response.status_code == 200
     data = response.json()
-    assert "mask_url" in data
-    assert "preview_url" in data
+    assert "maskUrl" in data
+    assert "previewUrl" in data
     assert len(data["bbox"]) == 4
 
 
@@ -92,7 +92,7 @@ async def test_generate_from_upload_produces_bundle(client: AsyncClient) -> None
     assert response.status_code == 200
     data = response.json()
     assert "modelId" in data
-    assert data["zipUrl"].endswith(".splattie")
+    assert data["spzUrl"].endswith(".splattie")
 
 
 @pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")

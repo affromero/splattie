@@ -20,11 +20,9 @@ export async function segmentImage(image: File): Promise<SegmentResponse> {
   return res.json();
 }
 
-export async function generateFromUpload(image: File): Promise<{
-  modelId: string;
-  zipUrl: string;
-  inferenceSeconds: number;
-}> {
+export async function generateFromUpload(
+  image: File
+): Promise<GenerationResult & { inferenceSeconds: number }> {
   const formData = new FormData();
   formData.append('image', image);
 

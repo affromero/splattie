@@ -2,7 +2,23 @@
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
+
+
+class CamelModel(BaseModel):
+    """API base model: serialize camelCase for the TS frontend, accept snake_case too.
+
+    `populate_by_name` keeps Python-side construction (`MethodInfo(asset_type=...)`)
+    working, while `model_dump(by_alias=True)` / FastAPI responses emit `assetType`.
+    `protected_namespaces=()` allows `model_id` without Pydantic's `model_` warning.
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        protected_namespaces=(),
+    )
 
 
 class AssetType(str, Enum):
@@ -24,7 +40,7 @@ class SplatFormat(str, Enum):
     SPZ = "spz"
 
 
-class MethodInfo(BaseModel):
+class MethodInfo(CamelModel):
     """Metadata about an asset generation method."""
 
     id: str
@@ -35,7 +51,7 @@ class MethodInfo(BaseModel):
     asset_type: AssetType
 
 
-class MethodCapabilities(BaseModel):
+class MethodCapabilities(CamelModel):
     """What an asset generation method can do."""
 
     supports_single_image: bool
@@ -44,7 +60,7 @@ class MethodCapabilities(BaseModel):
     typical_inference_seconds: float
 
 
-class GenerationResult(BaseModel):
+class GenerationResult(CamelModel):
     """Result of an asset generation request."""
 
     model_id: str
@@ -55,7 +71,7 @@ class GenerationResult(BaseModel):
     rig_params_url: str
 
 
-class SegmentationResult(BaseModel):
+class SegmentationResult(CamelModel):
     """Result of a segmentation request."""
 
     mask_url: str

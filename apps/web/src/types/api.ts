@@ -29,8 +29,16 @@ export interface MethodInfo {
   assetType: AssetType;
 }
 
+export interface GpuStatus {
+  available: boolean;
+  device: string | null;
+  vramTotalMb?: number;
+  vramUsedMb?: number;
+  modelLoaded: boolean;
+}
+
 export interface HealthResponse {
   status: string;
-  gpu: string;
+  gpu: GpuStatus;
   methodsLoaded: string[];
 }

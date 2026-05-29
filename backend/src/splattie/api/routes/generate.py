@@ -52,14 +52,7 @@ async def generate_from_upload(image: UploadFile, method: str | None = None) -> 
     elapsed = time.monotonic() - start
 
     return JSONResponse(
-        {
-            "modelId": result.model_id,
-            "zipUrl": result.spz_url,
-            "zipSizeBytes": result.spz_size_bytes,
-            "numGaussians": result.num_gaussians,
-            "methodId": result.method_id,
-            "inferenceSeconds": round(elapsed, 2),
-        }
+        {**result.model_dump(by_alias=True), "inferenceSeconds": round(elapsed, 2)},
     )
 
 
@@ -90,15 +83,7 @@ async def _generation_stream(
     yield _sse("progress", {"stage": "done", "pct": 100})
     yield _sse(
         "complete",
-        {
-            "modelId": result.model_id,
-            "spzUrl": result.spz_url,
-            "spzSizeBytes": result.spz_size_bytes,
-            "numGaussians": result.num_gaussians,
-            "methodId": result.method_id,
-            "rigParamsUrl": result.rig_params_url,
-            "inferenceSeconds": round(elapsed, 2),
-        },
+        {**result.model_dump(by_alias=True), "inferenceSeconds": round(elapsed, 2)},
     )
 
 
