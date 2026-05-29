@@ -41,20 +41,50 @@ const HEADS = DEMOS.filter((d) => d.category === 'head');
 const BODIES = DEMOS.filter((d) => d.category === 'body');
 
 function Carousel({
+  category,
   demos,
   activeId,
   paused,
   onSelect,
 }: {
+  category: Category;
   demos: Demo[];
   activeId: string | null;
   paused: boolean;
   onSelect: (demo: Demo) => void;
 }) {
-  // Duplicate the list so the marquee loops seamlessly at translateX(-50%).
+  // Duplicate the list so auto-scroll loops seamlessly (reset at half the width).
   const loop = [...demos, ...demos];
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const hoverRef = useRef(false);
+
+  // Native horizontal scroll (trackpad/drag works any time) + JS auto-scroll on top.
+  // Auto-scroll pauses while hovered or while an avatar is selected, so you can
+  // browse and click another one.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    let raf = 0;
+    const tick = () => {
+      if (!paused && !hoverRef.current) {
+        const half = el.scrollWidth / 2;
+        el.scrollLeft = half > 0 && el.scrollLeft >= half ? el.scrollLeft - half + 0.4 : el.scrollLeft + 0.4;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [paused]);
+
   return (
-    <div className={styles.carousel} data-paused={paused}>
+    <div
+      ref={scrollRef}
+      className={styles.carousel}
+      data-category={category}
+      onPointerEnter={() => { hoverRef.current = true; }}
+      onPointerLeave={() => { hoverRef.current = false; }}
+    >
       <div className={styles.carouselTrack}>
         {loop.map((demo, i) => (
           <div key={`${demo.id}-${i}`} className={styles.carouselItem}>
@@ -63,7 +93,7 @@ function Carousel({
               onClick={() => onSelect(demo)}
               aria-label={`Bring ${demo.category} by ${demo.photographer} to life`}
             >
-              {/* Plain img (not next/image): the marquee duplicates nodes + lazy-loads. */}
+              {/* Plain img (not next/image): the loop duplicates nodes + lazy-loads. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={demoThumb(demo)} alt={`${demo.category} by ${demo.photographer}`} className={styles.carouselImg} loading="lazy" />
             </button>
@@ -126,10 +156,10 @@ export default function Home() {
         <p className={styles.sectionSubtitle}>Click an avatar to bring it to life — the carousel pauses while you play</p>
 
         <div className={styles.categoryLabel}>Heads<span className={styles.categoryHint}>eyes follow your cursor</span></div>
-        <Carousel demos={HEADS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
+        <Carousel category="head" demos={HEADS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
 
         <div className={styles.categoryLabel}>Bodies<span className={styles.categoryHint}>head &amp; torso turn toward you</span></div>
-        <Carousel demos={BODIES} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
+        <Carousel category="body" demos={BODIES} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
 
         {activeDemo && (
           <div className={styles.editorSection} ref={editorRef}>

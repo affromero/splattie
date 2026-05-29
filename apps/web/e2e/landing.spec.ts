@@ -28,4 +28,13 @@ test('landing carousels + inline body editor render on localhost', async ({ page
   await expect
     .poll(async () => (await canvas.screenshot()).length, { timeout: 25_000, intervals: [500, 500, 1000] })
     .toBeGreaterThan(40_000);
+
+  // With an avatar selected (auto-scroll paused), the carousel stays trackpad-
+  // scrollable so you can browse and pick another.
+  const carousel = page.locator('[data-category="body"]');
+  expect(await carousel.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  await carousel.evaluate((el) => {
+    el.scrollLeft = 250;
+  });
+  expect(await carousel.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
 });
