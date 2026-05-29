@@ -6,7 +6,7 @@
 
 **Interactive 3D avatars from a single photo.**
 
-*Eyes follow visitors. Head reacts to hover. Runs at 60fps in any browser.*
+*Reacts to your cursor. Head responds to hover. Runs at 60fps in any browser.*
 
 [![Live](https://img.shields.io/badge/live-splattie.app-7eb8f0)](https://splattie.app)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
