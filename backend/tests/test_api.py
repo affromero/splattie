@@ -107,8 +107,8 @@ async def test_generate(client: AsyncClient) -> None:
     gen_response = await client.post(
         "/generate",
         json={
-            "image_url": seg_data["preview_url"].replace("/preview.png", "/original.png"),
-            "mask_url": seg_data["mask_url"],
+            "image_url": seg_data["previewUrl"].replace("/preview.png", "/original.png"),
+            "mask_url": seg_data["maskUrl"],
         },
     )
     assert gen_response.status_code == 200
