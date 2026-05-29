@@ -20,7 +20,8 @@ test('landing carousels + inline body editor render on localhost', async ({ page
   await bodyCard.click();
   const iframe = page.locator('iframe[title*="body" i]');
   await expect(iframe).toBeVisible();
-  await expect(iframe).toHaveAttribute('src', /\/demos\/bodies\/.*\.splattie/);
+  // src is URL-encoded (the .splattie path carries a ?v= cache-bust query).
+  await expect(iframe).toHaveAttribute('src', /bodies.*\.splattie/);
 
   // The body renders inside the inline editor (Spark WebGL within the iframe).
   const canvas = page.frameLocator('iframe[title*="body" i]').locator('splattie-widget canvas');

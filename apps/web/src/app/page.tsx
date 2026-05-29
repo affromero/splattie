@@ -16,9 +16,12 @@ interface Demo {
 }
 
 // Demos live in category subfolders: /demos/{heads,bodies}/<id>.{jpg,splattie}.
+// ASSET_VERSION cache-busts the .splattie when its contents change (the browser
+// otherwise serves the cached copy, surviving a hard-refresh). Bump on demo changes.
+const ASSET_VERSION = '2';
 const folder = (c: Category): string => (c === 'head' ? 'heads' : 'bodies');
 const demoThumb = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.jpg`;
-const demoSrc = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.splattie`;
+const demoSrc = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.splattie?v=${ASSET_VERSION}`;
 
 const DEMOS: Demo[] = [
   // Heads (LAM)
@@ -185,7 +188,7 @@ export default function Home() {
             </div>
             <iframe
               key={activeDemo.id}
-              src={`/editor.html?src=${demoSrc(activeDemo)}`}
+              src={`/editor.html?src=${encodeURIComponent(demoSrc(activeDemo))}`}
               className={styles.editorFrame}
               title={`Editor for ${activeDemo.photographer}'s ${activeDemo.category}`}
             />

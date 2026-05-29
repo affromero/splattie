@@ -100,7 +100,7 @@
   <div class="main" id="main"></div>
   <div class="panel" id="panel"></div>
 
-  <script src="/splattie-widget.cdn.js"></script>
+  <script src="/splattie-widget.cdn.js?v=2"></script>
   <script type="module">
     const params = new URLSearchParams(location.search);
     const src = params.get('src');
@@ -119,7 +119,7 @@
     const widget = document.createElement('splattie-widget');
     widget.id = 'widget';
     widget.setAttribute('background', '#0e0e14');
-    widget.setAttribute('expression-basis', '/demos/expression_basis.bin');
+    widget.setAttribute('expression-basis', '/demos/expression_basis.bin?v=2');
     if (src) widget.setAttribute('src', src);
     widget.style.flex = '1';
     main.appendChild(widget);
