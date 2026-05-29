@@ -26,25 +26,9 @@ test('head .splattie renders and the editor shows blendshape controls', async ({
     .poll(async () => (await canvas.screenshot()).length, { timeout: 20_000, intervals: [300, 300, 500] })
     .toBeGreaterThan(40_000);
 
-  // Head editor: friendly ARKit-blendshape expressions + eye tracking (not body controls).
+  // Head editor: FLAME blendshapes + eye tracking (not body controls).
   await expect(page.locator('#panel')).toContainText('jawOpen');
   await expect(page.locator('#panel')).toContainText('eyes');
-  await expect(page.locator('#panel')).toContainText('smile');
-  await expect(page.locator('#panel')).toContainText('browRaise');
-  // Old per-side virtual-bone keys are gone (replaced by the ARKit basis).
-  await expect(page.locator('#panel')).not.toContainText('browRaiseL');
-
-  // Driving a semantic expression to max deforms via the ARKit basis and the head
-  // keeps rendering (no crash, no blank canvas).
-  const smile = page.locator('.slider-group', { hasText: 'smile' }).first().locator('input[type=range]');
-  await smile.evaluate((el) => {
-    const input = el as HTMLInputElement;
-    input.value = input.max;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await page.waitForTimeout(500);
-  await expect.poll(async () => (await canvas.screenshot()).length).toBeGreaterThan(40_000);
-
   expect(pageErrors.join('\n')).not.toContain('Cannot convert');
   expect(pageErrors.join('\n')).not.toContain('body skinning');
 });

@@ -158,10 +158,8 @@
       if (!isBody) addSection('expression', () => {
         if (!state.expression) state.expression = {};
         if (!def.expression) def.expression = {};
-        // Friendly ARKit-blendshape expressions (defined by the widget) + bone/gaze controls.
-        const semantic = Array.from(widget.expressionVocabulary ?? []);
-        const boneKeys = [...semantic, 'neckTilt', 'neckYaw', 'neckRoll', 'gazeX', 'gazeY'];
-        const ranges = { neckTilt: [-0.3, 0.3, 0.005], neckYaw: [-0.3, 0.3, 0.005], neckRoll: [-0.3, 0.3, 0.005], gazeX: [-0.1, 0.1, 0.002], gazeY: [-0.05, 0.05, 0.001] };
+        const boneKeys = ['smile', 'mouthFrown', 'lipPucker', 'jawOpen', 'browRaiseL', 'browRaiseR', 'browFrownL', 'browFrownR', 'eyeSquint', 'cheekPuff', 'noseSneer', 'neckTilt', 'neckYaw', 'neckRoll', 'gazeX', 'gazeY'];
+        const ranges = { jawOpen: [0, 0.3, 0.005], neckTilt: [-0.3, 0.3, 0.005], neckYaw: [-0.3, 0.3, 0.005], neckRoll: [-0.3, 0.3, 0.005], gazeX: [-0.1, 0.1, 0.002], gazeY: [-0.05, 0.05, 0.001] };
         for (const k of boneKeys) {
           if (state.expression[k] === undefined) state.expression[k] = def.expression[k] || 0;
           if (def.expression[k] === undefined) def.expression[k] = 0;
