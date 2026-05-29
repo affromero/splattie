@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import AsyncGenerator
+from typing import Annotated
 
 import numpy as np
 from fastapi import APIRouter, Query, Request, UploadFile
@@ -15,6 +16,11 @@ from splattie.methods.registry import registry
 from splattie.types import AssetType
 
 router = APIRouter()
+
+# Module-level so FastAPI resolves it via get_type_hints (a `Query(...)` written
+# directly in the signature becomes an unresolvable string under
+# `from __future__ import annotations`).
+AssetTypeQuery = Annotated[AssetType, Query(alias="assetType")]
 
 
 @router.post("/generate")
@@ -38,7 +44,7 @@ async def generate(request: Request) -> StreamingResponse:
 @router.post("/generate-from-upload")
 async def generate_from_upload(
     image: UploadFile,
-    asset_type: Annotated[AssetType, Query(alias="assetType")] = AssetType.HEAD,
+    asset_type: AssetTypeQuery = AssetType.HEAD,
 ) -> JSONResponse:
     """Generate a 3DGS asset directly from an uploaded image. Returns JSON.
 
