@@ -20,6 +20,11 @@ def compress_ply_to_spz(ply_path: Path, spz_path: Path) -> Path:
             check=True,
             capture_output=True,
             text=True,
+            # Decode tool output as UTF-8 regardless of the host locale; on an ASCII
+            # locale (e.g. the GPU box) a non-ASCII byte in npx output would otherwise
+            # raise UnicodeDecodeError before the missing-package fallback can catch it.
+            encoding="utf-8",
+            errors="replace",
         )
     except (FileNotFoundError, subprocess.CalledProcessError):
         logger.warning("splat-transform not available, returning raw PLY")
