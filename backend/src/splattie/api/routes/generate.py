@@ -7,35 +7,44 @@ import time
 from collections.abc import AsyncGenerator
 
 import numpy as np
-from fastapi import APIRouter, Request, UploadFile
+from fastapi import APIRouter, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from PIL import Image
 
 from splattie.methods.registry import registry
+from splattie.types import AssetType
 
 router = APIRouter()
 
 
 @router.post("/generate")
 async def generate(request: Request) -> StreamingResponse:
-    """Generate a 3DGS head from image/mask URLs. Returns SSE stream."""
+    """Generate a 3DGS asset from image/mask URLs. Returns an SSE stream.
+
+    ``assetType`` in the body selects the category (head/body/object); the registry
+    resolves the method behind it.
+    """
     body = await request.json()
     image_url: str = body["image_url"]
     mask_url: str = body["mask_url"]
-    method_id: str = body.get("method", registry.default_method_id or "lam")
+    asset_type = AssetType(body.get("assetType", AssetType.HEAD.value))
 
     return StreamingResponse(
-        _generation_stream(image_url, mask_url, method_id),
+        _generation_stream(image_url, mask_url, asset_type),
         media_type="text/event-stream",
     )
 
 
 @router.post("/generate-from-upload")
-async def generate_from_upload(image: UploadFile, method: str | None = None) -> JSONResponse:
+async def generate_from_upload(
+    image: UploadFile,
+    asset_type: Annotated[AssetType, Query(alias="assetType")] = AssetType.HEAD,
+) -> JSONResponse:
     """Generate a 3DGS asset directly from an uploaded image. Returns JSON.
 
-    The ``?method=<id>`` query param selects the generation method (e.g. ``lam``
-    for heads, ``lhm`` for bodies); defaults to the registry's default method.
+    ``?assetType=<head|body|object>`` selects the asset *category*; the registry
+    resolves the method behind it (head→LAM, body→LHM), so the method can change
+    without altering the URL.
     """
     import io
 
@@ -43,8 +52,7 @@ async def generate_from_upload(image: UploadFile, method: str | None = None) -> 
     img = np.array(Image.open(io.BytesIO(contents)).convert("RGB"))
     mask = np.ones(img.shape[:2], dtype=np.bool_)
 
-    method_id = method or registry.default_method_id or "lam"
-    gen = registry.get(method_id)
+    gen = registry.for_asset_type(asset_type)
     gen.load()
 
     start = time.monotonic()
@@ -59,11 +67,11 @@ async def generate_from_upload(image: UploadFile, method: str | None = None) -> 
 async def _generation_stream(
     image_url: str,
     mask_url: str,
-    method_id: str,
+    asset_type: AssetType,
 ) -> AsyncGenerator[str, None]:
     yield _sse("progress", {"stage": "loading_model", "pct": 10})
 
-    method = registry.get(method_id)
+    method = registry.for_asset_type(asset_type)
     method.load()
 
     yield _sse("progress", {"stage": "loading_image", "pct": 20})
@@ -74,7 +82,7 @@ async def _generation_stream(
     img = np.array(Image.open(image_path).convert("RGB"))
     mask = np.array(Image.open(mask_path).convert("L")) > 127
 
-    yield _sse("progress", {"stage": "generating_head", "pct": 50})
+    yield _sse("progress", {"stage": "generating", "pct": 50})
 
     start = time.monotonic()
     result = method.generate(img, mask)

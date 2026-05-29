@@ -133,6 +133,10 @@ ignore = [
 ]
 select = ["ALL"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI uses these as argument defaults by design (B008 false positives).
+extend-immutable-calls = ["fastapi.Body", "fastapi.Depends", "fastapi.Path", "fastapi.Query"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D103", "S101"]
 

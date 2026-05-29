@@ -95,6 +95,14 @@ def test_registry_default() -> None:
     assert registry.default_method_id == "lam"
 
 
+def test_registry_for_asset_type() -> None:
+    """Endpoints select by category; the registry resolves the method behind it."""
+    assert registry.for_asset_type(AssetType.HEAD).info.id == "lam"
+    assert registry.for_asset_type(AssetType.BODY).info.id == "lhm"
+    with pytest.raises(KeyError):
+        registry.for_asset_type(AssetType.OBJECT)
+
+
 def test_lhm_implements_protocol() -> None:
     assert isinstance(LHMMethod(), AssetGenerationMethod)
 

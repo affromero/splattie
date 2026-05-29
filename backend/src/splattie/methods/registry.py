@@ -37,6 +37,21 @@ class MethodRegistry:
             self._instances[method_id] = self._methods[method_id]()
         return self._instances[method_id]
 
+    def for_asset_type(self, asset_type: AssetType) -> AssetGenerationMethod:
+        """Return the registered method for an asset category (head/body/object).
+
+        Lets the API select by category so the method behind a category can change
+        without altering the endpoint URL. Returns the first method registered for
+        the type (one per type today: lam=head, lhm=body).
+        """
+        for method_id in self._methods:
+            instance = self.get(method_id)
+            if instance.info.asset_type == asset_type:
+                return instance
+        available = [(m.id, m.asset_type.value) for m in self.list_available()]
+        msg = f"No method registered for asset type {asset_type.value!r}. Available: {available}"
+        raise KeyError(msg)
+
     def list_available(self) -> list[MethodInfo]:
         """List all registered methods."""
         result = []
