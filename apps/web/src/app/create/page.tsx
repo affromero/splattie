@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { generateFromUpload } from '@/lib/api-client';
+import { track } from '@/lib/track';
 import styles from './page.module.css';
 
 type Step = 'upload' | 'preview' | 'generate';
@@ -41,6 +42,7 @@ export default function CreatePage() {
 
     try {
       const result = await generateFromUpload(imageFile);
+      track('avatar_create', '/create', { modelId: result.modelId });
       router.push(`/view/${result.modelId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
