@@ -4,31 +4,50 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import styles from './page.module.css';
 
+interface LoginError {
+  error?: string;
+  remaining?: number;
+  retryAfter?: number;
+}
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [message, setMessage] = useState('');
+  const [locked, setLocked] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setError(false);
+    setMessage('');
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
       });
+
       if (res.ok) {
         router.replace('/admin');
         router.refresh();
+        return;
+      }
+
+      const data = (await res.json().catch(() => ({}))) as LoginError;
+      setPassword('');
+
+      if (res.status === 429) {
+        const mins = Math.max(1, Math.ceil((data.retryAfter ?? 0) / 60));
+        setLocked(true);
+        setMessage(`Too many attempts. Try again in about ${mins} min.`);
+      } else if (typeof data.remaining === 'number') {
+        setMessage(`Invalid password. ${data.remaining} attempt${data.remaining === 1 ? '' : 's'} left.`);
       } else {
-        setError(true);
-        setPassword('');
+        setMessage('Invalid password.');
       }
     } catch {
-      setError(true);
+      setMessage('Something went wrong. Try again.');
     } finally {
       setBusy(false);
     }
@@ -47,9 +66,10 @@ export default function AdminLoginPage() {
           placeholder="Password"
           autoFocus
           autoComplete="current-password"
+          disabled={locked}
         />
-        {error && <p className={styles.error}>Invalid password.</p>}
-        <button className={styles.button} type="submit" disabled={busy || !password}>
+        {message && <p className={styles.error}>{message}</p>}
+        <button className={styles.button} type="submit" disabled={busy || locked || !password}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
