@@ -66,10 +66,19 @@ function Carousel({
     if (!el) return undefined;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
     let raf = 0;
+    // Browsers round scrollLeft to an integer, so reading it back and adding a
+    // sub-pixel step would never accumulate (it rounds to 0 each frame, nothing
+    // moves). Keep our own float position and write it; read scrollLeft back only
+    // to resync after the user trackpad-scrolls.
+    let pos = el.scrollLeft;
+    const SPEED = 0.8; // px/frame ≈ 48px/s — a gentle, clearly-moving drift
     const tick = () => {
       if (!paused && !hoverRef.current) {
         const half = el.scrollWidth / 2;
-        el.scrollLeft = half > 0 && el.scrollLeft >= half ? el.scrollLeft - half + 0.4 : el.scrollLeft + 0.4;
+        pos = half > 0 && pos >= half ? pos - half : pos + SPEED;
+        el.scrollLeft = pos;
+      } else {
+        pos = el.scrollLeft;
       }
       raf = requestAnimationFrame(tick);
     };
