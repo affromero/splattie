@@ -112,26 +112,26 @@ BODY_RIG = RigSpec(
 # head + torso look-at (the chosen body interaction) instead of eyes, and frames
 # the full standing figure. The editor (1.E) tunes camera/pose per body.
 DEFAULT_STATES_BODY: dict = {
-    "defaults": {"camera": {"theta": 0, "phi": 90, "radius": 2.4, "fov": 45}},
+    "defaults": {"camera": {"theta": 0, "phi": 90, "radius": 3.3, "fov": 45}},
     "states": {
         "idle": {
             "ghost": {"amplitude": 0.004, "frequency": 0.3, "wobble": 0.2},
             "expression": {},
-            "camera": {"theta": 0, "phi": 90, "radius": 2.4, "fov": 45},
+            "camera": {"theta": 0, "phi": 90, "radius": 3.3, "fov": 45},
             "rotation": [0, 0, 0],
             "tracking": {"head": 1.0, "torso": 0.3},
         },
         "hover": {
             "ghost": {"amplitude": 0.006, "frequency": 0.5, "wobble": 0.3},
             "expression": {},
-            "camera": {"theta": 0, "phi": 90, "radius": 2.2, "fov": 45},
+            "camera": {"theta": 0, "phi": 90, "radius": 3.025, "fov": 45},
             "rotation": [0, 0, 0],
             "tracking": {"head": 1.0, "torso": 0.5},
         },
         "click": {
             "ghost": {"amplitude": 0.002, "frequency": 0.8, "wobble": 0.1},
             "expression": {},
-            "camera": {"theta": 0, "phi": 88, "radius": 2.0, "fov": 48},
+            "camera": {"theta": 0, "phi": 88, "radius": 2.75, "fov": 48},
             "rotation": [0, 0, 0],
             "tracking": {"head": 0.6, "torso": 0.2},
         },

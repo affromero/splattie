@@ -237,7 +237,7 @@
           reset.className = 'pose-btn';
           reset.textContent = 'reset pose';
           reset.onclick = () => {
-            for (const name of Object.keys(config.states)) delete config.states[name].pose;
+            delete config.states[currentState].pose;
             configured.add(currentState);
             applyConfig();
             if (poseMode) { widget._stateMachine?.forceState(currentState); buildHandles(); }
@@ -354,14 +354,12 @@
     }
 
     // ── Body IK pose authoring (drag handles over the canvas) ──
-    // The limb pose is one consistent stance written to every state, so it doesn't
-    // "change" when the live state flips (idle/hover/click); only the look-at varies.
-    function writePoseToAllStates(sol) {
-      for (const name of Object.keys(config.states)) {
-        const st = config.states[name];
-        if (!st.pose) st.pose = {};
-        for (const j of sol) st.pose[j.joint] = j.quat;
-      }
+    // Pose is per-state (like camera/expression): editing one state's pose never
+    // touches the others. Author idle/hover/click independently.
+    function writePose(sol) {
+      const st = config.states[currentState];
+      if (!st.pose) st.pose = {};
+      for (const j of sol) st.pose[j.joint] = j.quat;
       configured.add(currentState);
       applyConfig();
       widget._stateMachine?.forceState(currentState);
@@ -425,7 +423,7 @@
         const rect = canvas.getBoundingClientRect();
         const sx = ev.clientX - rect.left, sy = ev.clientY - rect.top;
         const sol = widget.solveLimbToScreen(chain, sx, sy);
-        if (sol) writePoseToAllStates(sol);
+        if (sol) writePose(sol);
         const [cx, cy] = clampToCanvas(sx, sy);
         dot.style.left = cx + 'px';
         dot.style.top = cy + 'px';
