@@ -37,7 +37,6 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Splattie - Editor & widget for interactive 3D avatars',
     description: 'In-browser editor and web component for interactive 3D Gaussian-splat avatars. Embed with one line of HTML.',
-    images: ['/og.png'],
   },
   robots: { index: true, follow: true },
   // Set GOOGLE_SITE_VERIFICATION in the web container env to verify Search Console.
