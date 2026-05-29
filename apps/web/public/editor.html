@@ -4,8 +4,24 @@
   html, body { height: 100%; }
   body { background: #0e0e14; display: flex; font-family: monospace; color: #888; overflow: hidden; }
 
-  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
   .main > splattie-widget { flex: 1; }
+
+  #pose-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 5; display: none; }
+  #pose-overlay.active { display: block; }
+  .ik-handle {
+    position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    border-radius: 50%; background: rgba(126,184,240,0.45); border: 2px solid #7eb8f0;
+    cursor: grab; pointer-events: auto; touch-action: none; transition: background 0.1s;
+  }
+  .ik-handle:hover { background: rgba(126,184,240,0.7); }
+  .ik-handle.dragging { cursor: grabbing; background: rgba(196,160,240,0.8); border-color: #c4a0f0; }
+  .pose-hint { font-size: 0.6rem; color: #555; margin: 0.2rem 0; line-height: 1.4; }
+  .pose-btn {
+    width: 100%; padding: 0.4rem; background: #1e1e2a; border: 1px solid #2a2a3a;
+    color: #7eb8f0; font: inherit; font-size: 0.7rem; cursor: pointer; margin-top: 0.2rem;
+  }
+  .pose-btn.active { background: #7eb8f0; color: #0e0e14; font-weight: bold; }
 
   .panel {
     width: 240px;
@@ -108,6 +124,12 @@
     widget.style.flex = '1';
     main.appendChild(widget);
 
+    // Overlay for body-pose IK drag handles (over the widget canvas).
+    const poseOverlay = document.createElement('div');
+    poseOverlay.id = 'pose-overlay';
+    main.appendChild(poseOverlay);
+    let poseMode = false;
+
     let config = null;
     let defaults = null;
     let currentState = 'idle';
@@ -144,7 +166,7 @@
         const btn = document.createElement('button');
         btn.className = 'state-btn' + (name === currentState ? ' editing' : '') + (name === liveState ? ' live' : '') + (configured.has(name) ? ' configured' : '');
         btn.textContent = name;
-        btn.onclick = () => { currentState = name; buildPanel(); };
+        btn.onclick = () => { currentState = name; buildPanel(); if (poseMode) renderPoseHandles(); };
         statesDiv.appendChild(btn);
       }
       panel.appendChild(statesDiv);
@@ -194,6 +216,31 @@
         } else {
           addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
           addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
+        }
+      });
+
+      // Body-only: IK limb posing via on-canvas drag handles.
+      if (isBody) addSection('pose', () => {
+        const hint = document.createElement('div');
+        hint.className = 'pose-hint';
+        hint.textContent = 'Pose this state by dragging the dots on the hands & feet.';
+        getContainer().appendChild(hint);
+        const btn = document.createElement('button');
+        btn.className = 'pose-btn' + (poseMode ? ' active' : '');
+        btn.textContent = poseMode ? '✓ done posing' : '✎ edit pose';
+        btn.onclick = () => setPoseMode(!poseMode);
+        getContainer().appendChild(btn);
+        if (state.pose && Object.keys(state.pose).length) {
+          const reset = document.createElement('button');
+          reset.className = 'pose-btn';
+          reset.textContent = 'reset pose';
+          reset.onclick = () => {
+            delete config.states[currentState].pose;
+            configured.add(currentState);
+            applyConfig();
+            if (poseMode) renderPoseHandles();
+          };
+          getContainer().appendChild(reset);
         }
       });
 
@@ -302,6 +349,60 @@
     function applyConfig() {
       if (!widget._stateMachine) return;
       widget._stateMachine.updateStates(JSON.parse(JSON.stringify(config.states)));
+    }
+
+    // ── Body IK pose authoring (drag handles over the canvas) ──
+    function setPoseMode(on) {
+      poseMode = on;
+      widget.poseAuthoring = on;            // freeze look-at so handles match the body
+      poseOverlay.classList.toggle('active', on);
+      if (on) renderPoseHandles(); else poseOverlay.innerHTML = '';
+      buildPanel();
+    }
+
+    function renderPoseHandles() {
+      if (!poseMode) return;
+      widget._stateMachine?.forceState(currentState); // show the state being posed
+      poseOverlay.innerHTML = '';
+      const handles = widget.bodyIKHandles ? widget.bodyIKHandles() : [];
+      for (const h of handles) {
+        const dot = document.createElement('div');
+        dot.className = 'ik-handle';
+        dot.style.left = h.sx + 'px';
+        dot.style.top = h.sy + 'px';
+        dot.title = h.chain;
+        dot.onpointerdown = (e) => startPoseDrag(e, h.chain, dot);
+        poseOverlay.appendChild(dot);
+      }
+    }
+
+    function startPoseDrag(e, chain, dot) {
+      e.preventDefault();
+      dot.classList.add('dragging');
+      dot.setPointerCapture(e.pointerId);
+      const canvas = widget.querySelector('canvas');
+      const move = (ev) => {
+        const rect = canvas.getBoundingClientRect();
+        const sx = ev.clientX - rect.left, sy = ev.clientY - rect.top;
+        const sol = widget.solveLimbToScreen(chain, sx, sy);
+        if (!sol) return;
+        const st = config.states[currentState];
+        if (!st.pose) st.pose = {};
+        for (const j of sol) st.pose[j.joint] = j.quat;
+        configured.add(currentState);
+        applyConfig();
+        widget._stateMachine?.forceState(currentState);
+        dot.style.left = sx + 'px';
+        dot.style.top = sy + 'px';
+      };
+      const up = () => {
+        dot.classList.remove('dragging');
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        renderPoseHandles();
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
     }
 
     async function exportSplattie() {

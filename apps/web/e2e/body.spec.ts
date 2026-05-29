@@ -58,3 +58,44 @@ test('body .splattie renders and follows the cursor (look-at)', async ({ page })
   await expect(page.locator('#panel')).toContainText('torso');
   expect(pageErrors.join('\n')).not.toContain('Cannot convert undefined');
 });
+
+test('body editor poses a limb via IK drag handles', async ({ page }) => {
+  await page.goto(`/editor.html?src=${BODY_SRC}`);
+  await page.waitForFunction(
+    () => {
+      const w = document.querySelector('splattie-widget') as unknown as { _stateMachine?: unknown };
+      return Boolean(w && w._stateMachine);
+    },
+    { timeout: 60_000 },
+  );
+  const canvas = page.locator('splattie-widget canvas');
+  await expect
+    .poll(async () => (await canvas.screenshot()).length, { timeout: 20_000, intervals: [300, 300, 500] })
+    .toBeGreaterThan(40_000);
+
+  // Enter pose mode → a draggable handle appears at each limb end-effector.
+  await page.locator('.pose-btn').first().click();
+  await expect(page.locator('.ik-handle')).toHaveCount(4);
+
+  // Dragging a handle solves two-bone IK and writes the limb's joint rotations
+  // into the edited state's pose.
+  const box = (await page.locator('.ik-handle').first().boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 30, cy - 200, { steps: 16 });
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+
+  const posedJoints = await page.evaluate(() => {
+    const w = document.querySelector('splattie-widget') as unknown as {
+      _stateMachine?: { currentFrame?: { pose?: Record<string, unknown> } };
+    };
+    return Object.keys(w._stateMachine?.currentFrame?.pose ?? {});
+  });
+  expect(posedJoints).toContain('L_Shoulder');
+  expect(posedJoints).toContain('L_Elbow');
+  // The body still renders after posing (no crash, no blank canvas).
+  await expect.poll(async () => (await canvas.screenshot()).length).toBeGreaterThan(40_000);
+});
