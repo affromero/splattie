@@ -1,8 +1,8 @@
 {
   "num_vertices": 20426,
   "num_expressions": 50,
-  "bytes": 12255612,
-  "format": "float32_le, shape (num_vertices, num_expressions, 3)",
+  "bytes": 6127812,
+  "format": "float16_le, shape (num_vertices, num_expressions, 3)",
   "labels": [
     "lipsBack",
     "lipsUp",
