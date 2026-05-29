@@ -1,9 +1,16 @@
 """LHM model loading + shared runtime helpers (cached, GPU).
 
-LHM is vendored at backend/vendor/LHM (fork affromero/LHM @ splattie, which makes
-mmpose/sam2 optional). We construct ModelHumanLRM directly and run the canonical
-`infer_mesh` forward for the *canonical* body avatar — neutral SMPL-X pose, so no
-pose estimation (mmpose) is needed. The widget animates the SMPL-X rig client-side.
+LHM is vendored at backend/vendor/LHM (fork affromero/LHM @ splattie). We construct
+LHM's canonical `HumanLRMInferrer` and drive its *real* pipeline:
+
+    betas = pose_estimator(image)          # Multi-HMR -> person's body shape
+    infer_mesh(image, shape_param=betas)   # canonical pose + real face crop -> save_ply
+
+The avatar is reconstructed in a neutral SMPL-X pose (the widget animates the rig
+client-side) but with the person's real body shape + face crop. Background removal uses
+rembg (`parsingnet` stays None -> our fork's rembg fallback; no sam2). The render-only
+`diff_gaussian_rasterization` import is optional in the fork's gs_renderer — the export
+path (forward -> animation_infer_gs -> save_ply) never rasterizes.
 """
 
 from __future__ import annotations
@@ -19,13 +26,11 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 VENDOR_LHM = Path(__file__).resolve().parents[4] / "vendor" / "LHM"
-# model_dict key for the 500M (SapDino body+head SD3.5) checkpoint.
-_EXP_TYPE = "human_lrm_sapdino_bh_sd3_5"
-_HF_SNAPSHOT_GLOB = "pretrained_models/huggingface/models--3DAIGC--LHM-500M/snapshots/*"
+# AutoModelQuery resolves this name to the downloaded snapshot (download_weights.sh).
+_MODEL_NAME = "LHM-500M"
 
-_lhm_model = None
-_lhm_cfg = None
-# LHM uses cwd-relative asset paths + shared scratch dirs → serialize + run from
+_inferrer = None
+# LHM uses cwd-relative asset paths + shared scratch dirs -> serialize + run from
 # vendor/LHM (mirrors the LAM method).
 inference_lock = threading.Lock()
 
@@ -66,54 +71,58 @@ def patch_chumpy_compat() -> None:
             setattr(np, name, typ)
 
 
-def _hf_snapshot() -> Path:
-    base = VENDOR_LHM / "pretrained_models" / "huggingface" / "models--3DAIGC--LHM-500M" / "snapshots"
-    snaps = sorted(base.glob("*")) if base.exists() else []
-    if not snaps:
-        msg = (
-            f"LHM-500M weights not found under {base}. Run backend/scripts/setup-gpu.sh "
-            "(or LHM's download_weights.sh) to populate the vendored weights."
-        )
-        raise FileNotFoundError(msg)
-    return snaps[-1]
+def load_inferrer():  # noqa: ANN201 - LHM's HumanLRMInferrer is untyped (vendored).
+    """Build + cache LHM's HumanLRMInferrer on GPU (real pose + face pipeline).
 
+    Raises if weights/GPU are missing (no fallback). `parse_configs()` reads the model
+    name + flags from `sys.argv` (LHM's CLI), so we mirror inference_mesh.sh's invocation
+    in-process instead of spawning a subprocess.
+    """
+    global _inferrer
+    if _inferrer is not None:
+        return _inferrer
 
-def load_model() -> tuple:
-    """Build + cache the LHM-500M model on GPU. Raises if weights/GPU missing (no fallback)."""
-    global _lhm_model, _lhm_cfg
-    if _lhm_model is not None:
-        return _lhm_model, _lhm_cfg
-
-    lhm_path = str(VENDOR_LHM)
-    if lhm_path not in sys.path:
-        sys.path.insert(0, lhm_path)
+    if str(VENDOR_LHM) not in sys.path:
+        sys.path.insert(0, str(VENDOR_LHM))
     patch_chumpy_compat()
 
-    from LHM.models import model_dict
-    from LHM.utils.hf_hub import wrap_model_hub
-    from omegaconf import OmegaConf
+    saved_argv = sys.argv
+    sys.argv = [
+        "splattie-lhm",
+        f"model_name={_MODEL_NAME}",
+        "image_input=./train_data/example_imgs/",
+        "export_mesh=True",
+        "motion_seqs_dir=None",
+        "motion_img_dir=None",
+        "vis_motion=false",
+        "motion_img_need_mask=true",
+    ]
+    try:
+        with chdir(VENDOR_LHM):
+            from LHM.runners.infer.human_lrm import HumanLRMInferrer
 
-    with chdir(VENDOR_LHM):
-        cfg = OmegaConf.load(str(VENDOR_LHM / "configs" / "inference" / "human-lrm-500M.yaml"))
-        logger.info("Building LHM-500M model...")
-        model_cls = wrap_model_hub(model_dict[_EXP_TYPE])
-        model = model_cls.from_pretrained(str(_hf_snapshot())).to("cuda")
-        model.eval()
-    logger.info("LHM model loaded on GPU")
+            logger.info("Building LHM-500M inferrer (model + Multi-HMR pose + face detector)...")
+            inferrer = HumanLRMInferrer()
+    finally:
+        sys.argv = saved_argv
 
-    _lhm_model = model
-    _lhm_cfg = cfg
-    return model, cfg
+    logger.info(
+        "LHM inferrer ready (pose_estimator=%s, facedetect=%s, parsingnet=%s; mask via rembg)",
+        inferrer.pose_estimator is not None,
+        inferrer.facedetect is not None,
+        inferrer.parsingnet is not None,
+    )
+    _inferrer = inferrer
+    return inferrer
 
 
 def unload_model() -> None:
-    """Release the cached LHM model + free GPU memory."""
-    global _lhm_model, _lhm_cfg
-    if _lhm_model is None:
+    """Release the cached LHM inferrer + free GPU memory."""
+    global _inferrer
+    if _inferrer is None:
         return
-    _lhm_model = None
-    _lhm_cfg = None
+    _inferrer = None
     import torch
 
     torch.cuda.empty_cache()
-    logger.info("LHM model unloaded")
+    logger.info("LHM inferrer unloaded")

@@ -1,10 +1,11 @@
 """LHM body generation method (SIGGRAPH 2025 — arxiv 2503.10625).
 
-Single image → canonical SMPL-X-anchored 3DGS body. We run LHM's canonical
-`infer_mesh` forward with a neutral SMPL-X pose (no mmpose pose estimation needed
-for the canonical avatar — the widget animates the rig client-side) and rembg
-masking. Outputs a raw gaussian PLY; the `.splattie` bundle + per-gaussian LBS
-weight extraction happen in the LHM bundle adapter (Phase 1.C).
+Single image → SMPL-X-anchored 3DGS body. We drive LHM's canonical pipeline:
+Multi-HMR pose estimation for the person's body shape (betas), then `infer_mesh` with a
+neutral SMPL-X pose + the real face crop → a canonical-pose gaussian PLY. Background
+removal uses rembg. The widget animates the SMPL-X rig client-side. Outputs a raw
+gaussian PLY; the `.splattie` bundle + per-gaussian LBS weight extraction land in the
+LHM bundle adapter (Phase 1.C).
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ import numpy.typing as npt
 from beartype import beartype
 from jaxtyping import Bool, UInt8, jaxtyped
 
-from splattie.methods.lhm.runtime import VENDOR_LHM, chdir, inference_lock, load_model
+from splattie.methods.lhm.runtime import VENDOR_LHM, chdir, inference_lock, load_inferrer
 from splattie.methods.registry import registry
 from splattie.types import AssetType, GenerationResult, MethodCapabilities, MethodInfo
 
@@ -55,7 +56,7 @@ class LHMMethod:
 
     def load(self) -> None:
         # No fallback: missing GPU/weights raises (caller returns 500).
-        load_model()
+        load_inferrer()
 
     @jaxtyped(typechecker=beartype)
     def generate(
@@ -63,7 +64,8 @@ class LHMMethod:
         image: UInt8[npt.NDArray[np.uint8], "h w 3"],
         mask: Bool[npt.NDArray[np.bool_], "h w"],
     ) -> GenerationResult:
-        # No fallback: inference failure propagates as a 500.
+        # No fallback: inference failure propagates as a 500. LHM re-derives its own
+        # person mask (rembg) inside infer_mesh, so the upstream `mask` is unused here.
         model_id = uuid.uuid4().hex[:12]
         output_dir = (STORAGE_DIR / model_id).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -76,75 +78,38 @@ class LHMMethod:
         model_id: str,
         output_dir: Path,
     ) -> GenerationResult:
-        import torch
         from PIL import Image as PILImage
 
-        img_path = output_dir / "input.jpg"
+        img_path = output_dir / f"{model_id}.jpg"
         PILImage.fromarray(image).save(str(img_path))
+        tmp_dir = output_dir / "tmp"
+        tmp_dir.mkdir(exist_ok=True)
 
-        model, cfg = load_model()
-        source_size = cfg.dataset.source_image_res
-        src_head_size = cfg.dataset.get("src_head_size", 112)
-
-        ply_path = output_dir / f"{model_id}.ply"
-        device, dtype = "cuda", torch.float32
+        inferrer = load_inferrer()
 
         # LHM uses cwd-relative asset paths; serialize and run from vendor/LHM.
         with inference_lock, chdir(VENDOR_LHM):
-            from LHM.runners.infer.human_lrm import infer_preprocess_image  # patched: mmpose-free
-            from rembg import remove
+            # Person-specific body shape from Multi-HMR. Neutral betas only if pose
+            # estimation is unavailable (degraded: generic body proportions).
+            if inferrer.pose_estimator is not None:
+                betas = inferrer.pose_estimator(str(img_path)).beta
+            else:
+                logger.warning("LHM pose estimator unavailable → neutral betas (generic body shape)")
+                betas = np.zeros(_SHAPE_PARAM_DIM, dtype=np.float32)
 
-            # Person mask via rembg (the canonical SAM2-free parsing fallback).
-            parsing_mask = np.array(remove(PILImage.open(img_path).convert("RGB")).convert("RGBA"))[:, :, 3]
-
-            ref_image, _, _ = infer_preprocess_image(
+            logger.info("Running LHM infer_mesh (canonical body gaussians; real shape + face)...")
+            inferrer.infer_mesh(
                 str(img_path),
-                mask=parsing_mask,
-                intr=None,
-                pad_ratio=0,
-                bg_color=1.0,
-                max_tgt_size=896,
-                aspect_standard=5.0 / 3,
-                enlarge_ratio=[1.0, 1.0],
-                render_tgt_size=source_size,
-                multiply=14,
-                need_mask=True,
+                dump_tmp_dir=str(tmp_dir),
+                dump_mesh_dir=str(output_dir),
+                shape_param=betas,
             )
 
-            # Canonical avatar: no head crop, neutral SMPL-X pose. The widget poses
-            # the rig client-side; person-specific betas (via pose estimation) are a
-            # future fidelity upgrade.
-            src_head_rgb = torch.zeros(1, 3, src_head_size, src_head_size, dtype=dtype)
-
-            smplx_params = {
-                "betas": torch.zeros(1, _SHAPE_PARAM_DIM, device=device),
-                "root_pose": torch.zeros(1, 1, 3, device=device),
-                "body_pose": torch.zeros(1, 1, 21, 3, device=device),
-                "jaw_pose": torch.zeros(1, 1, 3, device=device),
-                "leye_pose": torch.zeros(1, 1, 3, device=device),
-                "reye_pose": torch.zeros(1, 1, 3, device=device),
-                "lhand_pose": torch.zeros(1, 1, 15, 3, device=device),
-                "rhand_pose": torch.zeros(1, 1, 15, 3, device=device),
-                "expr": torch.zeros(1, 1, 100, device=device),
-                "trans": torch.zeros(1, 1, 3, device=device),
-            }
-
-            model.to(dtype)
-            logger.info("Running LHM forward pass (canonical body gaussians)...")
-            with torch.no_grad():
-                gs_app_model_list, query_points, transform_mat_neutral_pose = model.infer_single_view(
-                    ref_image.unsqueeze(0).to(device, dtype),
-                    src_head_rgb.unsqueeze(0).to(device, dtype),
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    smplx_params={k: v.to(device) for k, v in smplx_params.items()},
-                )
-                smplx_params["transform_mat_neutral_pose"] = transform_mat_neutral_pose
-                output_gs = model.animation_infer_gs(gs_app_model_list, query_points, smplx_params)
-                output_gs.save_ply(str(ply_path))
+        # infer_mesh names the output after the image stem: "<model_id>.jpg" -> "<model_id>.ply".
+        ply_path = output_dir / f"{model_id}.ply"
+        if not ply_path.exists():
+            msg = f"LHM infer_mesh did not produce {ply_path}"
+            raise FileNotFoundError(msg)
 
         num_gaussians = _count_ply_vertices(ply_path)
         logger.info("LHM body PLY saved: %s (%d gaussians)", ply_path.name, num_gaussians)
