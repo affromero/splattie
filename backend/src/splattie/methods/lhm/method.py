@@ -10,6 +10,7 @@ LHM bundle adapter (Phase 1.C).
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from pathlib import Path
