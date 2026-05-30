@@ -30,8 +30,6 @@ from pathlib import Path
 import tyro
 from klogr import get_logger
 
-from splattie.compression.spz import compress_ply_to_spz
-
 logger = get_logger()
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -136,7 +134,7 @@ def build_manifest(
     return manifest
 
 
-def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compress_spz: bool = False) -> str:
+def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compress: bool = False) -> str:
     """Returns a short status string for logging."""
     stem = splattie_path.stem
     note = ""
@@ -148,16 +146,13 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compres
 
         splat_entry, splat_format = find_splat_entry(zf)
         splat_bytes = zf.read(splat_entry)
-        # Count gaussians from the PLY *before* any compression; for an already-SPZ
-        # bundle, preserve the count recorded in the existing manifest.
-        if splat_format == "ply":
-            num_gaussians = count_ply_vertices_bytes(splat_bytes)
-        else:
-            num_gaussians = (existing or {}).get("avatar", {}).get("splat", {}).get("numGaussians", 0)
+        # 'element vertex' is present in both standard and compressed PLY headers.
+        num_gaussians = count_ply_vertices_bytes(splat_bytes)
+        already_compressed = b"packed_position" in splat_bytes[:1024]
 
-        # Nothing to do only when the manifest is current AND we're not converting PLY->SPZ.
+        # Nothing to do only when the manifest is current AND there's no compression left.
         already_current = existing is not None and existing.get("formatVersion") == widget_version
-        if already_current and not (compress_spz and splat_format == "ply"):
+        if already_current and not (compress and not already_compressed):
             return f"skip (already v{widget_version})"
 
         has_skeleton = "bone_tree.json" in names
@@ -166,19 +161,18 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compres
 
         payload: dict[str, bytes] = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
 
-    # Convert the PLY payload to SPZ in-place (hard-fails if splat-transform errors).
-    if compress_spz and splat_format == "ply":
+    # Compress the PLY payload to compressed PLY in place (hard-fails on error). The
+    # entry keeps its .ply name and manifest format stays "ply": compressed PLY has the
+    # 'ply' magic, so Spark loads it via its correct PLY reader (SPZ does not).
+    if compress and not already_compressed:
         with tempfile.TemporaryDirectory() as td:
             ply_tmp = Path(td) / f"{stem}.ply"
-            spz_tmp = Path(td) / f"{stem}.spz"
+            comp_tmp = Path(td) / f"{stem}.compressed.ply"
             ply_tmp.write_bytes(splat_bytes)
-            compress_ply_to_spz(ply_tmp, spz_tmp)
-            spz_bytes = spz_tmp.read_bytes()
-        del payload[splat_entry]
-        splat_entry = f"{stem}.spz"
-        splat_format = "spz"
-        payload[splat_entry] = spz_bytes
-        note = f", {len(splat_bytes) // 1024}KB ply -> {len(spz_bytes) // 1024}KB spz"
+            compress_ply(ply_tmp, comp_tmp)
+            comp_bytes = comp_tmp.read_bytes()
+        payload[splat_entry] = comp_bytes
+        note = f", {len(splat_bytes) // 1024}KB ply -> {len(comp_bytes) // 1024}KB compressed.ply"
 
     thumb_path = find_thumb(thumbs_dir, stem)
     manifest = build_manifest(
@@ -231,7 +225,7 @@ def main(splatties_dir: Path, thumbs_dir: Path, compress_spz: bool = False) -> N
         return
 
     for p in splatties:
-        status = rebundle(p, thumbs_dir, widget_version, compress_spz=compress_spz)
+        status = rebundle(p, thumbs_dir, widget_version, compress=compress)
         logger.info(f"  {p.name}: {status}")
 
     logger.info(f"\nProcessed {len(splatties)} file(s).")
