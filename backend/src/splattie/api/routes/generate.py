@@ -5,68 +5,79 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import AsyncGenerator
+from typing import Annotated
 
 import numpy as np
-from fastapi import APIRouter, Request, UploadFile
+from fastapi import APIRouter, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from PIL import Image
 
 from splattie.methods.registry import registry
+from splattie.types import AssetType
 
 router = APIRouter()
+
+# Module-level so FastAPI resolves it via get_type_hints (a `Query(...)` written
+# directly in the signature becomes an unresolvable string under
+# `from __future__ import annotations`).
+AssetTypeQuery = Annotated[AssetType, Query(alias="assetType")]
 
 
 @router.post("/generate")
 async def generate(request: Request) -> StreamingResponse:
-    """Generate a 3DGS head from image/mask URLs. Returns SSE stream."""
+    """Generate a 3DGS asset from image/mask URLs. Returns an SSE stream.
+
+    ``assetType`` in the body selects the category (head/body/object); the registry
+    resolves the method behind it.
+    """
     body = await request.json()
     image_url: str = body["image_url"]
     mask_url: str = body["mask_url"]
-    method_id: str = body.get("method", registry.default_method_id or "lam")
+    asset_type = AssetType(body.get("assetType", AssetType.HEAD.value))
 
     return StreamingResponse(
-        _generation_stream(image_url, mask_url, method_id),
+        _generation_stream(image_url, mask_url, asset_type),
         media_type="text/event-stream",
     )
 
 
 @router.post("/generate-from-upload")
-async def generate_from_upload(image: UploadFile) -> JSONResponse:
-    """Generate a 3DGS head directly from an uploaded image. Returns JSON."""
+async def generate_from_upload(
+    image: UploadFile,
+    asset_type: AssetTypeQuery = AssetType.HEAD,
+) -> JSONResponse:
+    """Generate a 3DGS asset directly from an uploaded image. Returns JSON.
+
+    ``?assetType=<head|body|object>`` selects the asset *category*; the registry
+    resolves the method behind it (head→LAM, body→LHM), so the method can change
+    without altering the URL.
+    """
     import io
 
     contents = await image.read()
     img = np.array(Image.open(io.BytesIO(contents)).convert("RGB"))
     mask = np.ones(img.shape[:2], dtype=np.bool_)
 
-    method_id = registry.default_method_id or "lam"
-    method = registry.get(method_id)
-    method.load()
+    gen = registry.for_asset_type(asset_type)
+    gen.load()
 
     start = time.monotonic()
-    result = method.generate(img, mask)
+    result = gen.generate(img, mask)
     elapsed = time.monotonic() - start
 
     return JSONResponse(
-        {
-            "modelId": result.model_id,
-            "zipUrl": result.spz_url,
-            "zipSizeBytes": result.spz_size_bytes,
-            "numGaussians": result.num_gaussians,
-            "methodId": result.method_id,
-            "inferenceSeconds": round(elapsed, 2),
-        }
+        {**result.model_dump(by_alias=True), "inferenceSeconds": round(elapsed, 2)},
     )
 
 
 async def _generation_stream(
     image_url: str,
     mask_url: str,
-    method_id: str,
+    asset_type: AssetType,
 ) -> AsyncGenerator[str, None]:
     yield _sse("progress", {"stage": "loading_model", "pct": 10})
 
-    method = registry.get(method_id)
+    method = registry.for_asset_type(asset_type)
     method.load()
 
     yield _sse("progress", {"stage": "loading_image", "pct": 20})
@@ -77,7 +88,7 @@ async def _generation_stream(
     img = np.array(Image.open(image_path).convert("RGB"))
     mask = np.array(Image.open(mask_path).convert("L")) > 127
 
-    yield _sse("progress", {"stage": "generating_head", "pct": 50})
+    yield _sse("progress", {"stage": "generating", "pct": 50})
 
     start = time.monotonic()
     result = method.generate(img, mask)
@@ -86,15 +97,7 @@ async def _generation_stream(
     yield _sse("progress", {"stage": "done", "pct": 100})
     yield _sse(
         "complete",
-        {
-            "modelId": result.model_id,
-            "spzUrl": result.spz_url,
-            "spzSizeBytes": result.spz_size_bytes,
-            "numGaussians": result.num_gaussians,
-            "methodId": result.method_id,
-            "flameParamsUrl": result.flame_params_url,
-            "inferenceSeconds": round(elapsed, 2),
-        },
+        {**result.model_dump(by_alias=True), "inferenceSeconds": round(elapsed, 2)},
     )
 
 

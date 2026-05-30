@@ -1,4 +1,4 @@
-import type { GenerationProgress, GenerationResult, HealthResponse, SegmentResponse } from '@/types/api';
+import type { AssetType, GenerationProgress, GenerationResult, HealthResponse, SegmentResponse } from '@/types/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
@@ -20,15 +20,15 @@ export async function segmentImage(image: File): Promise<SegmentResponse> {
   return res.json();
 }
 
-export async function generateFromUpload(image: File): Promise<{
-  modelId: string;
-  zipUrl: string;
-  inferenceSeconds: number;
-}> {
+export async function generateFromUpload(
+  image: File,
+  assetType: AssetType = 'head'
+): Promise<GenerationResult & { inferenceSeconds: number }> {
   const formData = new FormData();
   formData.append('image', image);
 
-  const res = await fetch(`${API_URL}/generate-from-upload`, {
+  // Select by category, not method — the backend resolves head→LAM, body→LHM.
+  const res = await fetch(`${API_URL}/generate-from-upload?assetType=${assetType}`, {
     method: 'POST',
     body: formData,
   });

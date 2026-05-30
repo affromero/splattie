@@ -27,7 +27,7 @@
   <img src="demo.gif" alt="Splattie Demo" width="600" />
 </p>
 
-Splattie turns a single photograph into an **interactive 3D Gaussian Splatting head** that lives on your website. It reacts to your cursor, blinks naturally, and hover and click trigger smooth state transitions. Rendered client-side. One file, one tag.
+Splattie turns a single photograph into an **interactive 3D Gaussian Splatting avatar** — a **head** or a **full body** — that lives on your website. Eyes follow the cursor, the face blinks naturally, the head and torso turn toward visitors (bodies add cursor-driven arm IK), hover and click trigger smooth state transitions. Rendered client-side. One file, one tag.
 
 ```html
 <splattie-widget src="avatar.splattie"></splattie-widget>
@@ -42,8 +42,8 @@ Spark renders splats. SuperSplat edits them. StorySplat hosts them. **Nothing ma
 
 ## Try it
 
-- **Hosted** - [splattie.app](https://splattie.app) - click any of the 6 demo portraits, play with the sliders, download the customised `.splattie`.
-- **Embed the widget** - `npm install @afromero/splattie-widget` and drop the tag on your page. The 6 demo `.splattie` files in [`apps/web/public/demos/`](apps/web/public/demos) are MIT-friendly (Pexels-licensed portraits).
+- **Hosted** - [splattie.app](https://splattie.app) - click any of the 16 demo avatars (8 heads + 8 bodies), play with the sliders, download the customised `.splattie`.
+- **Embed the widget** - `npm install @afromero/splattie-widget` and drop the tag on your page. The 16 demo `.splattie` files in [`apps/web/public/demos/`](apps/web/public/demos) are **AI-generated (synthetic)** — no real people, no attribution required.
 - **Self-host** with your own GPU - see below.
 
 ## Run it locally
@@ -58,7 +58,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:4001](http://localhost:4001). All 6 demo avatars work, the state editor works, downloads work. No backend needed.
+Open [http://localhost:4001](http://localhost:4001). All 16 demo avatars (heads + bodies) work, the state editor works, downloads work. No backend needed.
 
 ### Self-host the full app (with GPU)
 
@@ -70,7 +70,7 @@ cp .env.example .env.local
 #   NEXT_PUBLIC_SELF_HOST=true
 #   NEXT_PUBLIC_API_URL=http://localhost:8000
 
-# install GPU deps (CUDA 12.x, ~20 min — downloads LAM weights)
+# install GPU deps (CUDA 12.x, ~20 min — downloads LAM head + LHM body weights)
 cd backend
 bash scripts/setup-gpu.sh
 
@@ -82,7 +82,7 @@ cd ../
 npm run dev
 ```
 
-Now [http://localhost:4001/create](http://localhost:4001/create) accepts photos, generates a 3D head in ~30 s on an H100, and routes you to the state editor where you can tune the interactions and download the `.splattie`. No CLI required.
+Now [http://localhost:4001/create](http://localhost:4001/create) accepts photos and generates a 3D **head** (LAM) or **body** (LHM) in ~20-30 s on an H100, then routes you to the state editor where you can tune the interactions and download the `.splattie`. No CLI required.
 
 ### Widget development
 
@@ -99,15 +99,22 @@ A ZIP bundle with a required `manifest.json` declaring every asset and locking t
 
 ```
 avatar.splattie
-├── manifest.json             # required - declares assets + formatVersion
+├── manifest.json             # required - declares assets + assetType (head/body) + formatVersion
 ├── *.ply or *.spz            # required - Gaussian splats
+│
+│  # head (assetType: head) — FLAME rig:
 ├── bone_tree.json            # optional - skeleton (FLAME 5 bones)
 ├── lbs_weight_20k.json       # optional - per-splat skinning weights
 ├── expression_basis.bin      # optional - FLAME PCA blendshape basis
+│
+│  # body (assetType: body) — SMPL-X rig:
+├── skeleton.json             # optional - skeleton (SMPL-X 55 joints, baked-pose rest)
+├── lbs_weights.json          # optional - per-gaussian sparse LBS weights
+│
 └── states.json               # optional - idle/hover/click definitions
 ```
 
-Each state defines all five interaction dimensions: **ghost** (floating motion), **expression** (FLAME blendshapes + bones), **camera** (spherical position), **rotation** (object pitch/yaw/roll), **tracking** (cursor-follow intensity per bone).
+Each state defines all five interaction dimensions: **ghost** (floating motion), **expression** (FLAME blendshapes + bones for heads), **camera** (spherical position), **rotation** (object pitch/yaw/roll), **tracking** (cursor-follow intensity per bone — head/eyes for heads, head/torso for bodies). Bodies are skinned with SMPL-X linear blend skinning and add two-bone arm IK; heads use FLAME SplatSkinning. The format is the same bundle either way — the widget branches on `assetType`.
 
 ## Architecture
 
@@ -116,13 +123,15 @@ splattie/
 ├── apps/web/                       # Next.js 15 landing + editor (port 4001)
 │   └── src/app/                    # /, /create, /view/[id]
 ├── packages/splattie-widget/       # <splattie-widget> web component (MIT)
-│   ├── src/                        # SplatWidget, StateMachine, dimensions
+│   ├── src/                        # SplatWidget, StateMachine, dimensions (look-at, IK)
 │   └── FORMAT.md                   # .splattie format spec
 ├── backend/                        # FastAPI GPU service (port 8000)
-│   ├── src/splattie/methods/lam/   # LAM head generation
-│   ├── scripts/setup-gpu.sh        # CUDA + LAM weights setup
-│   ├── scripts/generate_splattie_batch.py  # CLI batch generation
-│   └── vendor/LAM/                 # LAM submodule (SIGGRAPH 2025)
+│   ├── src/splattie/methods/lam/   # LAM head generation (FLAME)
+│   ├── src/splattie/methods/lhm/   # LHM body generation (SMPL-X)
+│   ├── scripts/setup-gpu.sh        # CUDA + LAM/LHM weights setup
+│   ├── scripts/generate_splattie_batch.py  # CLI batch generation (head/body)
+│   ├── vendor/LAM/                 # LAM submodule (SIGGRAPH 2025)
+│   └── vendor/LHM/                 # LHM submodule (SIGGRAPH 2025)
 ├── Dockerfile.backend              # GPU image
 ├── apps/web/Dockerfile             # Web image (port 4001)
 └── deploy/Caddyfile                # Reverse proxy fragment for splattie.app
@@ -132,9 +141,10 @@ splattie/
 |-----------|-----------|
 | Frontend | Next.js 15, TypeScript strict, CSS Modules |
 | Rendering | Spark 2.0 (World Labs, MIT) + Three.js |
-| Animation | FLAME SplatSkinning (dual quaternion) + PCA blendshapes |
+| Animation (heads) | FLAME SplatSkinning (dual quaternion) + PCA blendshapes |
+| Animation (bodies) | SMPL-X linear blend skinning + head/torso look-at + two-bone arm IK |
 | Backend | FastAPI, Python 3.10, uv |
-| Head generation | LAM (SIGGRAPH 2025) - swappable via the `HeadGenerationMethod` protocol |
+| Asset generation | LAM (heads, FLAME) + LHM (bodies, SMPL-X) — both SIGGRAPH 2025; swappable via the `AssetGenerationMethod` protocol (`asset_type`: head/body/object) |
 | Format | ZIP with `manifest.json`, version-locked to the widget |
 
 ## API
@@ -167,11 +177,13 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Splattie builds on outstanding open-source research:
 
-- **[LAM](https://github.com/aigc3d/LAM)** (SIGGRAPH 2025) - Large Avatar Model for single-image 3DGS head generation. By Zixuan Zeng et al., AIGC3D.
-- **[FLAME](https://flame.is.tue.mpg.de/)** - 3D face shape, expression, and pose model. By Tianye Li, Timo Bolkart, Michael J. Black, Hao Li, Javier Romero.
+- **[LAM](https://github.com/aigc3d/LAM)** (SIGGRAPH 2025) - Large Avatar Model for single-image 3DGS **head** generation. By Zixuan Zeng et al., AIGC3D.
+- **[LHM](https://github.com/aigc3d/LHM)** (SIGGRAPH 2025) - Large Animatable Human Model for single-image 3DGS **body** generation. By AIGC3D.
+- **[FLAME](https://flame.is.tue.mpg.de/)** - 3D face shape, expression, and pose model (heads). By Tianye Li, Timo Bolkart, Michael J. Black, Hao Li, Javier Romero.
+- **[SMPL-X](https://smpl-x.is.tue.mpg.de/)** - Expressive 3D body model (bodies). By Pavlakos, Choutas, Ghorbani, Bolkart, Osman, Tzionas, Black (MPI).
 - **[Spark 2.0](https://github.com/sparkjsdev/spark)** - MIT-licensed 3DGS renderer for Three.js, by World Labs.
 - **[3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/)** - Real-time radiance field rendering. Kerbl, Kopanas, Leimkühler, Drettakis (INRIA).
-- Demo portraits from **[Pexels](https://www.pexels.com)** (free license, attribution on the landing page).
+- Demo avatars are **AI-generated (synthetic)** — they are not real people.
 
 ## License
 
@@ -181,10 +193,10 @@ The Splattie source code is **MIT-licensed** and commercial-use safe:
 - the `.splattie` format and `manifest.json` schema
 - the web app (`apps/web/`)
 
-The reference GPU pipeline (`backend/`) wraps **LAM** (Apache 2.0) + **gsplat** (Apache 2.0) + **FLAME**. The only non-commercial piece is FLAME's face model. The widget itself does not require any of this at runtime - it only needs a valid `.splattie` file.
+The reference GPU pipeline (`backend/`) wraps **LAM** (Apache 2.0) + **LHM** (Apache 2.0) + **gsplat** (Apache 2.0) on top of parametric models — **FLAME** (heads) and **SMPL-X** (bodies). The non-commercial pieces are those two face/body models; everything else is Apache 2.0 / MIT. The widget itself does not require any of this at runtime - it only needs a valid `.splattie` file.
 
 **Three paths to commercial use** (see [`NOTICE`](NOTICE) for the full breakdown):
 
 1. **Widget-only** - use the widget freely; generate `.splattie` files through your own pipeline.
-2. **License FLAME** - contact [MPI for Intelligent Systems](https://flame.is.tue.mpg.de) for commercial FLAME terms. The rest of the stack is already Apache 2.0 / MIT.
-3. **Drop-in replacement** - implement an alternative head-generation method behind the `HeadGenerationMethod` protocol in [`backend/src/splattie/methods/`](backend/src/splattie/methods/). The format is method-agnostic.
+2. **License FLAME / SMPL-X** - contact [MPI for Intelligent Systems](https://www.is.mpg.de) for commercial FLAME (heads) and SMPL-X (bodies) terms. The rest of the stack is already Apache 2.0 / MIT.
+3. **Drop-in replacement** - implement an alternative asset-generation method behind the `AssetGenerationMethod` protocol in [`backend/src/splattie/methods/`](backend/src/splattie/methods/), declaring its `asset_type` (head/body/object). The format is method-agnostic.

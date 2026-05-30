@@ -14,6 +14,6 @@ def list_models() -> dict:
     """List available head generation methods."""
     methods = registry.list_available()
     return {
-        "methods": [m.model_dump() for m in methods],
+        "methods": [m.model_dump(by_alias=True) for m in methods],
         "default": registry.default_method_id,
     }

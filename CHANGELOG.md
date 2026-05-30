@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0] - 2026-05-28
+
+### Changed
+- **Protocol generalized for multi-asset support (Phase 1.A of bodies).** `HeadGenerationMethod` → `AssetGenerationMethod`; `MethodInfo` gains an `asset_type` discriminator (`head`/`body`/`object`); `GenerationResult.flame_params_url` → `rig_params_url`. The `/models` endpoint now surfaces `assetType`.
+- **Widget bundle format `0.1.1` → `0.2.0`:** manifest gains a required `assetType` field. All `.splattie` bundles regenerated. `TrackingConfig.body` replaced by `armReach` + `shoulderFollow` (body-only).
+- **One shared `.splattie` bundler** (`backend/src/splattie/methods/bundle_common.py`): `/generate-from-upload` and the demo batch script now emit the identical, widget-loadable bundle shape. The API path previously emitted a manifestless, non-loadable ZIP.
+- `/generate-from-upload` accepts `?method=<id>` to select the generation method.
+
+### Removed
+- **LAM demo fallback** (`_fallback` + GPU-error swallow): generation failures now raise (HTTP 500) instead of silently serving a demo bundle — honoring the no-fallback rule.
+
 ## [0.1.1] - 2026-05-28
 
 ### Added

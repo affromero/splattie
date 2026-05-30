@@ -4,8 +4,24 @@
   html, body { height: 100%; }
   body { background: #0e0e14; display: flex; font-family: monospace; color: #888; overflow: hidden; }
 
-  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
   .main > splattie-widget { flex: 1; }
+
+  #pose-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 5; display: none; }
+  #pose-overlay.active { display: block; }
+  .ik-handle {
+    position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    border-radius: 50%; background: rgba(126,184,240,0.45); border: 2px solid #7eb8f0;
+    cursor: grab; pointer-events: auto; touch-action: none; transition: background 0.1s;
+  }
+  .ik-handle:hover { background: rgba(126,184,240,0.7); }
+  .ik-handle.dragging { cursor: grabbing; background: rgba(196,160,240,0.8); border-color: #c4a0f0; }
+  .pose-hint { font-size: 0.6rem; color: #555; margin: 0.2rem 0; line-height: 1.4; }
+  .pose-btn {
+    width: 100%; padding: 0.4rem; background: #1e1e2a; border: 1px solid #2a2a3a;
+    color: #7eb8f0; font: inherit; font-size: 0.7rem; cursor: pointer; margin-top: 0.2rem;
+  }
+  .pose-btn.active { background: #7eb8f0; color: #0e0e14; font-weight: bold; }
 
   .panel {
     width: 240px;
@@ -125,7 +141,7 @@
   <div class="main" id="main"></div>
   <div class="panel" id="panel"></div>
 
-  <script src="/splattie-widget.cdn.js"></script>
+  <script src="/splattie-widget.cdn.js?v=4"></script>
   <script type="module">
     import { inspectSplattie } from '/splattie-format.js';
 
@@ -136,6 +152,15 @@
     let currentSrc = params.get('src');
     let widget = null;
     let liveInterval = null;
+
+    // Overlay for body-pose IK drag handles (over the widget canvas). It is
+    // (re)created alongside the widget in mountWidget() since clearStage()
+    // wipes `main`; pose-mode state lives with the other editor state below.
+    let poseOverlay = null;
+    let poseMode = false;
+    let poseRaf = 0;
+    let draggingChain = null;
+
     let config = null;
     let defaults = null;
     let currentState = 'idle';
@@ -152,7 +177,11 @@
     // means recreating the element rather than mutating the attribute.
     function clearStage() {
       if (liveInterval) { clearInterval(liveInterval); liveInterval = null; }
+      if (poseRaf) { cancelAnimationFrame(poseRaf); poseRaf = 0; }
       if (widget) { widget.remove(); widget = null; }
+      poseOverlay = null;
+      poseMode = false;
+      draggingChain = null;
       main.innerHTML = '';
     }
 
@@ -203,11 +232,17 @@
       widget = document.createElement('splattie-widget');
       widget.id = 'widget';
       widget.setAttribute('background', '#0e0e14');
-      widget.setAttribute('expression-basis', '/demos/expression_basis.bin');
+      widget.setAttribute('expression-basis', '/demos/expression_basis.bin?v=2');
       widget.setAttribute('src', srcUrl);
       widget.style.flex = '1';
       widget.addEventListener('splatload', onSplatLoad);
       main.appendChild(widget);
+
+      // Overlay for body-pose IK drag handles, layered over the widget canvas.
+      // Lives inside `main` (position: relative) so its `inset: 0` covers the canvas.
+      poseOverlay = document.createElement('div');
+      poseOverlay.id = 'pose-overlay';
+      main.appendChild(poseOverlay);
     }
 
     function onSplatLoad() {
@@ -282,7 +317,7 @@
         const btn = document.createElement('button');
         btn.className = 'state-btn' + (name === currentState ? ' editing' : '') + (name === liveState ? ' live' : '') + (configured.has(name) ? ' configured' : '');
         btn.textContent = name;
-        btn.onclick = () => { currentState = name; buildPanel(); };
+        btn.onclick = () => { currentState = name; buildPanel(); if (poseMode) widget._stateMachine?.forceState(currentState); };
         statesDiv.appendChild(btn);
       }
       panel.appendChild(statesDiv);
@@ -306,8 +341,11 @@
 
       const state = config.states[currentState];
       const def = defaults.states[currentState];
+      const isBody = widget.assetType === 'body';
 
-      addSection('expression', () => {
+      // FLAME blendshapes are head-only. Bodies set machine states via tracking
+      // (head/torso look-at), camera, ghost + rotation.
+      if (!isBody) addSection('expression', () => {
         if (!state.expression) state.expression = {};
         if (!def.expression) def.expression = {};
         const boneKeys = ['smile', 'mouthFrown', 'lipPucker', 'jawOpen', 'browRaiseL', 'browRaiseR', 'browFrownL', 'browFrownR', 'eyeSquint', 'cheekPuff', 'noseSneer', 'neckTilt', 'neckYaw', 'neckRoll', 'gazeX', 'gazeY'];
@@ -328,7 +366,7 @@
 
       addSection('camera', () => {
         addCameraSphere(state.camera, def.camera);
-        addSlider('radius', state.camera, 'radius', 0.1, 3, 0.01, undefined, def.camera.radius);
+        addSlider('radius', state.camera, 'radius', 0.1, 10, 0.01, undefined, def.camera.radius);
         addSlider('fov', state.camera, 'fov', 20, 120, 0.5, undefined, def.camera.fov);
       });
 
@@ -339,8 +377,39 @@
       });
 
       addSection('tracking', () => {
-        addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
-        addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
+        if (isBody) {
+          if (state.tracking.torso === undefined) state.tracking.torso = def.tracking.torso ?? 0;
+          addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head ?? 1);
+          addSlider('torso', state.tracking, 'torso', 0, 1, 0.01, undefined, def.tracking.torso ?? 0);
+        } else {
+          addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
+          addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
+        }
+      });
+
+      // Body-only: IK limb posing via on-canvas drag handles.
+      if (isBody) addSection('pose', () => {
+        const hint = document.createElement('div');
+        hint.className = 'pose-hint';
+        hint.textContent = 'Pose this state by dragging the dots on the hands & feet.';
+        getContainer().appendChild(hint);
+        const btn = document.createElement('button');
+        btn.className = 'pose-btn' + (poseMode ? ' active' : '');
+        btn.textContent = poseMode ? '✓ done posing' : '✎ edit pose';
+        btn.onclick = () => setPoseMode(!poseMode);
+        getContainer().appendChild(btn);
+        if (state.pose && Object.keys(state.pose).length) {
+          const reset = document.createElement('button');
+          reset.className = 'pose-btn';
+          reset.textContent = 'reset pose';
+          reset.onclick = () => {
+            delete config.states[currentState].pose;
+            configured.add(currentState);
+            applyConfig();
+            if (poseMode) { widget._stateMachine?.forceState(currentState); buildHandles(); }
+          };
+          getContainer().appendChild(reset);
+        }
       });
 
       const footer = document.createElement('div');
@@ -497,6 +566,91 @@
       defaults = null;
       configured.clear();
       showUploadZone();
+    }
+
+    // ── Body IK pose authoring (drag handles over the canvas) ──
+    // Pose is per-state (like camera/expression): editing one state's pose never
+    // touches the others. Author idle/hover/click independently.
+    function writePose(sol) {
+      const st = config.states[currentState];
+      if (!st.pose) st.pose = {};
+      for (const j of sol) st.pose[j.joint] = j.quat;
+      configured.add(currentState);
+      applyConfig();
+      widget._stateMachine?.forceState(currentState);
+    }
+
+    function clampToCanvas(sx, sy) {
+      const c = widget.querySelector('canvas');
+      const m = 12;
+      return [Math.max(m, Math.min(c.clientWidth - m, sx)), Math.max(m, Math.min(c.clientHeight - m, sy))];
+    }
+
+    function setPoseMode(on) {
+      poseMode = on;
+      widget.poseAuthoring = on;            // freeze look-at so handles match the body
+      if (widget._stateMachine) widget._stateMachine.frozen = on; // no transitions while posing
+      poseOverlay.classList.toggle('active', on);
+      cancelAnimationFrame(poseRaf);
+      if (on) {
+        widget._stateMachine?.forceState(currentState);
+        buildHandles();
+        const loop = () => { updateHandlePositions(); poseRaf = requestAnimationFrame(loop); };
+        poseRaf = requestAnimationFrame(loop);
+      } else {
+        poseOverlay.innerHTML = '';
+      }
+      buildPanel();
+    }
+
+    function buildHandles() {
+      poseOverlay.innerHTML = '';
+      const handles = widget.bodyIKHandles ? widget.bodyIKHandles() : [];
+      for (const h of handles) {
+        const dot = document.createElement('div');
+        dot.className = 'ik-handle';
+        dot.dataset.chain = h.chain;
+        dot.title = h.chain.replace('_', ' ');
+        dot.onpointerdown = (e) => startPoseDrag(e, h.chain, dot);
+        poseOverlay.appendChild(dot);
+      }
+      updateHandlePositions();
+    }
+
+    // Re-project handle positions each frame so they track the camera (radius/zoom)
+    // and the posed body; off-screen joints (e.g. feet) clamp to the canvas edge.
+    function updateHandlePositions() {
+      if (!poseMode || !widget.bodyIKHandles) return;
+      for (const h of widget.bodyIKHandles()) {
+        if (h.chain === draggingChain) continue;
+        const dot = poseOverlay.querySelector('[data-chain="' + h.chain + '"]');
+        if (dot) { const [x, y] = clampToCanvas(h.sx, h.sy); dot.style.left = x + 'px'; dot.style.top = y + 'px'; }
+      }
+    }
+
+    function startPoseDrag(e, chain, dot) {
+      e.preventDefault();
+      draggingChain = chain;
+      dot.classList.add('dragging');
+      dot.setPointerCapture(e.pointerId);
+      const canvas = widget.querySelector('canvas');
+      const move = (ev) => {
+        const rect = canvas.getBoundingClientRect();
+        const sx = ev.clientX - rect.left, sy = ev.clientY - rect.top;
+        const sol = widget.solveLimbToScreen(chain, sx, sy);
+        if (sol) writePose(sol);
+        const [cx, cy] = clampToCanvas(sx, sy);
+        dot.style.left = cx + 'px';
+        dot.style.top = cy + 'px';
+      };
+      const up = () => {
+        draggingChain = null;
+        dot.classList.remove('dragging');
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
     }
 
     async function exportSplattie() {

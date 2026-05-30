@@ -8,8 +8,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-# Force LAM method registration on import
-import splattie.methods.lam.method  # noqa: F401
+# Force method registration on import (head: LAM, body: LHM)
+import splattie.methods.lam.method
+import splattie.methods.lhm.method  # noqa: F401
 from splattie.api.routes import generate, health, models, segment, stats
 
 

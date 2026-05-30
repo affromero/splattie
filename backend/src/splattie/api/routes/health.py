@@ -8,7 +8,7 @@ from splattie.methods.registry import registry
 
 router = APIRouter()
 
-_NO_GPU: dict = {"available": False, "device": None, "model_loaded": False}
+_NO_GPU: dict = {"available": False, "device": None, "modelLoaded": False}
 
 
 def _gpu_status() -> dict:
@@ -22,7 +22,7 @@ def _gpu_status() -> dict:
         return _NO_GPU
 
     device_name = torch.cuda.get_device_name(0)
-    vram_total_mb = torch.cuda.get_device_properties(0).total_mem // (1024 * 1024)
+    vram_total_mb = torch.cuda.get_device_properties(0).total_memory // (1024 * 1024)
     vram_used_mb = torch.cuda.memory_allocated(0) // (1024 * 1024)
 
     from splattie.methods.lam.method import _lam_model
@@ -30,9 +30,9 @@ def _gpu_status() -> dict:
     return {
         "available": True,
         "device": device_name,
-        "vram_total_mb": vram_total_mb,
-        "vram_used_mb": vram_used_mb,
-        "model_loaded": _lam_model is not None,
+        "vramTotalMb": vram_total_mb,
+        "vramUsedMb": vram_used_mb,
+        "modelLoaded": _lam_model is not None,
     }
 
 
@@ -44,5 +44,5 @@ def health() -> dict:
     return {
         "status": "ok",
         "gpu": gpu,
-        "methods_loaded": [m.id for m in methods],
+        "methodsLoaded": [m.id for m in methods],
     }

@@ -11,12 +11,13 @@ export interface GenerationProgress {
 
 export interface GenerationResult {
   modelId: string;
-  spzUrl: string;
-  spzSizeBytes: number;
+  splattieUrl: string;
+  splattieSizeBytes: number;
   numGaussians: number;
   methodId: string;
-  flameParamsUrl: string;
 }
+
+export type AssetType = 'head' | 'body' | 'object';
 
 export interface MethodInfo {
   id: string;
@@ -24,10 +25,19 @@ export interface MethodInfo {
   description: string;
   paperUrl: string;
   repoUrl: string;
+  assetType: AssetType;
+}
+
+export interface GpuStatus {
+  available: boolean;
+  device: string | null;
+  vramTotalMb?: number;
+  vramUsedMb?: number;
+  modelLoaded: boolean;
 }
 
 export interface HealthResponse {
   status: string;
-  gpu: string;
+  gpu: GpuStatus;
   methodsLoaded: string[];
 }

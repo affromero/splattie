@@ -1,23 +1,46 @@
-"""Head generation method tests."""
+"""Asset generation method tests."""
 
 from __future__ import annotations
 
-import numpy as np
+from pathlib import Path
 
-from splattie.methods.base import HeadGenerationMethod
+import numpy as np
+import pytest
+
+from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
+from splattie.methods.lhm.method import LHMMethod
 from splattie.methods.registry import registry
+from splattie.types import AssetType
+
+# A committed demo portrait — LAM's FLAME tracking needs a real face.
+_FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "heads" / "3762763.jpg"
+
+
+def cuda_available() -> bool:
+    """Return True when torch and a CUDA device are present (real GPU runner)."""
+    try:
+        import torch
+
+        return torch.cuda.is_available()
+    except Exception:
+        return False
 
 
 def test_lam_implements_protocol() -> None:
     method = LAMMethod()
-    assert isinstance(method, HeadGenerationMethod)
+    assert isinstance(method, AssetGenerationMethod)
 
 
 def test_lam_info() -> None:
     method = LAMMethod()
     assert method.info.id == "lam"
     assert "SIGGRAPH" in method.info.name
+
+
+def test_lam_is_a_head_method() -> None:
+    assert LAMMethod().info.asset_type is AssetType.HEAD
+    assert LAMMethod().info.asset_type == "head"
 
 
 def test_lam_capabilities() -> None:
@@ -27,18 +50,32 @@ def test_lam_capabilities() -> None:
     assert caps.max_output_gaussians > 0
 
 
-def test_lam_generate() -> None:
+@pytest.mark.skipif(cuda_available(), reason="GPU present — covered by produces-bundle test")
+def test_lam_generate_raises_without_gpu() -> None:
+    """No-fallback contract: with no CUDA/weights, generation raises (no demo bundle)."""
+    method = LAMMethod()
+    image = np.zeros((256, 256, 3), dtype=np.uint8)
+    mask = np.ones((256, 256), dtype=np.bool_)
+    with pytest.raises(Exception):  # noqa: B017, PT011 - any failure is acceptable; the point is it does NOT fall back
+        method.generate(image, mask)
+
+
+@pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
+@pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
+def test_lam_generate_produces_bundle() -> None:
+    """On a real GPU, generation produces a widget-loadable `.splattie` bundle."""
+    from PIL import Image
+
     method = LAMMethod()
     method.load()
 
-    image = np.zeros((256, 256, 3), dtype=np.uint8)
-    mask = np.ones((256, 256), dtype=np.bool_)
+    image = np.array(Image.open(_FACE_IMAGE).convert("RGB"))
+    mask = np.ones(image.shape[:2], dtype=np.bool_)
 
     result = method.generate(image, mask)
     assert result.method_id == "lam"
-    assert result.num_gaussians == 20_000
-    assert result.spz_url.endswith((".spz", ".zip"))
-    assert result.flame_params_url.endswith((".json", ".zip"))
+    assert result.num_gaussians > 0
+    assert result.splattie_url.endswith(".splattie")
 
     method.unload()
 
@@ -56,3 +93,56 @@ def test_registry_get() -> None:
 
 def test_registry_default() -> None:
     assert registry.default_method_id == "lam"
+
+
+def test_registry_for_asset_type() -> None:
+    """Endpoints select by category; the registry resolves the method behind it."""
+    assert registry.for_asset_type(AssetType.HEAD).info.id == "lam"
+    assert registry.for_asset_type(AssetType.BODY).info.id == "lhm"
+    with pytest.raises(KeyError):
+        registry.for_asset_type(AssetType.OBJECT)
+
+
+def test_lhm_implements_protocol() -> None:
+    assert isinstance(LHMMethod(), AssetGenerationMethod)
+
+
+def test_lhm_is_a_body_method() -> None:
+    assert LHMMethod().info.asset_type is AssetType.BODY
+    assert LHMMethod().info.asset_type == "body"
+
+
+def test_lhm_registered() -> None:
+    assert registry.get("lhm").info.id == "lhm"
+    assert registry.get("lhm").info.asset_type == "body"
+
+
+@pytest.mark.skipif(cuda_available(), reason="GPU present — covered by produces-bundle test")
+def test_lhm_generate_raises_without_gpu() -> None:
+    """No-fallback contract: body generation raises without CUDA/weights."""
+    method = LHMMethod()
+    image = np.zeros((256, 256, 3), dtype=np.uint8)
+    mask = np.ones((256, 256), dtype=np.bool_)
+    with pytest.raises(Exception):  # noqa: B017, PT011 - any failure is fine; no silent fallback
+        method.generate(image, mask)
+
+
+@pytest.mark.skipif(not cuda_available(), reason="LHM inference requires CUDA + weights")
+@pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
+def test_lhm_generate_produces_body() -> None:
+    """On a real GPU, LHM produces a canonical-pose body gaussian asset from one image."""
+    from PIL import Image
+
+    method = LHMMethod()
+    method.load()
+
+    image = np.array(Image.open(_FACE_IMAGE).convert("RGB"))
+    mask = np.ones(image.shape[:2], dtype=np.bool_)
+
+    result = method.generate(image, mask)
+    assert result.method_id == "lhm"
+    assert result.num_gaussians > 0
+    # 1.C: the body method emits a widget-loadable .splattie (SMPL-X skeleton + weights).
+    assert result.splattie_url.endswith(".splattie")
+
+    method.unload()

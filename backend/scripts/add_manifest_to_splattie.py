@@ -94,6 +94,7 @@ def build_manifest(
     num_gaussians: int,
     thumb_path: Path | None,
     widget_version: str,
+    asset_type: str,
     *,
     has_skeleton: bool,
     has_weights: bool,
@@ -102,6 +103,7 @@ def build_manifest(
     manifest: dict = {
         "format": "splattie",
         "formatVersion": widget_version,
+        "assetType": asset_type,
         "generator": {
             "method": "lam",
             "methodVersion": "20k-siggraph2025",
@@ -141,7 +143,9 @@ def build_manifest(
     return manifest
 
 
-def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, *, compress: bool = False) -> str:
+def rebundle(
+    splattie_path: Path, thumbs_dir: Path, widget_version: str, asset_type: str, *, compress: bool = False
+) -> str:
     """Re-bundle one .splattie with a current manifest; return a status string."""
     stem = splattie_path.stem
     note = ""
@@ -157,10 +161,15 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, *, comp
         num_gaussians = count_ply_vertices_bytes(splat_bytes)
         already_compressed = b"packed_position" in splat_bytes[:1024]
 
-        # Nothing to do only when the manifest is current AND there's no compression left.
-        already_current = existing is not None and existing.get("formatVersion") == widget_version
+        # Nothing to do only when the manifest is current (version + asset type) AND
+        # there's no compression left to apply.
+        already_current = (
+            existing is not None
+            and existing.get("formatVersion") == widget_version
+            and existing.get("assetType") == asset_type
+        )
         if already_current and not (compress and not already_compressed):
-            return f"skip (already v{widget_version})"
+            return f"skip (already v{widget_version}, {asset_type})"
 
         has_skeleton = "bone_tree.json" in names
         has_weights = "lbs_weight_20k.json" in names
@@ -188,6 +197,7 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, *, comp
         num_gaussians=num_gaussians,
         thumb_path=thumb_path,
         widget_version=widget_version,
+        asset_type=asset_type,
         has_skeleton=has_skeleton,
         has_weights=has_weights,
     )
@@ -203,12 +213,19 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, *, comp
     return f"rebundled (v{widget_version}, {num_gaussians} gaussians, format={splat_format}{note})"
 
 
-def main(splatties_dir: Path, thumbs_dir: Path, *, compress: bool = False) -> None:
+def main(
+    splatties_dir: Path,
+    thumbs_dir: Path,
+    asset_type: Literal["head", "body", "object"] = "head",
+    *,
+    compress: bool = False,
+) -> None:
     """Add manifest.json to every .splattie in a directory (rewrites in place).
 
     Args:
         splatties_dir: Directory of .splattie bundles to process.
         thumbs_dir: Directory of source thumbnails (for sourceImageHash + attribution).
+        asset_type: Asset type recorded in the manifest (head/body/object).
         compress: Compress PLY payloads to compressed PLY via splat-transform before re-bundling.
 
     """
@@ -232,7 +249,7 @@ def main(splatties_dir: Path, thumbs_dir: Path, *, compress: bool = False) -> No
         return
 
     for p in splatties:
-        status = rebundle(p, thumbs_dir, widget_version, compress=compress)
+        status = rebundle(p, thumbs_dir, widget_version, asset_type, compress=compress)
         logger.info(f"  {p.name}: {status}")
 
     logger.info(f"\nProcessed {len(splatties)} file(s).")
