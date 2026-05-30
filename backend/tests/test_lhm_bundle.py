@@ -12,6 +12,7 @@ import json
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from splattie.methods.bundle_common import (
@@ -24,6 +25,8 @@ from splattie.methods.lhm.bundle import (
     BODY_RIG,
     DEFAULT_STATES_BODY,
     JOINTS_NAME,
+    parse_ply_xyz,
+    reweight_lower_arm_rigid,
 )
 from splattie.types import AssetType
 
@@ -134,3 +137,55 @@ def test_body_bundle_is_widget_loadable(fake_ply: Path, tmp_path: Path) -> None:
         assert skeleton["rig"] == "smplx"
         assert len(skeleton["names"]) == 55
         assert len(skeleton["parents"]) == 55
+
+
+def test_parse_ply_xyz_reads_positions_by_name() -> None:
+    """XYZ is read by property name, tolerating extra channels (here: opacity)."""
+    import struct
+
+    header = (
+        b"ply\nformat binary_little_endian 1.0\nelement vertex 2\n"
+        b"property float x\nproperty float y\nproperty float z\nproperty float opacity\n"
+        b"end_header\n"
+    )
+    body = struct.pack("<8f", 1, 2, 3, 0.5, 4, 5, 6, 0.9)
+    xyz = parse_ply_xyz(header + body)
+    assert xyz.shape == (2, 3)
+    assert np.allclose(xyz, [[1, 2, 3], [4, 5, 6]])
+
+
+def test_reweight_lower_arm_rigid_rebinds_lower_arm_and_spares_legs() -> None:
+    """Arm gaussians re-bind to the upper-arm chain (dropping the wrist); legs untouched."""
+    names = list(JOINTS_NAME)
+    rest = [[0.0, 0.0, 0.0] for _ in names]
+    rest[names.index("L_Collar")] = [0.10, 0.5, 0.0]
+    rest[names.index("L_Shoulder")] = [0.20, 0.5, 0.0]
+    rest[names.index("L_Elbow")] = [0.45, 0.5, 0.0]
+    rest[names.index("L_Wrist")] = [0.70, 0.5, 0.0]
+    rest[names.index("L_Index_1")] = [0.80, 0.5, 0.0]
+    rest[names.index("L_Ankle")] = [0.10, -1.0, 0.0]
+    skeleton = {"names": names, "restPositions": rest}
+
+    wrist, elbow, ankle = (names.index(n) for n in ("L_Wrist", "L_Elbow", "L_Ankle"))
+    # hand gaussian (near wrist/finger), forearm gaussian (at elbow), ankle gaussian
+    positions = np.array([[0.75, 0.5, 0.0], [0.45, 0.5, 0.0], [0.10, -1.0, 0.0]], dtype=np.float32)
+    weights = {
+        "numGaussians": 3,
+        "jointCount": len(names),
+        "k": 4,
+        "indices": [wrist, 0, 0, 0, elbow, wrist, 0, 0, ankle, 0, 0, 0],
+        "weights": [1.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+    }
+
+    reweight_lower_arm_rigid(positions, skeleton, weights)
+    idx, wt = weights["indices"], weights["weights"]
+    arm_targets = {names.index(n) for n in ("L_Collar", "L_Shoulder", "L_Elbow")}
+
+    # hand gaussian (row 0) re-bound onto the upper-arm chain, no longer the wrist
+    row0 = [idx[j] for j in range(4) if wt[j] > 0]
+    assert row0, "hand gaussian must keep a binding"
+    assert all(j in arm_targets for j in row0)
+    assert wrist not in row0
+    # ankle gaussian (row 2) untouched: nearest joint is a leg joint
+    assert idx[8] == ankle
+    assert wt[8] == 1.0
