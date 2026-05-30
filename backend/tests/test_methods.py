@@ -13,8 +13,12 @@ from splattie.methods.lhm.method import LHMMethod
 from splattie.methods.registry import registry
 from splattie.types import AssetType
 
+_DEMOS = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos"
 # A committed demo portrait — LAM's FLAME tracking needs a real face.
-_FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "heads" / "3762763.jpg"
+_FACE_IMAGE = _DEMOS / "heads" / "h1.jpg"
+# A committed full-body demo — LHM segments the person (rembg) and requires a portrait
+# (taller-than-wide) person bbox, so the body pipeline needs a standing-figure image.
+_BODY_IMAGE = _DEMOS / "bodies" / "b1.jpg"
 
 
 def cuda_available() -> bool:
@@ -50,9 +54,18 @@ def test_lam_capabilities() -> None:
     assert caps.max_output_gaussians > 0
 
 
-@pytest.mark.skipif(cuda_available(), reason="GPU present — covered by produces-bundle test")
-def test_lam_generate_raises_without_gpu() -> None:
-    """No-fallback contract: with no CUDA/weights, generation raises (no demo bundle)."""
+def test_lam_generate_propagates_load_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No silent fallback: if the model can't load, generation raises (no demo bundle).
+
+    Forces the GPU/weights boundary to fail so it runs on any machine (GPU or not).
+    """
+    import splattie.methods.lam.method as lam_method
+
+    def _boom() -> object:
+        msg = "simulated model-load failure (no GPU / weights)"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(lam_method, "_load_model", _boom)
     method = LAMMethod()
     image = np.zeros((256, 256, 3), dtype=np.uint8)
     mask = np.ones((256, 256), dtype=np.bool_)
@@ -117,9 +130,18 @@ def test_lhm_registered() -> None:
     assert registry.get("lhm").info.asset_type == "body"
 
 
-@pytest.mark.skipif(cuda_available(), reason="GPU present — covered by produces-bundle test")
-def test_lhm_generate_raises_without_gpu() -> None:
-    """No-fallback contract: body generation raises without CUDA/weights."""
+def test_lhm_generate_propagates_load_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No silent fallback: body generation raises if the model can't load.
+
+    Forces the GPU/weights boundary to fail so it runs on any machine (GPU or not).
+    """
+    import splattie.methods.lhm.method as lhm_method
+
+    def _boom() -> object:
+        msg = "simulated model-load failure (no GPU / weights)"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(lhm_method, "load_inferrer", _boom)
     method = LHMMethod()
     image = np.zeros((256, 256, 3), dtype=np.uint8)
     mask = np.ones((256, 256), dtype=np.bool_)
@@ -128,15 +150,15 @@ def test_lhm_generate_raises_without_gpu() -> None:
 
 
 @pytest.mark.skipif(not cuda_available(), reason="LHM inference requires CUDA + weights")
-@pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
+@pytest.mark.skipif(not _BODY_IMAGE.exists(), reason="demo body image not present")
 def test_lhm_generate_produces_body() -> None:
-    """On a real GPU, LHM produces a canonical-pose body gaussian asset from one image."""
+    """On a real GPU, LHM produces a canonical-pose body gaussian asset from one body image."""
     from PIL import Image
 
     method = LHMMethod()
     method.load()
 
-    image = np.array(Image.open(_FACE_IMAGE).convert("RGB"))
+    image = np.array(Image.open(_BODY_IMAGE).convert("RGB"))
     mask = np.ones(image.shape[:2], dtype=np.bool_)
 
     result = method.generate(image, mask)

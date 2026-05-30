@@ -10,7 +10,7 @@ from httpx import AsyncClient
 from PIL import Image
 
 # A committed demo portrait — LAM's FLAME tracking needs a real face.
-_FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "heads" / "3762763.jpg"
+_FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "heads" / "h1.jpg"
 
 
 def _face_png_bytes() -> io.BytesIO:
@@ -68,10 +68,22 @@ async def test_segment(client: AsyncClient) -> None:
     assert len(data["bbox"]) == 4
 
 
-async def test_generate_from_upload_without_gpu_errors(client: AsyncClient) -> None:
-    """No-fallback contract at the API layer: with no GPU, /generate-from-upload errors."""
-    if cuda_available():
-        pytest.skip("GPU present — success path covered by test_generate_from_upload_produces_bundle")
+async def test_generate_from_upload_propagates_load_failure(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No silent fallback at the API layer: a model-load failure surfaces as an error.
+
+    Forces the GPU/weights boundary to fail so it runs on any machine (GPU or not),
+    proving /generate-from-upload does not serve a demo bundle when the model can't load.
+    """
+    import splattie.methods.lam.method as lam_method
+
+    def _boom() -> object:
+        msg = "simulated model-load failure (no GPU / weights)"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(lam_method, "_load_model", _boom)
 
     img = Image.new("RGB", (200, 200), (128, 128, 128))
     buf = io.BytesIO()

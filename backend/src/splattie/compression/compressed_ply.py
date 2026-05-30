@@ -30,6 +30,8 @@ def compress_ply(ply_path: Path, out_path: Path) -> Path:
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
         )
     except FileNotFoundError as exc:
         msg = "splat-transform not found; install @playcanvas/splat-transform (npm)"

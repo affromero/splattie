@@ -1,0 +1,82 @@
+"""Provisioning checks: every generation pipeline is wired and its weights are on disk.
+
+A half-provisioned GPU box (CUDA present but a checkpoint missing) otherwise only fails
+deep inside inference. These assert the concrete files each pipeline's loader reads, so a
+broken setup fails fast and obviously. The weight-file checks are skipped off a GPU runner,
+where the weights aren't downloaded (setup-gpu.sh); the registry/coverage check runs
+everywhere.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from splattie.methods.lam.method import MODEL_ZOO, VENDOR_LAM
+from splattie.methods.lhm.runtime import VENDOR_LHM
+from splattie.methods.registry import registry
+
+
+def cuda_available() -> bool:
+    """Return True on a real GPU runner — where setup-gpu.sh has downloaded the weights."""
+    try:
+        import torch
+
+        return torch.cuda.is_available()
+    except Exception:
+        return False
+
+
+_LHM_SNAPSHOTS = VENDOR_LHM / "pretrained_models" / "huggingface" / "models--3DAIGC--LHM-500M" / "snapshots"
+
+# (pipeline id, asset name, path, kind) — the files each pipeline's loader reads at
+# inference time. `lhm-checkpoint` globs the HF snapshot dir (the hash varies by release).
+_PIPELINE_WEIGHTS: list[tuple[str, str, Path, str]] = [
+    ("lam", "config", VENDOR_LAM / "configs" / "inference" / "lam-20k-8gpu.yaml", "file"),
+    (
+        "lam",
+        "checkpoint",
+        MODEL_ZOO / "lam_models" / "releases" / "lam" / "lam-20k" / "step_045500" / "model.safetensors",
+        "file",
+    ),
+    ("lam", "faceboxes", MODEL_ZOO / "flame_tracking_models" / "FaceBoxesV2.pth", "file"),
+    ("lam", "human-parametric-models", MODEL_ZOO / "human_parametric_models", "dir"),
+    ("lhm", "checkpoint", _LHM_SNAPSHOTS, "lhm-checkpoint"),
+    ("lhm", "human-model-files", VENDOR_LHM / "pretrained_models" / "human_model_files", "dir"),
+    ("lhm", "smplx", VENDOR_LHM / "pretrained_models" / "human_model_files" / "smplx", "dir"),
+]
+
+
+def test_every_registered_pipeline_has_weight_checks() -> None:
+    """All pipelines in place: every registered method is covered here.
+
+    Adding a new pipeline forces adding its weight checks (and removing one is caught too).
+    """
+    registered = {m.id for m in registry.list_available()}
+    covered = {pipeline for pipeline, _, _, _ in _PIPELINE_WEIGHTS}
+    assert registered == covered, (
+        f"pipelines missing weight checks: {registered - covered}; stale checks: {covered - registered}"
+    )
+
+
+@pytest.mark.skipif(not cuda_available(), reason="model weights are only provisioned on a GPU runner (setup-gpu.sh)")
+@pytest.mark.parametrize(
+    ("pipeline", "name", "path", "kind"),
+    _PIPELINE_WEIGHTS,
+    ids=[f"{pipeline}-{name}" for pipeline, name, _, _ in _PIPELINE_WEIGHTS],
+)
+def test_pipeline_weight_present(pipeline: str, name: str, path: Path, kind: str) -> None:
+    """Each pipeline's weights/assets are on disk and non-empty."""
+    if kind == "lhm-checkpoint":
+        weights = list(path.glob("*/model.safetensors"))
+        assert weights, f"{pipeline} {name}: no model.safetensors under {path}"
+        assert all(w.stat().st_size > 0 for w in weights), f"{pipeline} {name}: empty checkpoint"
+        return
+
+    assert path.exists(), f"{pipeline} {name} missing: {path}"
+    if kind == "dir":
+        assert path.is_dir(), f"{pipeline} {name} is not a directory: {path}"
+    else:
+        assert path.is_file(), f"{pipeline} {name} is not a file: {path}"
+        assert path.stat().st_size > 0, f"{pipeline} {name} is empty: {path}"
