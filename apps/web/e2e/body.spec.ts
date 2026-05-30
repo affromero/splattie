@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
  * the localhost body proof — it exercises the real CDN widget bundle + the body
  * bundle the LHM pipeline produced.
  */
-const BODY_SRC = '/demos/bodies/6668809.splattie';
+const BODY_SRC = '/demos/bodies/b6.splattie';
 
 test('body .splattie renders and follows the cursor (look-at)', async ({ page }) => {
   const pageErrors: string[] = [];
