@@ -27,6 +27,7 @@ const DEMO_FACES: DemoFace[] = [
 
 export default function Home() {
   const [activeFace, setActiveFace] = useState<DemoFace | null>(null);
+  const [editorReady, setEditorReady] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
   const handleCardClick = useCallback((face: DemoFace) => {
@@ -38,6 +39,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    setEditorReady(false); // new iframe mounts on face change; show its poster again
     if (activeFace && editorRef.current) {
       editorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -49,6 +51,17 @@ export default function Home() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Drop the poster once the same-origin editor iframe reports the splat is live.
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      const data = e.data as { type?: string } | null;
+      if (data?.type === 'splattie:loaded') setEditorReady(true);
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
   }, []);
 
   return (
@@ -93,6 +106,8 @@ export default function Home() {
                   alt={`Portrait by ${face.photographer}`}
                   width={400}
                   height={500}
+                  loading="lazy"
+                  sizes="(max-width: 640px) 45vw, (max-width: 932px) 30vw, 289px"
                   className={styles.cardImage}
                 />
               </button>
@@ -120,12 +135,21 @@ export default function Home() {
                 </svg>
               </button>
             </div>
-            <iframe
-              key={activeFace.id}
-              src={`/editor.html?src=${activeFace.splattie}`}
-              className={styles.editorFrame}
-              title={`Editor for ${activeFace.photographer}'s portrait`}
-            />
+            <div className={styles.editorStage}>
+              <iframe
+                key={activeFace.id}
+                src={`/editor.html?src=${activeFace.splattie}`}
+                className={styles.editorFrame}
+                title={`Editor for ${activeFace.photographer}'s portrait`}
+              />
+              <Image
+                src={activeFace.thumb}
+                alt=""
+                fill
+                sizes="(max-width: 932px) 100vw, 900px"
+                className={`${styles.editorPoster} ${editorReady ? styles.editorPosterHidden : ''}`}
+              />
+            </div>
           </div>
         )}
       </section>

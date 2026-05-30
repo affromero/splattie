@@ -9,7 +9,7 @@ dev = [
   "pytest-asyncio>=0.25.0",
   "pytest>=8.0",
   "ruff>=0.14",
-  "toml-sort>=0.24",
+  "toml-sort>=0.24"
 ]
 
 [project]
@@ -18,11 +18,13 @@ dependencies = [
   "beartype>=0.19.0",
   "fastapi>=0.115.0",
   "jaxtyping>=0.2.34",
+  "klogr>=0.2",
   "numpy>=1.23,<2",
   "pillow>=10.0",
   "pydantic>=2.10",
   "python-multipart>=0.0.9",
-  "uvicorn[standard]>=0.30.0",
+  "tyro>=0.8",
+  "uvicorn[standard]>=0.30.0"
 ]
 name = "splattie"
 requires-python = ">=3.10"
@@ -30,13 +32,13 @@ version = "0.1.0"
 
 [project.optional-dependencies]
 # CPU-only: enough to run the FastAPI server (GPU routes return 503).
-#   uv sync --extra cpu
+# uv sync --extra cpu
 cpu = [
   "plyfile",
-  "trimesh>=4.0",
+  "trimesh>=4.0"
 ]
 # Full GPU pipeline: head-generation with LAM + FLAME. Requires CUDA 12.x.
-#   uv sync --extra gpu
+# uv sync --extra gpu
 # Additional CUDA extensions (pytorch3d, nvdiffrast, simple-knn) are
 # installed by scripts/setup-gpu.sh because they need --no-build-isolation.
 gpu = [
@@ -59,19 +61,8 @@ gpu = [
   "torchvision==0.18.0",
   "transformers>=4.41",
   "trimesh>=4.0",
-  "tyro",
-  "xformers==0.0.26.post1",
+  "xformers==0.0.26.post1"
 ]
-
-[[tool.uv.index]]
-explicit = true
-name = "pytorch-cu121"
-url = "https://download.pytorch.org/whl/cu121"
-
-[tool.uv.sources]
-torch = {index = "pytorch-cu121"}
-torchvision = {index = "pytorch-cu121"}
-xformers = {index = "pytorch-cu121"}
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/splattie"]
@@ -116,9 +107,19 @@ ignore = [
   "TC002",
   "TC003",
   "TD003",
-  "UP037",
+  "UP037"
 ]
 select = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D103", "S101"]
+
+[[tool.uv.index]]
+explicit = true
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+
+[tool.uv.sources]
+torch = {index = "pytorch-cu121"}
+torchvision = {index = "pytorch-cu121"}
+xformers = {index = "pytorch-cu121"}

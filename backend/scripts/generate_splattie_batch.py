@@ -14,7 +14,6 @@ Usage (run from backend/vendor/LAM/):
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import os
@@ -22,6 +21,11 @@ import subprocess
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+import tyro
+from klogr import get_logger
+
+logger = get_logger()
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = SCRIPT_DIR.parent if SCRIPT_DIR.name == "scripts" else SCRIPT_DIR
@@ -114,7 +118,7 @@ def run_lam_inference(image_path: Path, name: str) -> Path:
 
     result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300)
     if result.returncode != 0:
-        print(f"  STDERR: {result.stderr[-500:]}")
+        logger.info(f"  STDERR: {result.stderr[-500:]}")
         raise RuntimeError(f"LAM inference failed for {name}")
 
     return Path(f"exps/cano_gs/{name}_gs_offset.ply")
@@ -125,7 +129,7 @@ def find_absolute_ply(name: str) -> Path:
     ply_path = Path(f"exps/cano_gs/{name}.ply")
     if not ply_path.exists():
         raise FileNotFoundError(f"Absolute PLY not found: {ply_path}")
-    print(f"  Absolute PLY: {ply_path} ({ply_path.stat().st_size // 1024} KB)")
+    logger.info(f"  Absolute PLY: {ply_path} ({ply_path.stat().st_size // 1024} KB)")
     return ply_path
 
 
@@ -204,47 +208,47 @@ def bundle_splattie(
         zf.writestr(manifest["widget"]["config"], json.dumps(DEFAULT_STATES, indent=2))
 
     size_kb = splattie_path.stat().st_size // 1024
-    print(f"  Bundle: {splattie_path} ({size_kb} KB)")
+    logger.info(f"  Bundle: {splattie_path} ({size_kb} KB)")
     return splattie_path
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Batch generate .splattie files")
-    parser.add_argument("--images-dir", type=str, required=True)
-    parser.add_argument("--output-dir", type=str, required=True)
-    args = parser.parse_args()
+def main(images_dir: Path, output_dir: Path) -> None:
+    """Batch-generate .splattie bundles from a directory of portrait images.
 
-    images_dir = Path(args.images_dir)
-    output_dir = Path(args.output_dir)
+    Args:
+        images_dir: Directory of input portrait images (.jpg/.jpeg/.png).
+        output_dir: Directory to write .splattie bundles into.
+
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
 
     widget_version = read_widget_version()
-    print(f"Widget version: {widget_version}\n")
+    logger.info(f"Widget version: {widget_version}\n")
 
     image_files = sorted(f for f in images_dir.iterdir() if f.suffix.lower() in (".jpg", ".jpeg", ".png"))
 
     if not image_files:
-        print(f"No images found in {images_dir}")
+        logger.info(f"No images found in {images_dir}")
         return
 
-    print(f"Found {len(image_files)} images\n")
+    logger.info(f"Found {len(image_files)} images\n")
 
     for i, img_path in enumerate(image_files, 1):
         name = img_path.stem
-        print(f"[{i}/{len(image_files)}] {img_path.name}")
+        logger.info(f"[{i}/{len(image_files)}] {img_path.name}")
 
         try:
             run_lam_inference(img_path, name)
             abs_ply = find_absolute_ply(name)
             bundle_splattie(name, abs_ply, output_dir, img_path, widget_version)
-            print("  OK\n")
+            logger.info("  OK\n")
         except Exception as e:
-            print(f"  FAILED: {e}\n")
+            logger.info(f"  FAILED: {e}\n")
             continue
 
     splattie_files = list(output_dir.glob("*.splattie"))
-    print(f"Done! {len(splattie_files)} .splattie files in {output_dir}")
+    logger.info(f"Done! {len(splattie_files)} .splattie files in {output_dir}")
 
 
 if __name__ == "__main__":
-    main()
+    tyro.cli(main)

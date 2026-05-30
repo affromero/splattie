@@ -211,6 +211,10 @@
     }
 
     function onSplatLoad() {
+      // Tell a same-origin embedder (the landing page) the splat is live so it
+      // can drop its poster overlay. Harmless when opened standalone (posts to self).
+      parent.postMessage({ type: 'splattie:loaded' }, location.origin);
+
       const wConfig = widget.config;
       if (wConfig) {
         config = JSON.parse(JSON.stringify(wConfig));

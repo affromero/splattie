@@ -32,7 +32,6 @@ Sidecar JSON (same path, .json extension):
 
 from __future__ import annotations
 
-import argparse
 import json
 import struct
 import sys
@@ -40,6 +39,10 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import tyro
+from klogr import get_logger
+
+logger = get_logger()
 
 VENDOR_LAM = Path(__file__).resolve().parents[1] / "vendor" / "LAM"
 
@@ -173,8 +176,8 @@ def export_basis(
     # expr_basis shape: (num_verts, 3, num_expr)
 
     num_verts = expr_basis.shape[0]
-    print(f"Vertices: {num_verts}, Expressions: {num_expr}")
-    print(f"Basis shape: {expr_basis.shape}")
+    logger.info(f"Vertices: {num_verts}, Expressions: {num_expr}")
+    logger.info(f"Basis shape: {expr_basis.shape}")
 
     # Transpose to (num_verts, num_expr, 3) for easier web consumption
     basis_np = expr_basis.permute(0, 2, 1).contiguous().cpu().numpy().astype(np.float32)
@@ -184,7 +187,7 @@ def export_basis(
 
     for i in range(num_expr):
         mag = np.linalg.norm(basis_np[:, i, :], axis=1).max()
-        print(f"  {i:02d} {labels[i]:20s} max_disp={mag:.6f}")
+        logger.info(f"  {i:02d} {labels[i]:20s} max_disp={mag:.6f}")
 
     # Write binary
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -194,7 +197,7 @@ def export_basis(
         f.write(basis_np.tobytes())
 
     file_size = output_path.stat().st_size
-    print(f"Binary: {output_path} ({file_size / 1024:.0f} KB)")
+    logger.info(f"Binary: {output_path} ({file_size / 1024:.0f} KB)")
 
     # Write sidecar JSON
     json_path = output_path.with_suffix(".json")
@@ -208,36 +211,36 @@ def export_basis(
     }
     with open(json_path, "w") as f:
         json.dump(meta, f, indent=2)
-    print(f"Metadata: {json_path}")
+    logger.info(f"Metadata: {json_path}")
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Export FLAME expression basis")
-    parser.add_argument(
-        "--shape-param",
-        type=str,
-        default=None,
-        help="Path to shape_param.pt (person-specific). Uses mean shape if omitted.",
-    )
-    parser.add_argument("--output", type=str, required=True, help="Output .bin path")
-    parser.add_argument(
-        "--num-expressions", type=int, default=20, help="Number of expression coefficients to export (default: 20)"
-    )
-    parser.add_argument("--device", type=str, default="cuda", help="Device (cuda or cpu)")
-    args = parser.parse_args()
+def main(
+    output: Path,
+    shape_param: Path | None = None,
+    num_expressions: int = 20,
+    device: str = "cuda",
+) -> None:
+    """Export the FLAME expression basis to a .bin file.
 
-    shape_param = None
-    if args.shape_param:
-        shape_param = torch.load(args.shape_param, map_location="cpu")
-        print(f"Loaded shape param: {shape_param.shape}")
+    Args:
+        output: Output .bin path.
+        shape_param: Path to shape_param.pt (person-specific). Uses the mean shape if omitted.
+        num_expressions: Number of expression coefficients to export.
+        device: Device to run FLAME on (cuda or cpu).
 
-    print("Loading FLAME model...")
-    flame = load_flame_head(device=args.device, num_expressions=args.num_expressions)
-    print(f"FLAME loaded: {flame.n_shape_params} shape, {flame.n_expr_params} expr params")
+    """
+    shape = None
+    if shape_param:
+        shape = torch.load(shape_param, map_location="cpu")
+        logger.info(f"Loaded shape param: {shape.shape}")
 
-    export_basis(flame, shape_param, args.num_expressions, Path(args.output))
-    print("Done.")
+    logger.info("Loading FLAME model...")
+    flame = load_flame_head(device=device, num_expressions=num_expressions)
+    logger.info(f"FLAME loaded: {flame.n_shape_params} shape, {flame.n_expr_params} expr params")
+
+    export_basis(flame, shape, num_expressions, output)
+    logger.info("Done.")
 
 
 if __name__ == "__main__":
-    main()
+    tyro.cli(main)
