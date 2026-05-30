@@ -77,9 +77,9 @@ repos:
       hooks:
           - id: ruff
             args: [--fix]
-            files: ^backend/(src|tests)/.*\.py$
+            files: ^backend/(src|tests|scripts)/.*\.py$
           - id: ruff-format
-            files: ^backend/(src|tests)/.*\.py$
+            files: ^backend/(src|tests|scripts)/.*\.py$
 
     - repo: local
       hooks:
@@ -119,7 +119,7 @@ repos:
             entry: scripts/hooks/check_array_annotations.sh
             language: system
             types: [python]
-            files: ^backend/(src|tests)/.*\.py$
+            files: ^backend/(src|tests|scripts)/.*\.py$
             exclude: ^backend/src/splattie/methods/base\.py$
 
           # Frontend: lint + type-check the whole workspace (mirrors `npm run ci`
