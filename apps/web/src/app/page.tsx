@@ -11,33 +11,37 @@ type Category = 'head' | 'body';
 interface Demo {
   id: string;
   category: Category;
-  photographer: string;
-  pexelsUrl: string;
 }
 
 // Demos live in category subfolders: /demos/{heads,bodies}/<id>.{jpg,splattie}.
 // ASSET_VERSION cache-busts the .splattie when its contents change (the browser
 // otherwise serves the cached copy, surviving a hard-refresh). Bump on demo changes.
-const ASSET_VERSION = '2';
+const ASSET_VERSION = '3';
 const folder = (c: Category): string => (c === 'head' ? 'heads' : 'bodies');
 const demoThumb = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.jpg`;
 const demoSrc = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.splattie?v=${ASSET_VERSION}`;
 
+// All demo avatars are generated from AI-synthesized images (Gemini 3) — not real
+// people — so there are no likenesses or photo credits to attribute.
 const DEMOS: Demo[] = [
   // Heads (LAM)
-  { id: '3762763', category: 'head', photographer: 'Shiny Diamond', pexelsUrl: 'https://www.pexels.com/photo/3762763/' },
-  { id: '3754430', category: 'head', photographer: 'TUBARONES PHOTOGRAPHY', pexelsUrl: 'https://www.pexels.com/photo/3754430/' },
-  { id: '7705909', category: 'head', photographer: 'ShotPot', pexelsUrl: 'https://www.pexels.com/photo/7705909/' },
-  { id: '8727488', category: 'head', photographer: 'Tima Miroshnichenko', pexelsUrl: 'https://www.pexels.com/photo/8727488/' },
-  { id: '8727554', category: 'head', photographer: 'Tima Miroshnichenko', pexelsUrl: 'https://www.pexels.com/photo/8727554/' },
-  { id: '35466969', category: 'head', photographer: 'Daniel Hoffman Jackson', pexelsUrl: 'https://www.pexels.com/photo/35466969/' },
+  { id: 'h1', category: 'head' },
+  { id: 'h2', category: 'head' },
+  { id: 'h3', category: 'head' },
+  { id: 'h4', category: 'head' },
+  { id: 'h5', category: 'head' },
+  { id: 'h6', category: 'head' },
+  { id: 'h7', category: 'head' },
+  { id: 'h8', category: 'head' },
   // Bodies (LHM)
-  { id: '6668809', category: 'body', photographer: 'N. Voitkevich', pexelsUrl: 'https://www.pexels.com/photo/6668809/' },
-  { id: '31894858', category: 'body', photographer: 'Andrea Musto', pexelsUrl: 'https://www.pexels.com/photo/31894858/' },
-  { id: '31969138', category: 'body', photographer: 'Sephina Cornwall', pexelsUrl: 'https://www.pexels.com/photo/31969138/' },
-  { id: '8217520', category: 'body', photographer: 'Mart Production', pexelsUrl: 'https://www.pexels.com/photo/8217520/' },
-  { id: '6211660', category: 'body', photographer: 'Dima Valkov', pexelsUrl: 'https://www.pexels.com/photo/6211660/' },
-  { id: '18516993', category: 'body', photographer: 'Foto Art Events', pexelsUrl: 'https://www.pexels.com/photo/18516993/' },
+  { id: 'b1', category: 'body' },
+  { id: 'b2', category: 'body' },
+  { id: 'b3', category: 'body' },
+  { id: 'b4', category: 'body' },
+  { id: 'b5', category: 'body' },
+  { id: 'b6', category: 'body' },
+  { id: 'b7', category: 'body' },
+  { id: 'b8', category: 'body' },
 ];
 
 const HEADS = DEMOS.filter((d) => d.category === 'head');
@@ -103,11 +107,11 @@ function Carousel({
             <button
               className={`${styles.carouselCard} ${activeId === demo.id ? styles.cardActive : ''}`}
               onClick={() => onSelect(demo)}
-              aria-label={`Bring ${demo.category} by ${demo.photographer} to life`}
+              aria-label={`Bring this AI-generated ${demo.category} to life`}
             >
               {/* Plain img (not next/image): the loop duplicates nodes + lazy-loads. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={demoThumb(demo)} alt={`${demo.category} by ${demo.photographer}`} className={styles.carouselImg} loading="lazy" />
+              <img src={demoThumb(demo)} alt={`AI-generated ${demo.category}`} className={styles.carouselImg} loading="lazy" />
             </button>
           </div>
         ))}
@@ -173,12 +177,13 @@ export default function Home() {
         <div className={styles.categoryLabel}>Bodies<span className={styles.categoryHint}>head &amp; torso turn toward you</span></div>
         <Carousel category="body" demos={BODIES} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
 
+        <p className={styles.embedNote}>Every demo avatar is AI-generated from a synthetic image — not a real person.</p>
+
         {activeDemo && (
           <div className={styles.editorSection} ref={editorRef}>
             <div className={styles.editorHeader}>
               <span className={styles.editorLabel}>
-                Editor · {activeDemo.category} ·{' '}
-                <a href={activeDemo.pexelsUrl} target="_blank" rel="noopener noreferrer">{activeDemo.photographer}</a>
+                Editor · {activeDemo.category} · AI-generated
               </span>
               <button className={styles.editorClose} onClick={() => setActiveDemo(null)} aria-label="Close editor">
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
@@ -190,7 +195,7 @@ export default function Home() {
               key={activeDemo.id}
               src={`/editor.html?src=${encodeURIComponent(demoSrc(activeDemo))}`}
               className={styles.editorFrame}
-              title={`Editor for ${activeDemo.photographer}'s ${activeDemo.category}`}
+              title={`Editor for an AI-generated ${activeDemo.category}`}
             />
           </div>
         )}
@@ -262,7 +267,7 @@ export default function Home() {
           Built with <a href="https://github.com/aigc3d/LAM" target="_blank" rel="noopener noreferrer">LAM</a>{' '}
           + <a href="https://github.com/aigc3d/LHM" target="_blank" rel="noopener noreferrer">LHM</a>{' '}
           + <a href="https://sparkjs.dev" target="_blank" rel="noopener noreferrer">Spark</a>{'. '}
-          Photos from <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a>.
+          Demo avatars are AI-generated — not real people.
         </p>
       </footer>
     </main>

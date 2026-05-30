@@ -41,7 +41,7 @@ repos:
           - id: check-yaml
             exclude: ^\.pre-commit-config\.yaml$
           - id: check-added-large-files
-            args: [--maxkb=2048]
+            args: [--maxkb=4096]  # demo .splattie avatars are ~3 MB of gaussian data
           - id: check-merge-conflict
           - id: check-case-conflict
           # apps/web/tsconfig.json is JSONC (has comments) — exclude from JSON hooks.
