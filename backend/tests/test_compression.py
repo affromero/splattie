@@ -6,20 +6,20 @@ from pathlib import Path
 
 import pytest
 
-from splattie.compression.spz import compress_ply_to_spz
+from splattie.compression.compressed_ply import compress_ply
 
 
 def test_compress_hard_fails_on_invalid_input(tmp_path: Path) -> None:
     """Invalid input (or a missing tool) raises rather than silently returning the PLY.
 
-    A silent PLY fallback would let a bundle be stamped format="spz" while holding a
-    PLY, which breaks the widget loader — so compression must hard-fail.
+    A silent fallback would let a bundle ship uncompressed (or mislabeled), so
+    compression must hard-fail.
     """
     ply_path = tmp_path / "test.ply"
     ply_path.write_bytes(b"fake ply data")
-    spz_path = tmp_path / "test.spz"
+    out_path = tmp_path / "test.compressed.ply"
 
     with pytest.raises(RuntimeError):
-        compress_ply_to_spz(ply_path, spz_path)
+        compress_ply(ply_path, out_path)
 
-    assert not spz_path.exists() or spz_path.stat().st_size == 0
+    assert not out_path.exists() or out_path.stat().st_size == 0

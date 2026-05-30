@@ -30,6 +30,8 @@ from pathlib import Path
 import tyro
 from klogr import get_logger
 
+from splattie.compression.compressed_ply import compress_ply
+
 logger = get_logger()
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -198,13 +200,13 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compres
     return f"rebundled (v{widget_version}, {num_gaussians} gaussians, format={splat_format}{note})"
 
 
-def main(splatties_dir: Path, thumbs_dir: Path, compress_spz: bool = False) -> None:
+def main(splatties_dir: Path, thumbs_dir: Path, compress: bool = False) -> None:
     """Add manifest.json to every .splattie in a directory (rewrites in place).
 
     Args:
         splatties_dir: Directory of .splattie bundles to process.
         thumbs_dir: Directory of source thumbnails (for sourceImageHash + attribution).
-        compress_spz: Convert PLY payloads to SPZ via splat-transform before re-bundling.
+        compress: Compress PLY payloads to compressed PLY via splat-transform before re-bundling.
 
     """
     splatties_dir = splatties_dir.resolve()
