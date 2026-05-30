@@ -28,7 +28,11 @@ COPY backend/uv.lock* ./
 RUN uv venv --python 3.10 .venv
 ENV PATH="/app/backend/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/backend/.venv"
-RUN uv sync --extra cpu --no-install-project
+# --frozen: install the cpu subset straight from the lock without re-resolving. The
+# GPU-only git sources (pytorch3d, etc.) are unpinned, so a plain `uv sync` re-fetches
+# their HEAD — which needs git, absent from this slim CPU image. They're not in the
+# cpu extra, so the frozen lock skips them entirely.
+RUN uv sync --extra cpu --frozen --no-install-project
 
 # App source + editable install. Build isolation lets uv fetch the declared
 # build backend (hatchling); the GPU image pins it differently, but here the
