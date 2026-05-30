@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 
 // Dynamically generated social card (1200×630) with a clear headline + CTA
 // baked into the pixels. Next auto-wires this into og:image and twitter:image.
-export const alt = 'Splattie — interactive 3D avatars from a single photo';
+export const alt = 'Splattie: interactive 3D avatars from a single photo';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -32,7 +32,7 @@ export default function OpengraphImage() {
             <span style={{ color: '#C4A0F0' }}>Embed the avatar.</span>
           </div>
           <div style={{ display: 'flex', fontSize: 32, color: '#9a9aae', marginTop: 22, maxWidth: 920 }}>
-            Interactive 3D avatars from a single photo — an open-source web component.
+            Interactive 3D avatars from a single photo. An open-source web component.
           </div>
         </div>
 

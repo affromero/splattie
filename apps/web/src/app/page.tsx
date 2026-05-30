@@ -21,8 +21,8 @@ const folder = (c: Category): string => (c === 'head' ? 'heads' : 'bodies');
 const demoThumb = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.jpg`;
 const demoSrc = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.splattie?v=${ASSET_VERSION}`;
 
-// All demo avatars are generated from AI-synthesized images (Gemini 3) — not real
-// people — so there are no likenesses or photo credits to attribute.
+// All demo avatars are generated from AI-synthesized images (Gemini 3), not real
+// people, so there are no likenesses or photo credits to attribute.
 const DEMOS: Demo[] = [
   // Heads (LAM)
   { id: 'h1', category: 'head' },
@@ -78,7 +78,7 @@ function Carousel({
     // moves). Keep our own float position and write it; read scrollLeft back only
     // to resync after the user trackpad-scrolls.
     let pos = el.scrollLeft;
-    const SPEED = 0.8; // px/frame ≈ 48px/s — a gentle, clearly-moving drift
+    const SPEED = 0.8; // px/frame ≈ 48px/s, a gentle, clearly-moving drift
     const tick = () => {
       if (!paused && !hoverRef.current) {
         const half = el.scrollWidth / 2;
@@ -109,8 +109,8 @@ function Carousel({
               onClick={() => onSelect(demo)}
               aria-label={`Bring this AI-generated ${demo.category} to life`}
             >
-              {/* Plain img (not next/image): the loop duplicates nodes. Eager-load —
-                  lazy-loading flickers as thumbnails scroll in/out of the strip. */}
+              {/* Plain img (not next/image): the loop duplicates nodes. Eager-load
+                  because lazy-loading flickers as thumbnails scroll in/out of the strip. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={demoThumb(demo)} alt={demo.category} className={styles.carouselImg} draggable={false} />
             </button>
@@ -154,7 +154,7 @@ export default function Home() {
           <span className={styles.titleAccent}>Interactive 3D avatar out.</span>
         </h1>
         <p className={styles.subtitle}>
-          Turn any portrait — or full body — into a living avatar for your website.
+          Turn any portrait or full body into a living avatar for your website.
           It looks at your visitors and reacts to hover. One line of HTML.
         </p>
         <div className={styles.heroBadges}>
@@ -170,7 +170,7 @@ export default function Home() {
 
       <section className={styles.gallerySection}>
         <h2 className={styles.sectionTitle}>Try it</h2>
-        <p className={styles.sectionSubtitle}>Click an avatar to bring it to life — the carousel pauses while you play</p>
+        <p className={styles.sectionSubtitle}>Click an avatar to bring it to life. The carousel pauses while you play.</p>
 
         <div className={styles.categoryLabel}>Heads<span className={styles.categoryHint}>eyes follow your cursor</span></div>
         <Carousel category="head" demos={HEADS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
@@ -231,8 +231,8 @@ export default function Home() {
         </p>
       </section>
 
-      <section className={styles.uploadSection}>
-        {SELF_HOST ? (
+      {SELF_HOST && (
+        <section className={styles.uploadSection}>
           <Link href="/create" className={styles.uploadBoxActive}>
             <h2 className={styles.uploadTitle}>Upload your own photo</h2>
             <p className={styles.uploadSubtitleActive}>Generate a 3D avatar on your local GPU</p>
@@ -242,18 +242,8 @@ export default function Home() {
               </svg>
             </div>
           </Link>
-        ) : (
-          <div className={styles.uploadBox}>
-            <h2 className={styles.uploadTitle}>Upload your own photo</h2>
-            <p className={styles.uploadSubtitle}>Coming soon</p>
-            <div className={styles.uploadPlaceholder}>
-              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                <path d="M24 8v32M8 24h32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3" />
-              </svg>
-            </div>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <footer className={styles.footer}>
         <p>
@@ -266,7 +256,7 @@ export default function Home() {
           Built with <a href="https://github.com/aigc3d/LAM" target="_blank" rel="noopener noreferrer">LAM</a>{' '}
           + <a href="https://github.com/aigc3d/LHM" target="_blank" rel="noopener noreferrer">LHM</a>{' '}
           + <a href="https://sparkjs.dev" target="_blank" rel="noopener noreferrer">Spark</a>{'. '}
-          Demo avatars are AI-generated — not real people.
+          Demo avatars are AI-generated, not real people.
         </p>
       </footer>
     </main>
