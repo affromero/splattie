@@ -20,7 +20,11 @@ from splattie.methods.bundle_common import (
     count_ply_vertices,
     read_widget_version,
 )
-from splattie.methods.lhm.bundle import BODY_RIG, DEFAULT_STATES_BODY, JOINTS_NAME
+from splattie.methods.lhm.bundle import (
+    BODY_RIG,
+    DEFAULT_STATES_BODY,
+    JOINTS_NAME,
+)
 from splattie.types import AssetType
 
 _MINIMAL_PLY = b"""ply

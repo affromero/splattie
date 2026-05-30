@@ -1,18 +1,24 @@
 """LHM body `.splattie` bundle adapter (Phase 1.C).
 
-Turns LHM's raw canonical-pose gaussian PLY into a widget-loadable body
-`.splattie` by extracting the SMPL-X rig the widget needs to skin + pose it:
+Turns LHM's exported gaussian PLY into a widget-loadable body `.splattie` by
+extracting the SMPL-X rig the widget needs to skin + pose it:
 
-- **skeleton.json** — the 55 SMPL-X joints (names + parents + betas-specific rest
-  positions), computed as ``J_regressor @ (v_template + betas·shapedirs)`` so the
-  joints live in the *same shaped space* as the gaussians (validated by overlay).
+- **skeleton.json** — the 55 SMPL-X joints (names + parents + rest positions). The
+  gaussians are baked into the *photographed* body pose (arms at rest), so the rest
+  positions are the matching **posed** joints emitted alongside the PLY by
+  `infer_mesh` (``<stem>_joints.json``). The widget's rest pose is therefore the
+  identity — no shoulder-down rotation, hence no skinning stretch. Falls back to the
+  canonical ``J_regressor @ (v_template + betas·shapedirs)`` joints only when pose
+  estimation was unavailable (the legacy A-pose export).
 - **lbs_weights.json** — the per-gaussian linear-blend-skinning weights
   (``smplx_model.skinning_weight`` [N, 55]) stored sparse top-K (each gaussian binds
-  to a few joints), renormalised.
+  to a few joints), renormalised. Pose-independent, so they bind the baked-pose
+  gaussians to the posed skeleton unchanged.
 
 The widget (Phase 1.D) reads these to skin the gaussians via SMPL-X LBS and apply
-the head/torso look-at. Reuses `bundle_common.build_manifest` / `bundle_splattie`
-so body bundles share the head bundle's shape (manifest + splat + rig + states.json).
+the head/torso look-at + arm IK. Reuses `bundle_common.build_manifest` /
+`bundle_splattie` so body bundles share the head bundle's shape (manifest + splat +
+rig + states.json).
 """
 
 from __future__ import annotations
@@ -167,8 +173,18 @@ def _rest_joints(
 
 
 @jaxtyped(typechecker=beartype)
-def extract_body_rig(smplx_model: object, betas: Float[npt.NDArray[np.float32], "n_betas"]) -> tuple[dict, dict]:
-    """Extract (skeleton, sparse-weights) dicts from the loaded LHM SMPL-X model."""
+def extract_body_rig(
+    smplx_model: object,
+    betas: Float[npt.NDArray[np.float32], "n_betas"],
+    posed_joints: Float[npt.NDArray[np.float32], "55 3"] | None = None,
+) -> tuple[dict, dict]:
+    """Extract (skeleton, sparse-weights) dicts from the loaded LHM SMPL-X model.
+
+    ``posed_joints`` (from ``infer_mesh``'s ``<stem>_joints.json``) are the joints in
+    the baked-pose frame; when given they become the skeleton's rest positions so the
+    widget's identity rest pose matches the gaussians. Without them the canonical
+    (A-pose) joints are used (legacy export path).
+    """
     weights = smplx_model.skinning_weight.detach().cpu().numpy().astype(np.float32)  # [N, 55]
     n_gaussians = int(weights.shape[0])
 
@@ -177,7 +193,7 @@ def extract_body_rig(smplx_model: object, betas: Float[npt.NDArray[np.float32], 
     top_w = np.take_along_axis(weights, top, axis=1)  # [N, K]
     top_w = top_w / np.clip(top_w.sum(axis=1, keepdims=True), 1e-8, None)
 
-    joints = _rest_joints(smplx_model, betas)  # [55, 3]
+    joints = posed_joints if posed_joints is not None else _rest_joints(smplx_model, betas)  # [55, 3]
     parents = _smplx_parents(smplx_model)
 
     skeleton = {
@@ -215,13 +231,17 @@ def build_body_splattie(
     model_id: str,
     smplx_model: object,
     betas: Float[npt.NDArray[np.float32], "n_betas"],
+    posed_joints: Float[npt.NDArray[np.float32], "55 3"] | None = None,
     source_image_path: Path | None = None,
 ) -> tuple[Path, int]:
-    """Write a widget-loadable body `.splattie` from the raw PLY + the SMPL-X rig.
+    """Write a widget-loadable body `.splattie` from the PLY + the SMPL-X rig.
 
-    Returns (bundle_path, num_gaussians).
+    ``posed_joints`` are the baked-pose skeleton joints from ``infer_mesh``'s
+    ``<stem>_joints.json``; when given, the rig's rest pose matches the photographed
+    body so the widget needs no rest rotation (and no arm stretch). Returns
+    (bundle_path, num_gaussians).
     """
-    skeleton, lbs_weights = extract_body_rig(smplx_model, np.asarray(betas, dtype=np.float32))
+    skeleton, lbs_weights = extract_body_rig(smplx_model, np.asarray(betas, dtype=np.float32), posed_joints)
 
     skeleton_path = output_dir / BODY_RIG.skeleton_file
     weights_path = output_dir / BODY_RIG.weights_file

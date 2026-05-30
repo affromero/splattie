@@ -90,20 +90,25 @@ class LHMMethod:
 
         # LHM uses cwd-relative asset paths; serialize and run from vendor/LHM.
         with inference_lock, chdir(VENDOR_LHM):
-            # Person-specific body shape from Multi-HMR. Neutral betas only if pose
-            # estimation is unavailable (degraded: generic body proportions).
+            # Person-specific body shape + pose from Multi-HMR. The pose (axis-angle
+            # [53, 3]) bakes the arms into their photographed rest position; neutral
+            # betas + canonical A-pose only if pose estimation is unavailable.
             if inferrer.pose_estimator is not None:
-                betas = inferrer.pose_estimator(str(img_path)).beta
+                est = inferrer.pose_estimator(str(img_path))
+                betas = est.beta if est.beta is not None else np.zeros(_SHAPE_PARAM_DIM, dtype=np.float32)
+                pose_rotvec = est.full_pose  # [53, 3], or None when no full body detected
             else:
-                logger.warning("LHM pose estimator unavailable → neutral betas (generic body shape)")
+                logger.warning("LHM pose estimator unavailable → neutral betas + canonical A-pose")
                 betas = np.zeros(_SHAPE_PARAM_DIM, dtype=np.float32)
+                pose_rotvec = None
 
-            logger.info("Running LHM infer_mesh (canonical body gaussians; real shape + face)...")
+            logger.info("Running LHM infer_mesh (body gaussians baked to the photographed pose)...")
             inferrer.infer_mesh(
                 str(img_path),
                 dump_tmp_dir=str(tmp_dir),
                 dump_mesh_dir=str(output_dir),
                 shape_param=betas,
+                pose_rotvec=pose_rotvec,
             )
 
             # infer_mesh names the output after the image stem ("<id>.jpg" -> "<id>.ply").
@@ -112,7 +117,14 @@ class LHMMethod:
                 msg = f"LHM infer_mesh did not produce {ply_path}"
                 raise FileNotFoundError(msg)
 
-            # Bundle the raw PLY + SMPL-X rig (skeleton + per-gaussian LBS weights) into
+            # When a pose was baked, infer_mesh drops the matching posed skeleton next to
+            # the PLY; the rig uses it so the widget's rest pose is the identity.
+            joints_path = output_dir / f"{model_id}_joints.json"
+            posed_joints = (
+                np.asarray(json.loads(joints_path.read_text()), dtype=np.float32) if joints_path.exists() else None
+            )
+
+            # Bundle the PLY + SMPL-X rig (posed skeleton + per-gaussian LBS weights) into
             # a widget-loadable body .splattie (assetType=body).
             bundle_path, num_gaussians = build_body_splattie(
                 ply_path=ply_path,
@@ -120,6 +132,7 @@ class LHMMethod:
                 model_id=model_id,
                 smplx_model=inferrer.model.renderer.smplx_model,
                 betas=np.asarray(betas, dtype=np.float32),
+                posed_joints=posed_joints,
                 source_image_path=img_path,
             )
 
