@@ -179,12 +179,11 @@ def test_reweight_lower_arm_rigid_rebinds_lower_arm_and_spares_legs() -> None:
 
     reweight_lower_arm_rigid(positions, skeleton, weights)
     idx, wt = weights["indices"], weights["weights"]
-    arm_targets = {names.index(n) for n in ("L_Collar", "L_Shoulder", "L_Elbow")}
 
-    # hand gaussian (row 0) re-bound onto the upper-arm chain, no longer the wrist
+    # hand gaussian (row 0) re-bound rigidly to the elbow, no longer the wrist
     row0 = [idx[j] for j in range(4) if wt[j] > 0]
     assert row0, "hand gaussian must keep a binding"
-    assert all(j in arm_targets for j in row0)
+    assert all(j == elbow for j in row0)
     assert wrist not in row0
     # ankle gaussian (row 2) untouched: nearest joint is a leg joint
     assert idx[8] == ankle

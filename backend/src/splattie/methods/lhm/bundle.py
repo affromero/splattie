@@ -105,16 +105,15 @@ JOINTS_NAME: tuple[str, ...] = (
 # How many joints each gaussian binds to in the bundle (SMPL-X LBS is sparse).
 _TOP_K = 4
 
-# Arm-region joints: a gaussian is "arm" when its nearest joint is one of these (or a
-# finger). The lower arm (forearm + hand) is re-bound rigidly to the upper-arm chain
-# down to the elbow (_LOWER_ARM_TARGETS) so that when the limb is *rotated* (editor IK
-# or animation) it swings as one solid piece instead of the approximate per-gaussian
-# LBS stretching the forearm into thin tendrils — see reweight_lower_arm_rigid.
-_ARM_JOINTS = frozenset(
-    {"L_Collar", "R_Collar", "L_Shoulder", "R_Shoulder", "L_Elbow", "R_Elbow", "L_Wrist", "R_Wrist"}
-)
+# Lower-arm region: a gaussian is "forearm/hand" when its nearest joint is the elbow,
+# wrist, or a finger. Only these are re-bound — rigidly, to the elbow (_LOWER_ARM_TARGETS)
+# — so that rotating the limb (editor IK / animation) swings the forearm as one solid
+# piece instead of the approximate per-gaussian LBS stretching it into thin tendrils.
+# The collar/shoulder/upper-arm are deliberately left with their original soft weights
+# so the shoulder + chest still deform naturally (re-binding them dragged the torso).
+_ARM_JOINTS = frozenset({"L_Elbow", "R_Elbow", "L_Wrist", "R_Wrist"})
 _FINGER_TOKENS = ("Index", "Middle", "Pinky", "Ring", "Thumb")
-_LOWER_ARM_TARGETS = frozenset({"L_Collar", "R_Collar", "L_Shoulder", "R_Shoulder", "L_Elbow", "R_Elbow"})
+_LOWER_ARM_TARGETS = frozenset({"L_Elbow", "R_Elbow"})
 
 # The SMPL-X body rig: skeleton + per-gaussian weights are generated per body (the
 # skeleton is betas-specific), so the bundler writes them via rig_files.
