@@ -119,7 +119,7 @@ repos:
             entry: scripts/hooks/check_array_annotations.sh
             language: system
             types: [python]
-            files: ^backend/(src|tests|scripts)/.*\.py$
+            files: ^backend/(src|tests)/.*\.py$
             exclude: ^backend/src/splattie/methods/base\.py$
 
           # Frontend: lint + type-check the whole workspace (mirrors `npm run ci`

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add manifest.json to existing .splattie files.
+r"""Add manifest.json to existing .splattie files.
 
 Idempotent. For each .splattie in the input directory:
   1. Open the ZIP
@@ -12,8 +12,8 @@ Idempotent. For each .splattie in the input directory:
 Runs on any machine (no GPU required) - just rewrites ZIPs.
 
 Usage:
-    python backend/scripts/add_manifest_to_splattie.py \\
-        --splatties-dir apps/web/public/demos \\
+    python backend/scripts/add_manifest_to_splattie.py \
+        --splatties-dir apps/web/public/demos \
         --thumbs-dir apps/web/public/demos/thumbs
 """
 
@@ -50,6 +50,7 @@ ATTRIBUTIONS = {
 
 
 def read_widget_version() -> str:
+    """Read the widget package version (used as the manifest formatVersion)."""
     return json.loads(WIDGET_PKG_JSON.read_text())["version"]
 
 
@@ -62,7 +63,8 @@ def count_ply_vertices_bytes(data: bytes) -> int:
             return int(line.split()[-1])
         if line == "end_header":
             break
-    raise ValueError("No vertex count in PLY header")
+    msg = "No vertex count in PLY header"
+    raise ValueError(msg)
 
 
 def find_splat_entry(zf: zipfile.ZipFile) -> tuple[str, str]:
@@ -72,10 +74,12 @@ def find_splat_entry(zf: zipfile.ZipFile) -> tuple[str, str]:
             return name, "ply"
         if name.endswith(".spz"):
             return name, "spz"
-    raise FileNotFoundError("No .ply or .spz entry in archive")
+    msg = "No .ply or .spz entry in archive"
+    raise FileNotFoundError(msg)
 
 
 def find_thumb(thumbs_dir: Path, stem: str) -> Path | None:
+    """Return the source thumbnail for a stem, trying common extensions."""
     for ext in (".jpg", ".jpeg", ".png"):
         candidate = thumbs_dir / f"{stem}{ext}"
         if candidate.exists():
@@ -88,12 +92,13 @@ def build_manifest(
     splat_entry: str,
     splat_format: str,
     num_gaussians: int,
-    has_skeleton: bool,
-    has_weights: bool,
-    has_states: bool,
     thumb_path: Path | None,
     widget_version: str,
+    *,
+    has_skeleton: bool,
+    has_weights: bool,
 ) -> dict:
+    """Build the .splattie manifest dict for one bundle."""
     manifest: dict = {
         "format": "splattie",
         "formatVersion": widget_version,
@@ -115,7 +120,7 @@ def build_manifest(
             "type": "lbs",
             "expression": {"system": "flame-pca", "basis": None},
         },
-        "widget": {"config": "states.json" if has_states else "states.json"},
+        "widget": {"config": "states.json"},
     }
     if has_skeleton:
         manifest["animation"]["skeleton"] = {"file": "bone_tree.json", "rig": "flame"}
@@ -136,8 +141,8 @@ def build_manifest(
     return manifest
 
 
-def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compress: bool = False) -> str:
-    """Returns a short status string for logging."""
+def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, *, compress: bool = False) -> str:
+    """Re-bundle one .splattie with a current manifest; return a status string."""
     stem = splattie_path.stem
     note = ""
 
@@ -159,7 +164,6 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compres
 
         has_skeleton = "bone_tree.json" in names
         has_weights = "lbs_weight_20k.json" in names
-        has_states = "states.json" in names
 
         payload: dict[str, bytes] = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
 
@@ -182,11 +186,10 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compres
         splat_entry=splat_entry,
         splat_format=splat_format,
         num_gaussians=num_gaussians,
-        has_skeleton=has_skeleton,
-        has_weights=has_weights,
-        has_states=has_states,
         thumb_path=thumb_path,
         widget_version=widget_version,
+        has_skeleton=has_skeleton,
+        has_weights=has_weights,
     )
 
     tmp_path = splattie_path.with_suffix(splattie_path.suffix + ".tmp")
@@ -200,7 +203,7 @@ def rebundle(splattie_path: Path, thumbs_dir: Path, widget_version: str, compres
     return f"rebundled (v{widget_version}, {num_gaussians} gaussians, format={splat_format}{note})"
 
 
-def main(splatties_dir: Path, thumbs_dir: Path, compress: bool = False) -> None:
+def main(splatties_dir: Path, thumbs_dir: Path, *, compress: bool = False) -> None:
     """Add manifest.json to every .splattie in a directory (rewrites in place).
 
     Args:
@@ -212,9 +215,11 @@ def main(splatties_dir: Path, thumbs_dir: Path, compress: bool = False) -> None:
     splatties_dir = splatties_dir.resolve()
     thumbs_dir = thumbs_dir.resolve()
     if not splatties_dir.is_dir():
-        raise SystemExit(f"Not a directory: {splatties_dir}")
+        msg = f"Not a directory: {splatties_dir}"
+        raise SystemExit(msg)
     if not thumbs_dir.is_dir():
-        raise SystemExit(f"Not a directory: {thumbs_dir}")
+        msg = f"Not a directory: {thumbs_dir}"
+        raise SystemExit(msg)
 
     widget_version = read_widget_version()
     logger.info(f"Widget version: {widget_version}")

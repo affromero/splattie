@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shrink a FLAME expression-basis .bin from float32 (EXPR) to float16 (EXPH).
+r"""Shrink a FLAME expression-basis .bin from float32 (EXPR) to float16 (EXPH).
 
 Halves the download (~12 MB -> ~6 MB) with no change to vertex/expression counts.
 Runs anywhere (no GPU). The widget loader decodes the halves back to float32 at

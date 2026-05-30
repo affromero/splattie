@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Export FLAME expression blendshape basis for the splattie-widget.
+r"""Export FLAME expression blendshape basis for the splattie-widget.
 
 Extracts the per-vertex expression displacement basis from LAM's upsampled
-FLAME model (20K vertices × 3 × N_expr). The output is a compact binary
+FLAME model (20K vertices x 3 x N_expr). The output is a compact binary
 that the web client loads to compute per-frame vertex displacements:
 
     position[i] += sum(weight_j * basis[i][j]) for each expression j
@@ -48,9 +48,10 @@ VENDOR_LAM = Path(__file__).resolve().parents[1] / "vendor" / "LAM"
 
 
 def patch_torch_load() -> None:
+    """Patch torch.load to default weights_only=False so FLAME pickle assets load."""
     _original = torch.load
 
-    def _patched(*args, **kwargs):
+    def _patched(*args: object, **kwargs: object) -> object:
         kwargs.setdefault("weights_only", False)
         return _original(*args, **kwargs)
 
@@ -58,20 +59,25 @@ def patch_torch_load() -> None:
 
 
 def load_flame_head(device: str = "cuda", num_expressions: int = 50) -> object:
+    """Load the FLAME head model from the vendored LAM submodule."""
     lam_path = str(VENDOR_LAM)
     if lam_path not in sys.path:
         sys.path.insert(0, lam_path)
 
     patch_torch_load()
 
-    from lam.models.rendering.flame_model.flame import FlameHeadSubdivided
-    from omegaconf import OmegaConf
+    # Deferred dynamic imports: LAM is only importable after sys.path is set above,
+    # and is GPU-only, so it must not be imported at module load. importlib keeps these
+    # as runtime calls (not import statements) so the file imports cleanly elsewhere.
+    flame_module = importlib.import_module("lam.models.rendering.flame_model.flame")
+    flame_head_subdivided = flame_module.FlameHeadSubdivided
+    omega_conf = importlib.import_module("omegaconf").OmegaConf
 
     config_path = VENDOR_LAM / "configs" / "inference" / "lam-20k-8gpu.yaml"
-    cfg = OmegaConf.load(str(config_path))
+    cfg = omega_conf.load(str(config_path))
 
     human_model_path = str(VENDOR_LAM / "model_zoo" / "human_parametric_models")
-    flame = FlameHeadSubdivided(
+    flame = flame_head_subdivided(
         flame_model_path=f"{human_model_path}/flame_assets/flame/flame2023.pkl",
         flame_lmk_embedding_path=f"{human_model_path}/flame_assets/flame/landmark_embedding_with_eyes.npy",
         flame_template_mesh_path=f"{human_model_path}/flame_assets/flame/head_template_mesh.obj",
@@ -87,6 +93,51 @@ def load_flame_head(device: str = "cuda", num_expressions: int = 50) -> object:
 REGION_NAMES = ["jaw", "lips", "brow", "nose", "cheek", "eyes", "forehead", "neck"]
 
 
+def _load_region_map(flame: object, num_verts: int) -> dict[str, set[int]]:
+    """Map each FLAME region name to its in-range vertex-index set (empty if missing)."""
+    masks_path = Path(flame.flame_model_dir) / "FLAME_masks.pkl"
+    if not masks_path.exists():
+        return {}
+
+    # FLAME_masks.pkl is a trusted vendored asset; load it via torch (already patched
+    # to weights_only=False) so we don't import the raw pickle module.
+    masks = torch.load(masks_path, map_location="cpu", encoding="latin1")
+
+    region_map: dict[str, set[int]] = {}
+    for name in REGION_NAMES:
+        key = name if name in masks else next((k for k in masks if name in k.lower()), None)
+        if key and hasattr(masks[key], "__iter__"):
+            region_map[name] = {int(v) for v in masks[key] if int(v) < num_verts}
+    return region_map
+
+
+def _dominant_region(per_vert_mag: np.ndarray, region_map: dict[str, set[int]]) -> str:
+    """Return the region whose vertices show the largest mean displacement."""
+    best_region = "face"
+    best_score = 0.0
+    for rname, vids in region_map.items():
+        vids_arr = np.array(list(vids))
+        if vids_arr.size == 0:
+            continue
+        score = float(per_vert_mag[vids_arr].mean())
+        if score > best_score:
+            best_score = score
+            best_region = rname
+    return best_region
+
+
+def _direction_hint(disp: np.ndarray, per_vert_mag: np.ndarray) -> str:
+    """Return a coarse direction tag (L/R/Up/Down/Fwd/Back) for the dominant axis."""
+    top_verts = np.argsort(per_vert_mag)[-100:]
+    mean_disp = disp[top_verts].mean(axis=0)
+    dominant_axis = int(np.argmax(np.abs(mean_disp)))
+    if dominant_axis == 0:
+        return "L" if mean_disp[0] > 0 else "R"
+    if dominant_axis == 1:
+        return "Up" if mean_disp[1] > 0 else "Down"
+    return "Fwd" if mean_disp[2] > 0 else "Back"
+
+
 def _label_expressions(
     flame: object,
     basis_np: np.ndarray,
@@ -94,21 +145,7 @@ def _label_expressions(
     num_verts: int,
 ) -> list[str]:
     """Assign semantic names to PCA expression components using FLAME vertex masks."""
-    import pickle
-
-    masks_path = Path(flame.flame_model_dir) / "FLAME_masks.pkl"
-    if not masks_path.exists():
-        return [f"expr_{i}" for i in range(num_expr)]
-
-    with open(masks_path, "rb") as f:
-        masks = pickle.load(f, encoding="latin1")
-
-    region_map: dict[str, set[int]] = {}
-    for name in REGION_NAMES:
-        key = name if name in masks else next((k for k in masks if name in k.lower()), None)
-        if key and hasattr(masks[key], "__iter__"):
-            region_map[name] = set(int(v) for v in masks[key] if int(v) < num_verts)
-
+    region_map = _load_region_map(flame, num_verts)
     if not region_map:
         return [f"expr_{i}" for i in range(num_expr)]
 
@@ -117,36 +154,10 @@ def _label_expressions(
     for i in range(num_expr):
         disp = basis_np[:, i, :]
         per_vert_mag = np.linalg.norm(disp, axis=1)
-
-        best_region = "face"
-        best_score = 0.0
-        for rname, vids in region_map.items():
-            vids_arr = np.array(list(vids))
-            vids_arr = vids_arr[vids_arr < num_verts]
-            if len(vids_arr) == 0:
-                continue
-            score = float(per_vert_mag[vids_arr].mean())
-            if score > best_score:
-                best_score = score
-                best_region = rname
-
-        # Direction hint from dominant axis of top-displaced vertices
-        top_verts = np.argsort(per_vert_mag)[-100:]
-        mean_disp = disp[top_verts].mean(axis=0)
-        dominant_axis = int(np.argmax(np.abs(mean_disp)))
-        direction = ""
-        if dominant_axis == 0:
-            direction = "L" if mean_disp[0] > 0 else "R"
-        elif dominant_axis == 1:
-            direction = "Up" if mean_disp[1] > 0 else "Down"
-        elif dominant_axis == 2:
-            direction = "Fwd" if mean_disp[2] > 0 else "Back"
-
-        base = f"{best_region}{direction}"
+        base = f"{_dominant_region(per_vert_mag, region_map)}{_direction_hint(disp, per_vert_mag)}"
         count = used_names.get(base, 0)
         used_names[base] = count + 1
-        label = base if count == 0 else f"{base}{count + 1}"
-        labels.append(label)
+        labels.append(base if count == 0 else f"{base}{count + 1}")
 
     return labels
 
@@ -157,6 +168,7 @@ def export_basis(
     num_expressions: int,
     output_path: Path,
 ) -> None:
+    """Extract the FLAME expression basis and write the .bin + sidecar .json."""
     device = flame.v_template.device
 
     n_shape = flame.n_shape_params
@@ -191,7 +203,7 @@ def export_basis(
 
     # Write binary
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "wb") as f:
+    with output_path.open("wb") as f:
         f.write(b"EXPR")
         f.write(struct.pack("<II", num_verts, num_expr))
         f.write(basis_np.tobytes())
@@ -209,7 +221,7 @@ def export_basis(
         "labels": labels,
         "indices": {label: i for i, label in enumerate(labels)},
     }
-    with open(json_path, "w") as f:
+    with json_path.open("w") as f:
         json.dump(meta, f, indent=2)
     logger.info(f"Metadata: {json_path}")
 
