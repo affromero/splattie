@@ -16,7 +16,7 @@ interface Demo {
 // Demos live in category subfolders: /demos/{heads,bodies}/<id>.{jpg,splattie}.
 // ASSET_VERSION cache-busts the .splattie when its contents change (the browser
 // otherwise serves the cached copy, surviving a hard-refresh). Bump on demo changes.
-const ASSET_VERSION = '3';
+const ASSET_VERSION = '4';
 const folder = (c: Category): string => (c === 'head' ? 'heads' : 'bodies');
 const demoThumb = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.jpg`;
 const demoSrc = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.splattie?v=${ASSET_VERSION}`;
@@ -109,9 +109,10 @@ function Carousel({
               onClick={() => onSelect(demo)}
               aria-label={`Bring this AI-generated ${demo.category} to life`}
             >
-              {/* Plain img (not next/image): the loop duplicates nodes + lazy-loads. */}
+              {/* Plain img (not next/image): the loop duplicates nodes. Eager-load —
+                  lazy-loading flickers as thumbnails scroll in/out of the strip. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={demoThumb(demo)} alt={`AI-generated ${demo.category}`} className={styles.carouselImg} loading="lazy" />
+              <img src={demoThumb(demo)} alt={demo.category} className={styles.carouselImg} draggable={false} />
             </button>
           </div>
         ))}
@@ -177,8 +178,6 @@ export default function Home() {
         <div className={styles.categoryLabel}>Bodies<span className={styles.categoryHint}>head &amp; torso turn toward you</span></div>
         <Carousel category="body" demos={BODIES} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
 
-        <p className={styles.embedNote}>Every demo avatar is AI-generated from a synthetic image — not a real person.</p>
-
         {activeDemo && (
           <div className={styles.editorSection} ref={editorRef}>
             <div className={styles.editorHeader}>
@@ -195,7 +194,7 @@ export default function Home() {
               key={activeDemo.id}
               src={`/editor.html?src=${encodeURIComponent(demoSrc(activeDemo))}`}
               className={styles.editorFrame}
-              title={`Editor for an AI-generated ${activeDemo.category}`}
+              title={`${activeDemo.category} editor`}
             />
           </div>
         )}
