@@ -7,15 +7,16 @@ import io
 import json
 import tempfile
 import zipfile
+from collections.abc import Mapping, MutableMapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
 from klogr import get_logger
 
 from splattie.compression.compressed_ply import compress_ply
 from splattie.methods.bundle_common import read_widget_version
+from splattie.types import AssetType
 
 logger = get_logger()
 
@@ -62,36 +63,43 @@ def find_thumb(thumbs_dir: Path, stem: str) -> Path | None:
     return None
 
 
-def _animation_manifest(names: set[str], asset_type: str) -> dict:
-    if asset_type == "body":
-        animation: dict = {"type": "lbs", "expression": None}
+def _animation_manifest(names: set[str], asset_type: AssetType) -> Mapping[str, object]:
+    if asset_type is AssetType.body:
+        animation: MutableMapping[str, object] = {"type": "lbs", "expression": None}
         if "skeleton.json" in names:
             animation["skeleton"] = {"file": "skeleton.json", "rig": "smplx"}
         if "lbs_weights.json" in names:
             animation["weights"] = {"file": "lbs_weights.json"}
         return animation
 
-    animation = {"type": "lbs", "expression": {"system": "flame-pca", "basis": None}}
-    if "bone_tree.json" in names:
-        animation["skeleton"] = {"file": "bone_tree.json", "rig": "flame"}
-    if "lbs_weight_20k.json" in names:
-        animation["weights"] = {"file": "lbs_weight_20k.json"}
+    if asset_type is AssetType.object:
+        animation = {"type": "lbs", "expression": None}
+        if "skeleton.json" in names:
+            animation["skeleton"] = {"file": "skeleton.json", "rig": "puppeteer-object"}
+        if "lbs_weights.bin" in names:
+            animation["weights"] = {"file": "lbs_weights.bin", "format": "lbsw-v1"}
+    else:
+        animation = {"type": "lbs", "expression": {"system": "flame-pca", "basis": None}}
+        if "bone_tree.json" in names:
+            animation["skeleton"] = {"file": "bone_tree.json", "rig": "flame"}
+        if "lbs_weight_20k.json" in names:
+            animation["weights"] = {"file": "lbs_weight_20k.json"}
     return animation
 
 
-def _topology(asset_type: str) -> str:
-    if asset_type == "body":
+def _topology(asset_type: AssetType) -> str:
+    if asset_type is AssetType.body:
         return "smplx-voxel"
-    if asset_type == "object":
+    if asset_type is AssetType.object:
         return "object-auto"
     return "flame-20k"
 
 
-def _generator_method(asset_type: str) -> str:
-    if asset_type == "body":
+def _generator_method(asset_type: AssetType) -> str:
+    if asset_type is AssetType.body:
         return "lhm"
-    if asset_type == "object":
-        return "object"
+    if asset_type is AssetType.object:
+        return "trellis-puppeteer"
     return "lam"
 
 
@@ -103,17 +111,17 @@ def build_legacy_manifest(
     num_gaussians: int,
     thumb_path: Path | None,
     widget_version: str,
-    asset_type: str,
+    asset_type: AssetType,
     names: set[str],
-) -> dict:
-    """Build the .splattie manifest dict for one legacy bundle."""
-    manifest: dict = {
+) -> MutableMapping[str, object]:
+    """Build the .splattie manifest payload for one legacy bundle."""
+    manifest: MutableMapping[str, object] = {
         "format": "splattie",
         "formatVersion": widget_version,
-        "assetType": asset_type,
+        "assetType": asset_type.value,
         "generator": {
             "method": _generator_method(asset_type),
-            "methodVersion": "20k-siggraph2025" if asset_type == "head" else None,
+            "methodVersion": "20k-siggraph2025" if asset_type is AssetType.head else None,
             "tool": "splattie add-manifest",
             "createdAt": datetime.now(timezone.utc).isoformat(),
         },
@@ -131,7 +139,7 @@ def build_legacy_manifest(
     if manifest["generator"]["methodVersion"] is None:
         del manifest["generator"]["methodVersion"]
 
-    metadata: dict = {}
+    metadata: MutableMapping[str, object] = {}
     if thumb_path is not None:
         source_hash = hashlib.sha256(thumb_path.read_bytes()).hexdigest()
         metadata["sourceImageHash"] = f"sha256:{source_hash}"
@@ -149,7 +157,7 @@ def rebundle(
     splattie_path: Path,
     thumbs_dir: Path,
     widget_version: str,
-    asset_type: str,
+    asset_type: AssetType,
     *,
     compress: bool = False,
 ) -> str:
@@ -167,10 +175,10 @@ def rebundle(
         already_current = (
             existing is not None
             and existing.get("formatVersion") == widget_version
-            and existing.get("assetType") == asset_type
+            and existing.get("assetType") == asset_type.value
         )
         if already_current and not (compress and not already_compressed):
-            return f"skip (already v{widget_version}, {asset_type})"
+            return f"skip (already v{widget_version}, {asset_type.value})"
         payload = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
 
     if compress and not already_compressed:
@@ -207,7 +215,7 @@ def rebundle(
 def add_manifest(
     splatties_dir: Path,
     thumbs_dir: Path,
-    asset_type: Literal["head", "body", "object"] = "head",
+    asset_type: AssetType = AssetType.head,
     *,
     compress: bool = False,
 ) -> None:
@@ -275,8 +283,7 @@ def shrink_expression_basis(basis_path: Path, output: Path | None = None) -> Non
 
     before, after = len(data), out.stat().st_size
     logger.info(
-        f"{out.name}: {before // 1024} KB (f32) -> {after // 1024} KB (f16), "
-        f"{num_verts} verts x {num_expr} expr"
+        f"{out.name}: {before // 1024} KB (f32) -> {after // 1024} KB (f16), {num_verts} verts x {num_expr} expr"
     )
 
     json_path = basis_path.with_suffix(".json")

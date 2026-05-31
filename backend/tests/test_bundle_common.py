@@ -48,7 +48,7 @@ def test_build_manifest_head_shape() -> None:
         splat_filename="x.ply",
         num_gaussians=3,
         widget_version="9.9.9",
-        asset_type=AssetType.HEAD,
+        asset_type=AssetType.head,
         rig=HEAD_RIG,
         generator_tool="test",
     )
@@ -72,11 +72,11 @@ def test_head_bundle_is_widget_loadable(fake_ply: Path, tmp_path: Path) -> None:
         splat_filename="head.ply",
         num_gaussians=count_ply_vertices(fake_ply),
         widget_version=read_widget_version(),
-        asset_type=AssetType.HEAD,
+        asset_type=AssetType.head,
         rig=HEAD_RIG,
         generator_tool="test",
     )
-    bundle_splattie(output_path=out, splat_path=fake_ply, manifest=manifest, states=DEFAULT_STATES_HEAD)
+    bundle_splattie(output_path=out, splat_path=fake_ply, manifest=manifest, states=DEFAULT_STATES_HEAD.jsonable())
 
     with zipfile.ZipFile(out) as zf:
         names = set(zf.namelist())
@@ -99,7 +99,7 @@ def test_bundle_errors_on_missing_rig_file(fake_ply: Path, tmp_path: Path) -> No
         splat_filename="x.ply",
         num_gaussians=3,
         widget_version="9.9.9",
-        asset_type=AssetType.HEAD,
+        asset_type=AssetType.head,
         rig=HEAD_RIG,
         generator_tool="test",
     )

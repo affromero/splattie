@@ -76,6 +76,7 @@ docker compose -f docker-compose.prod.yml up -d
 7. **Port 4001** — frontend dev and production
 8. **Port 8000** — backend API
 9. **Renderer patches** — setExpression + readPixels injected via `scripts/build-renderer.sh`
+10. **Python schemas** — first-party Python must not use `dict` typing; use Pydantic dataclasses/models for known payloads and precise non-dict types elsewhere. `Mapping`/`MutableMapping` are only acceptable for open-ended JSON or infrastructure plumbing. Stdlib `@dataclass` is forbidden.
 
 ## Design System
 

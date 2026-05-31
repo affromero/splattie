@@ -33,7 +33,7 @@ async def generate(request: Request) -> StreamingResponse:
     body = await request.json()
     image_url: str = body["image_url"]
     mask_url: str = body["mask_url"]
-    asset_type = AssetType(body.get("assetType", AssetType.HEAD.value))
+    asset_type = AssetType(body.get("assetType", AssetType.head.value))
 
     return StreamingResponse(
         _generation_stream(image_url, mask_url, asset_type),
@@ -44,7 +44,7 @@ async def generate(request: Request) -> StreamingResponse:
 @router.post("/generate-from-upload")
 async def generate_from_upload(
     image: UploadFile,
-    asset_type: AssetTypeQuery = AssetType.HEAD,
+    asset_type: AssetTypeQuery = AssetType.head,
 ) -> JSONResponse:
     """Generate a 3DGS asset directly from an uploaded image. Returns JSON.
 
@@ -101,7 +101,7 @@ async def _generation_stream(
     )
 
 
-def _sse(event: str, data: dict) -> str:
+def _sse(event: str, data: object) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 

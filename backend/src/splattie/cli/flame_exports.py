@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import importlib
+import importlib.machinery
+import importlib.util
 import json
 import struct
 import sys
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
 import torch
+from beartype import beartype
+from jaxtyping import Float, Int, jaxtyped
 from klogr import get_logger
 
 logger = get_logger()
@@ -72,6 +77,10 @@ ARKIT_52_NAMES = [
     "tongueOut",
 ]
 REGION_NAMES = ["jaw", "lips", "brow", "nose", "cheek", "eyes", "forehead", "neck"]
+FloatBasis = Float[npt.NDArray[np.float32], "vertices expressions xyz"]
+FloatDisplacements = Float[npt.NDArray[np.float32], "vertices xyz"]
+FloatVector = Float[npt.NDArray[np.float32], "vertices"]
+IntVector = Int[npt.NDArray[np.integer], "vertices"]
 
 
 def patch_torch_load() -> None:
@@ -86,9 +95,14 @@ def patch_torch_load() -> None:
 
 
 def _ensure_lam_importable() -> None:
-    lam_path = str(VENDOR_LAM)
-    if lam_path not in sys.path:
-        sys.path.insert(0, lam_path)
+    if "lam" not in sys.modules:
+        spec = importlib.machinery.PathFinder.find_spec("lam", [str(VENDOR_LAM)])
+        if spec is None or spec.loader is None:
+            msg = f"Cannot import vendored LAM package from {VENDOR_LAM}"
+            raise ImportError(msg)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["lam"] = module
+        spec.loader.exec_module(module)
     patch_torch_load()
     from splattie.methods.lam.method import _patch_chumpy_compat
 
@@ -142,12 +156,12 @@ def load_flame_arkit(device: str, arkit_bs_path: Path) -> object:
     return flame
 
 
-def _load_region_map(flame: object, num_verts: int) -> dict[str, set[int]]:
+def _load_region_map(flame: object, num_verts: int) -> Mapping[str, set[int]]:
     masks_path = Path(flame.flame_model_dir) / "FLAME_masks.pkl"
     if not masks_path.exists():
         return {}
     masks = torch.load(masks_path, map_location="cpu", encoding="latin1")
-    region_map: dict[str, set[int]] = {}
+    region_map: MutableMapping[str, set[int]] = {}
     for name in REGION_NAMES:
         key = name if name in masks else next((k for k in masks if name in k.lower()), None)
         if key and hasattr(masks[key], "__iter__"):
@@ -155,7 +169,8 @@ def _load_region_map(flame: object, num_verts: int) -> dict[str, set[int]]:
     return region_map
 
 
-def _dominant_region(per_vert_mag: npt.NDArray[np.float32], region_map: dict[str, set[int]]) -> str:
+@jaxtyped(typechecker=beartype)
+def _dominant_region(per_vert_mag: FloatVector, region_map: Mapping[str, set[int]]) -> str:
     best_region = "face"
     best_score = 0.0
     for rname, vids in region_map.items():
@@ -169,7 +184,8 @@ def _dominant_region(per_vert_mag: npt.NDArray[np.float32], region_map: dict[str
     return best_region
 
 
-def _direction_hint(disp: npt.NDArray[np.float32], per_vert_mag: npt.NDArray[np.float32]) -> str:
+@jaxtyped(typechecker=beartype)
+def _direction_hint(disp: FloatDisplacements, per_vert_mag: FloatVector) -> str:
     top_verts = np.argsort(per_vert_mag)[-100:]
     mean_disp = disp[top_verts].mean(axis=0)
     dominant_axis = int(np.argmax(np.abs(mean_disp)))
@@ -180,9 +196,10 @@ def _direction_hint(disp: npt.NDArray[np.float32], per_vert_mag: npt.NDArray[np.
     return "Fwd" if mean_disp[2] > 0 else "Back"
 
 
+@jaxtyped(typechecker=beartype)
 def _label_expressions(
     flame: object,
-    basis_np: npt.NDArray[np.float32],
+    basis_np: FloatBasis,
     num_expr: int,
     num_verts: int,
 ) -> list[str]:
@@ -191,7 +208,7 @@ def _label_expressions(
         return [f"expr_{i}" for i in range(num_expr)]
 
     labels: list[str] = []
-    used_names: dict[str, int] = {}
+    used_names: MutableMapping[str, int] = {}
     for i in range(num_expr):
         disp = basis_np[:, i, :]
         per_vert_mag = np.linalg.norm(disp, axis=1)
@@ -202,7 +219,8 @@ def _label_expressions(
     return labels
 
 
-def _write_basis(output_path: Path, basis_np: npt.NDArray[np.float32], labels: list[str], system: str) -> None:
+@jaxtyped(typechecker=beartype)
+def _write_basis(output_path: Path, basis_np: FloatBasis, labels: list[str], system: str) -> None:
     num_verts, num_expr, _ = basis_np.shape
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as f:
@@ -269,11 +287,12 @@ def export_expression_basis(
     _write_basis(output, basis_np, labels, "flame-pca")
 
 
-def _verify_arkit_order(basis_np: npt.NDArray[np.float32], masks_path: Path) -> None:
+@jaxtyped(typechecker=beartype)
+def _verify_arkit_order(basis_np: FloatBasis, masks_path: Path) -> None:
     if not masks_path.exists():
         return
     masks = torch.load(masks_path, map_location="cpu", encoding="latin1")
-    region_map: dict[str, npt.NDArray[np.int64]] = {}
+    region_map: MutableMapping[str, IntVector] = {}
     num_verts = basis_np.shape[0]
     for name in REGION_NAMES:
         key = name if name in masks else next((k for k in masks if name in k.lower()), None)

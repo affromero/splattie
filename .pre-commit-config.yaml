@@ -100,17 +100,25 @@ repos:
             types: [python]
             files: ^backend/.*\.py$
 
+          - id: check-forbidden-python-typing
+            name: check-forbidden-python-typing
+            description: Bans dict-typed APIs and stdlib dataclasses; use Pydantic dataclasses/models instead.
+            entry: scripts/hooks/check_forbidden_python_typing.sh
+            language: system
+            types: [python]
+            files: ^backend/.*\.py$
+
           - id: check-sys-path-manipulation
             name: check-sys-path-manipulation
             description: >-
                 Bans sys.path.insert/append/= in first-party code. Excludes the
                 files that must inject a vendored submodule (not uv workspace members):
-                lam/method.py, lhm/runtime.py, and the basis export scripts.
+                lam/method.py and lhm/runtime.py.
             entry: scripts/hooks/check_sys_path_manipulation.sh
             language: system
             types: [python]
             files: ^backend/.*\.py$
-            exclude: ^backend/(src/splattie/methods/(lam/method|lhm/runtime)\.py|scripts/export_(expression_basis|arkit_basis)\.py)$
+            exclude: ^backend/src/splattie/methods/(lam/method|lhm/runtime)\.py$
 
           - id: check-array-annotations
             name: check-array-annotations

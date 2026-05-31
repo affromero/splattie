@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -10,6 +11,10 @@ import pytest
 from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
 from splattie.methods.lhm.method import LHMMethod
+from splattie.methods.object.bundle import RigSkeleton, SparseLbsWeights
+from splattie.methods.object.method import ObjectRigMethod
+from splattie.methods.object.puppeteer import PuppeteerRiggingOutput
+from splattie.methods.object.reconstruct import ObjectReconstruction
 from splattie.methods.registry import registry
 from splattie.types import AssetType
 from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
@@ -34,7 +39,7 @@ def test_lam_info() -> None:
 
 
 def test_lam_is_a_head_method() -> None:
-    assert LAMMethod().info.asset_type is AssetType.HEAD
+    assert LAMMethod().info.asset_type is AssetType.head
     assert LAMMethod().info.asset_type == "head"
 
 
@@ -101,10 +106,9 @@ def test_registry_default() -> None:
 
 def test_registry_for_asset_type() -> None:
     """Endpoints select by category; the registry resolves the method behind it."""
-    assert registry.for_asset_type(AssetType.HEAD).info.id == "lam"
-    assert registry.for_asset_type(AssetType.BODY).info.id == "lhm"
-    with pytest.raises(KeyError):
-        registry.for_asset_type(AssetType.OBJECT)
+    assert registry.for_asset_type(AssetType.head).info.id == "lam"
+    assert registry.for_asset_type(AssetType.body).info.id == "lhm"
+    assert registry.for_asset_type(AssetType.object).info.id == "trellis-puppeteer"
 
 
 def test_lhm_implements_protocol() -> None:
@@ -112,7 +116,7 @@ def test_lhm_implements_protocol() -> None:
 
 
 def test_lhm_is_a_body_method() -> None:
-    assert LHMMethod().info.asset_type is AssetType.BODY
+    assert LHMMethod().info.asset_type is AssetType.body
     assert LHMMethod().info.asset_type == "body"
 
 
@@ -159,3 +163,146 @@ def test_lhm_generate_produces_body() -> None:
     assert result.splattie_url.endswith(".splattie")
 
     method.unload()
+
+
+def test_object_implements_protocol() -> None:
+    assert isinstance(ObjectRigMethod(), AssetGenerationMethod)
+
+
+def test_object_is_an_object_method() -> None:
+    assert ObjectRigMethod().info.asset_type is AssetType.object
+    assert ObjectRigMethod().info.asset_type == "object"
+
+
+def test_object_registered() -> None:
+    assert registry.get("trellis-puppeteer").info.id == "trellis-puppeteer"
+    assert registry.get("trellis-puppeteer").info.asset_type == "object"
+
+
+def test_object_generate_propagates_runtime_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No silent fallback: object generation raises if vendor runtime is incomplete."""
+    import splattie.methods.object.runtime as object_runtime
+
+    def _boom() -> object:
+        msg = "simulated object-runtime failure"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(object_runtime, "require_object_runtime", _boom)
+    method = ObjectRigMethod()
+    image = np.zeros((256, 256, 3), dtype=np.uint8)
+    mask = np.ones((256, 256), dtype=np.bool_)
+    with pytest.raises(Exception):  # noqa: B017, PT011 - any failure is fine; no silent fallback
+        method.generate(image, mask)
+
+
+def test_object_generate_binds_against_puppeteer_input_mesh(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Puppeteer skins its prepared input mesh, so binding must use that same mesh."""
+    import splattie.methods.object.method as object_method
+
+    model_id = "objecttest01"
+    trellis_mesh = tmp_path / "trellis.obj"
+    puppeteer_mesh = tmp_path / "puppeteer.obj"
+    observed_meshes: list[Path] = []
+    skeleton = RigSkeleton(
+        rig="puppeteer-object",
+        joint_count=1,
+        names=["root"],
+        parents=[-1],
+        rest_positions=[(0.0, 0.0, 0.0)],
+    )
+    weights = SparseLbsWeights(
+        num_gaussians=1,
+        joint_count=1,
+        k=1,
+        indices=[0],
+        weights=[1.0],
+    )
+
+    def _fake_reconstruct_object_with_trellis(
+        *,
+        image_path: Path,
+        output_dir: Path,
+        model_id: str,
+    ) -> ObjectReconstruction:
+        assert image_path.exists()
+        assert output_dir.name == "trellis"
+        assert model_id == "objecttest01"
+        return ObjectReconstruction(
+            gaussian_ply=tmp_path / "gaussian.ply",
+            mesh_obj=trellis_mesh,
+            mesh_arrays_npz=tmp_path / "mesh_arrays.npz",
+        )
+
+    def _fake_rig_object_mesh_with_puppeteer(
+        *,
+        mesh_obj: Path,
+        output_dir: Path,
+        model_id: str,
+    ) -> PuppeteerRiggingOutput:
+        assert mesh_obj == trellis_mesh
+        assert output_dir.name == "puppeteer"
+        assert model_id == "objecttest01"
+        return PuppeteerRiggingOutput(
+            input_mesh=puppeteer_mesh,
+            skeleton_txt=tmp_path / "skeleton.txt",
+            skin_txt=tmp_path / "skin.txt",
+            skin_npy=tmp_path / "skin.npy",
+            results_dir=tmp_path / "puppeteer_results",
+            input_vertex_count=3,
+            input_face_count=1,
+        )
+
+    def _fake_bind_rigged_splat(
+        *,
+        gaussian_ply: Path,
+        mesh_obj: Path,
+        rig_skin: Path,
+        output_dir: Path,
+        model_id: str,
+    ) -> object:
+        assert gaussian_ply == tmp_path / "gaussian.ply"
+        assert rig_skin == tmp_path / "skin.txt"
+        assert output_dir.name == "binding"
+        assert model_id == "objecttest01"
+        observed_meshes.append(mesh_obj)
+        return SimpleNamespace(skeleton=skeleton, lbs_weights=weights)
+
+    def _fake_build_object_splattie(
+        *,
+        ply_path: Path,
+        output_dir: Path,
+        model_id: str,
+        skeleton: RigSkeleton,
+        lbs_weights: SparseLbsWeights,
+        source_image_path: Path,
+    ) -> tuple[Path, int]:
+        assert ply_path == tmp_path / "gaussian.ply"
+        assert skeleton.rig == "puppeteer-object"
+        assert lbs_weights.num_gaussians == 1
+        assert source_image_path.exists()
+        bundle = output_dir / f"{model_id}.splattie"
+        bundle.write_bytes(b"bundle")
+        return bundle, 1
+
+    def _fake_load(self: ObjectRigMethod) -> None:
+        assert isinstance(self, ObjectRigMethod)
+
+    monkeypatch.setattr(object_method, "reconstruct_object_with_trellis", _fake_reconstruct_object_with_trellis)
+    monkeypatch.setattr(object_method, "rig_object_mesh_with_puppeteer", _fake_rig_object_mesh_with_puppeteer)
+    monkeypatch.setattr(object_method, "bind_rigged_splat", _fake_bind_rigged_splat)
+    monkeypatch.setattr(object_method, "build_object_splattie", _fake_build_object_splattie)
+    monkeypatch.setattr(object_method, "STORAGE_DIR", tmp_path)
+    monkeypatch.setattr(ObjectRigMethod, "load", _fake_load)
+    monkeypatch.setattr(object_method.uuid, "uuid4", lambda: SimpleNamespace(hex=model_id))
+
+    result = ObjectRigMethod().generate(
+        np.zeros((4, 4, 3), dtype=np.uint8),
+        np.ones((4, 4), dtype=np.bool_),
+    )
+
+    assert observed_meshes == [puppeteer_mesh]
+    assert result.method_id == "trellis-puppeteer"
+    assert result.splattie_url == f"/storage/{model_id}/{model_id}.splattie"

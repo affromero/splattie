@@ -18,8 +18,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Splattie - Editor & widget for interactive 3D avatars',
-  description: 'Open-source, in-browser editor and web component for interactive 3D Gaussian-splat avatars. Tune gaze, pose, and background, then embed with one line of HTML.',
+  title: 'Splattie - Editor & widget for rigged 3D Gaussian assets',
+  description: 'Open-source, in-browser editor and web component for interactive rigged 3D Gaussian assets. Tune gaze, pose, and background, then embed with one line of HTML.',
   metadataBase: new URL(SITE_URL),
   alternates: { canonical: '/' },
   icons: {
@@ -27,16 +27,16 @@ export const metadata: Metadata = {
     apple: '/logo.svg',
   },
   openGraph: {
-    title: 'Splattie - Editor & widget for interactive 3D avatars',
-    description: 'Open-source, in-browser editor and web component for interactive 3D Gaussian-splat avatars. Tune gaze, pose, and background, then embed with one line of HTML.',
+    title: 'Splattie - Editor & widget for rigged 3D Gaussian assets',
+    description: 'Open-source, in-browser editor and web component for interactive rigged 3D Gaussian assets. Tune gaze, pose, and background, then embed with one line of HTML.',
     url: SITE_URL,
     siteName: 'Splattie',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Splattie - Editor & widget for interactive 3D avatars',
-    description: 'In-browser editor and web component for interactive 3D Gaussian-splat avatars. Embed with one line of HTML.',
+    title: 'Splattie - Editor & widget for rigged 3D Gaussian assets',
+    description: 'In-browser editor and web component for interactive rigged 3D Gaussian assets. Embed with one line of HTML.',
   },
   robots: { index: true, follow: true },
   // Set GOOGLE_SITE_VERIFICATION in the web container env to verify Search Console.

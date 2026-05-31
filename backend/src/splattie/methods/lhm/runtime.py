@@ -16,14 +16,15 @@ path (forward -> animation_infer_gs -> save_ply) never rasterizes.
 from __future__ import annotations
 
 import contextlib
-import logging
 import os
 import sys
 import threading
 from collections.abc import Iterator
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+from klogr import get_logger
+
+logger = get_logger()
 
 VENDOR_LHM = Path(__file__).resolve().parents[4] / "vendor" / "LHM"
 # AutoModelQuery resolves this name to the downloaded snapshot (download_weights.sh).
@@ -107,10 +108,10 @@ def load_inferrer():  # noqa: ANN201 - LHM's HumanLRMInferrer is untyped (vendor
         sys.argv = saved_argv
 
     logger.info(
-        "LHM inferrer ready (pose_estimator=%s, facedetect=%s, parsingnet=%s; mask via rembg)",
-        inferrer.pose_estimator is not None,
-        inferrer.facedetect is not None,
-        inferrer.parsingnet is not None,
+        "LHM inferrer ready "
+        f"(pose_estimator={inferrer.pose_estimator is not None}, "
+        f"facedetect={inferrer.facedetect is not None}, "
+        f"parsingnet={inferrer.parsingnet is not None}; mask via rembg)"
     )
     _inferrer = inferrer
     return inferrer

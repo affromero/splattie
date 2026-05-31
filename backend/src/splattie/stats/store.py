@@ -16,8 +16,8 @@ import json
 import os
 import sqlite3
 import time
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
-from typing import Any
 from urllib.parse import urlparse
 
 _BOT_MARKERS = (
@@ -117,7 +117,7 @@ class StatsStore:
         ip: str,
         user_agent: str,
         country: str | None = None,
-        meta: dict[str, Any] | None = None,
+        meta: Mapping[str, object] | None = None,
         ts: int | None = None,
     ) -> None:
         """Persist a single event."""
@@ -142,7 +142,7 @@ class StatsStore:
         finally:
             con.close()
 
-    def stats(self, *, days: int = 30, now_ts: int | None = None) -> dict[str, Any]:
+    def stats(self, *, days: int = 30, now_ts: int | None = None) -> Mapping[str, object]:
         """Return aggregate metrics for the trailing ``days`` window.
 
         Bots are excluded from human-facing counts but reported separately.
@@ -154,7 +154,7 @@ class StatsStore:
         try:
             cur = con.cursor()
 
-            def scalar(query: str, args: tuple[Any, ...]) -> int:
+            def scalar(query: str, args: tuple[object, ...]) -> int:
                 return int(cur.execute(query, args).fetchone()[0])
 
             pageviews = scalar(
@@ -257,9 +257,9 @@ class StatsStore:
             con.close()
 
     @staticmethod
-    def _demo_clicks(cur: sqlite3.Cursor, since: int) -> list[dict[str, Any]]:
+    def _demo_clicks(cur: sqlite3.Cursor, since: int) -> list[Mapping[str, object]]:
         """Count demo-portrait clicks by demo id (parsed from the event meta)."""
-        counts: dict[str, int] = {}
+        counts: MutableMapping[str, int] = {}
         for row in cur.execute(
             "SELECT meta FROM events WHERE type='demo_click' AND device!='bot' AND ts>=?",
             (since,),

@@ -8,10 +8,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-# Force method registration on import (head: LAM, body: LHM)
-import splattie.methods.lam.method
-import splattie.methods.lhm.method  # noqa: F401
 from splattie.api.routes import generate, health, models, segment, stats
+from splattie.methods.lam.method import LAMMethod
+from splattie.methods.lhm.method import LHMMethod
+from splattie.methods.object.method import ObjectRigMethod
+
+# Keep explicit references so method modules are imported and registry decorators run.
+_REGISTERED_METHOD_CLASSES = (LAMMethod, LHMMethod, ObjectRigMethod)
 
 
 def create_app() -> FastAPI:

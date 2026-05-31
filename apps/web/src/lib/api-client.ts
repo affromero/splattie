@@ -27,7 +27,8 @@ export async function generateFromUpload(
   const formData = new FormData();
   formData.append('image', image);
 
-  // Select by category, not method — the backend resolves head→LAM, body→LHM.
+  // Select by category, not method — the backend resolves head/body/object to
+  // the registered generation method.
   const res = await fetch(`${API_URL}/generate-from-upload?assetType=${assetType}`, {
     method: 'POST',
     body: formData,

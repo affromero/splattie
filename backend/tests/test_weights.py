@@ -15,6 +15,15 @@ import pytest
 
 from splattie.methods.lam.method import MODEL_ZOO, VENDOR_LAM
 from splattie.methods.lhm.runtime import VENDOR_LHM
+from splattie.methods.object.runtime import (
+    PUPPETEER_MICHELANGELO,
+    PUPPETEER_PARTFIELD,
+    PUPPETEER_SKELETON_WEIGHTS,
+    PUPPETEER_SKINNING_MICHELANGELO,
+    PUPPETEER_SKINNING_WEIGHTS,
+    VENDOR_PUPPETEER,
+    VENDOR_TRELLIS,
+)
 from splattie.methods.registry import registry
 from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
 
@@ -35,6 +44,14 @@ _PIPELINE_WEIGHTS: list[tuple[str, str, Path, str]] = [
     ("lhm", "checkpoint", _LHM_SNAPSHOTS, "lhm-checkpoint"),
     ("lhm", "human-model-files", VENDOR_LHM / "pretrained_models" / "human_model_files", "dir"),
     ("lhm", "smplx", VENDOR_LHM / "pretrained_models" / "human_model_files" / "smplx", "dir"),
+    ("trellis-puppeteer", "trellis-package", VENDOR_TRELLIS / "trellis", "dir"),
+    ("trellis-puppeteer", "puppeteer-skeleton-code", VENDOR_PUPPETEER / "skeleton" / "demo.py", "file"),
+    ("trellis-puppeteer", "puppeteer-skinning-code", VENDOR_PUPPETEER / "skinning" / "main.py", "file"),
+    ("trellis-puppeteer", "puppeteer-skeleton", PUPPETEER_SKELETON_WEIGHTS, "file"),
+    ("trellis-puppeteer", "puppeteer-skinning", PUPPETEER_SKINNING_WEIGHTS, "file"),
+    ("trellis-puppeteer", "michelangelo-skeleton", PUPPETEER_MICHELANGELO, "file"),
+    ("trellis-puppeteer", "michelangelo-skinning", PUPPETEER_SKINNING_MICHELANGELO, "file"),
+    ("trellis-puppeteer", "partfield", PUPPETEER_PARTFIELD, "file"),
 ]
 
 

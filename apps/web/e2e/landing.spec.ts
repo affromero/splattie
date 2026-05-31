@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * End-to-end on the real landing page (localhost): both per-category carousels
- * render, and clicking a body avatar opens the inline editor that renders the body
+ * End-to-end on the real landing page (localhost): all per-category carousels
+ * render, and clicking a body asset opens the inline editor that renders the body
  * via the Spark WebGL widget inside the iframe.
  */
 test('landing carousels + inline body editor render on localhost', async ({ page }) => {
@@ -11,10 +11,11 @@ test('landing carousels + inline body editor render on localhost', async ({ page
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
 
-  // Both per-category carousels are populated (head + body avatar cards).
+  // All per-category carousels are populated (head + body + object cards).
   await expect(page.locator('button[aria-label*="head" i]').first()).toBeVisible();
   const bodyCard = page.locator('button[aria-label*="body" i]').first();
   await expect(bodyCard).toBeVisible();
+  await expect(page.locator('button[aria-label*="object" i]').first()).toBeVisible();
 
   // Clicking it opens the inline editor pointing at a body bundle.
   await bodyCard.click();
@@ -43,7 +44,7 @@ test('landing carousels + inline body editor render on localhost', async ({ page
     }, { timeout: 5_000, intervals: [100, 200, 300] })
     .toBeGreaterThan(0.2);
 
-  // With an avatar selected (auto-scroll paused), the carousel stays trackpad-
+  // With an asset selected (auto-scroll paused), the carousel stays trackpad-
   // scrollable so you can browse and pick another.
   const carousel = page.locator('[data-category="body"]');
   expect(await carousel.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);

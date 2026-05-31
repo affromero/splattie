@@ -8,3 +8,11 @@
 	path = backend/vendor/LHM
 	url = https://github.com/affromero/LHM.git
 	branch = splattie
+[submodule "backend/vendor/TRELLIS"]
+	path = backend/vendor/TRELLIS
+	url = https://github.com/affromero/TRELLIS.git
+	branch = splattie
+[submodule "backend/vendor/Puppeteer"]
+	path = backend/vendor/Puppeteer
+	url = https://github.com/affromero/Puppeteer.git
+	branch = splattie

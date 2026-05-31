@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 import { SELF_HOST, SITE_URL } from '@/lib/site';
 
 /**
- * Static sitemap. User-generated avatar pages (/view/[id]) are intentionally
+ * Static sitemap. User-generated asset pages (/view/[id]) are intentionally
  * excluded — they are not publicly enumerable and shouldn't be crawled.
  */
 export default function sitemap(): MetadataRoute.Sitemap {

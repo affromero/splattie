@@ -28,9 +28,9 @@ class AssetType(str, Enum):
     and compares equal to that string, while staying a single typed source of truth.
     """
 
-    HEAD = "head"
-    BODY = "body"
-    OBJECT = "object"
+    head = "head"
+    body = "body"
+    object = "object"
 
 
 class SplatFormat(str, Enum):

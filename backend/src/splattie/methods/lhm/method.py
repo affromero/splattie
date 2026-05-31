@@ -11,7 +11,6 @@ LHM bundle adapter (Phase 1.C).
 from __future__ import annotations
 
 import json
-import logging
 import uuid
 from pathlib import Path
 
@@ -19,13 +18,14 @@ import numpy as np
 import numpy.typing as npt
 from beartype import beartype
 from jaxtyping import Bool, UInt8, jaxtyped
+from klogr import get_logger
 
 from splattie.methods.lhm.bundle import build_body_splattie
 from splattie.methods.lhm.runtime import VENDOR_LHM, chdir, inference_lock, load_inferrer
 from splattie.methods.registry import registry
 from splattie.types import AssetType, GenerationResult, MethodCapabilities, MethodInfo
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 STORAGE_DIR = Path("data/generations")
 # 500M model: shape_param_dim=10 (configs/inference/human-lrm-500M.yaml).
@@ -44,7 +44,7 @@ class LHMMethod:
             description="Single image → SMPL-X-anchored 3DGS body with LBS animation",
             paper_url="https://arxiv.org/abs/2503.10625",
             repo_url="https://github.com/aigc3d/LHM",
-            asset_type=AssetType.BODY,
+            asset_type=AssetType.body,
         )
 
     @property
@@ -137,7 +137,7 @@ class LHMMethod:
                 source_image_path=img_path,
             )
 
-        logger.info("LHM body .splattie: %s (%d gaussians)", bundle_path.name, num_gaussians)
+        logger.info(f"LHM body .splattie: {bundle_path.name} ({num_gaussians} gaussians)")
         splattie_url = f"/storage/{model_id}/{bundle_path.name}"
         return GenerationResult(
             model_id=model_id,

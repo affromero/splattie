@@ -5,13 +5,27 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { generateFromUpload } from '@/lib/api-client';
 import { track } from '@/lib/track';
+import type { AssetType } from '@/types/api';
 import styles from './page.module.css';
 
 type Step = 'upload' | 'preview' | 'generate';
 
+const ASSET_OPTIONS: { value: AssetType; label: string; hint: string }[] = [
+  { value: 'head', label: 'Head', hint: 'clear, front-facing portrait' },
+  { value: 'body', label: 'Body', hint: 'full body, head to feet' },
+  { value: 'object', label: 'Object', hint: 'single isolated object' },
+];
+
+const GENERATING_COPY: Record<AssetType, string> = {
+  head: 'Reconstructing head model...',
+  body: 'Reconstructing body model...',
+  object: 'Reconstructing and rigging object...',
+};
+
 export default function CreatePage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('upload');
+  const [assetType, setAssetType] = useState<AssetType>('head');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +55,7 @@ export default function CreatePage() {
     setError(null);
 
     try {
-      const result = await generateFromUpload(imageFile);
+      const result = await generateFromUpload(imageFile, assetType);
       track('avatar_create', '/create', { modelId: result.modelId });
       router.push(`/view/${result.modelId}`);
     } catch (err) {
@@ -55,9 +69,24 @@ export default function CreatePage() {
       <header className={styles.header}>
         <h1 className={styles.title}>Create</h1>
         <p className={styles.subtitle}>
-          Upload a photo with a clear, front-facing head.
+          Upload one image and choose the asset category.
         </p>
       </header>
+
+      <div className={styles.assetTabs} role="tablist" aria-label="Asset type">
+        {ASSET_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={assetType === option.value ? styles.assetTabActive : styles.assetTab}
+            onClick={() => setAssetType(option.value)}
+            aria-pressed={assetType === option.value}
+          >
+            <span>{option.label}</span>
+            <small>{option.hint}</small>
+          </button>
+        ))}
+      </div>
 
       <div className={styles.steps}>
         <span className={step === 'upload' ? styles.stepActive : styles.step}>upload</span>
@@ -102,13 +131,13 @@ export default function CreatePage() {
           />
           <div className={styles.actions}>
             <button className={styles.button} onClick={handleGenerate}>
-              Generate 3D head
+              Generate 3D {assetType}
             </button>
             <button
               className={styles.buttonSecondary}
               onClick={() => { setStep('upload'); setImageFile(null); setImagePreview(null); }}
             >
-              Choose different photo
+              Choose different image
             </button>
           </div>
         </div>
@@ -117,7 +146,7 @@ export default function CreatePage() {
       {step === 'generate' && (
         <div className={styles.generating}>
           <div className={styles.spinner} />
-          <p>Reconstructing head model...</p>
+          <p>{GENERATING_COPY[assetType]}</p>
           <p className={styles.hint}>This takes about 30 seconds on GPU.</p>
         </div>
       )}

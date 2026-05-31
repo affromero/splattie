@@ -6,22 +6,26 @@ import styles from './page.module.css';
 
 const SELF_HOST = process.env.NEXT_PUBLIC_SELF_HOST === 'true';
 
-type Category = 'head' | 'body';
+type Category = 'head' | 'body' | 'object';
 
 interface Demo {
   id: string;
   category: Category;
 }
 
-// Demos live in category subfolders: /demos/{heads,bodies}/<id>.{jpg,splattie}.
+// Demos live in category subfolders: /demos/{heads,bodies,objects}/<id>.{jpg,splattie}.
 // ASSET_VERSION cache-busts the .splattie when its contents change (the browser
 // otherwise serves the cached copy, surviving a hard-refresh). Bump on demo changes.
-const ASSET_VERSION = '6';
-const folder = (c: Category): string => (c === 'head' ? 'heads' : 'bodies');
+const ASSET_VERSION = '8';
+const folder = (c: Category): string => {
+  if (c === 'head') return 'heads';
+  if (c === 'body') return 'bodies';
+  return 'objects';
+};
 const demoThumb = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.jpg`;
 const demoSrc = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.splattie?v=${ASSET_VERSION}`;
 
-// All demo avatars are generated from AI-synthesized images (Gemini 3), not real
+// All demo assets are generated from AI-synthesized images (Gemini 3), not real
 // people, so there are no likenesses or photo credits to attribute.
 const DEMOS: Demo[] = [
   // Heads (LAM)
@@ -42,10 +46,20 @@ const DEMOS: Demo[] = [
   { id: 'b6', category: 'body' },
   { id: 'b7', category: 'body' },
   { id: 'b8', category: 'body' },
+  // Objects (TRELLIS + Puppeteer)
+  { id: 'o1', category: 'object' },
+  { id: 'o2', category: 'object' },
+  { id: 'o3', category: 'object' },
+  { id: 'o4', category: 'object' },
+  { id: 'o5', category: 'object' },
+  { id: 'o6', category: 'object' },
+  { id: 'o7', category: 'object' },
+  { id: 'o8', category: 'object' },
 ];
 
 const HEADS = DEMOS.filter((d) => d.category === 'head');
 const BODIES = DEMOS.filter((d) => d.category === 'body');
+const OBJECTS = DEMOS.filter((d) => d.category === 'object');
 
 function Carousel({
   category,
@@ -66,7 +80,7 @@ function Carousel({
   const hoverRef = useRef(false);
 
   // Native horizontal scroll (trackpad/drag works any time) + JS auto-scroll on top.
-  // Auto-scroll pauses while hovered or while an avatar is selected, so you can
+  // Auto-scroll pauses while hovered or while an asset is selected, so you can
   // browse and click another one.
   useEffect(() => {
     const el = scrollRef.current;
@@ -143,19 +157,19 @@ export default function Home() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Selecting any avatar pauses both carousels so the chosen one stays in view.
+  // Selecting any asset pauses all carousels so the chosen one stays in view.
   const paused = activeDemo !== null;
 
   return (
     <main className={styles.page}>
       <section className={styles.hero}>
         <h1 className={styles.title}>
-          One photo in.<br />
-          <span className={styles.titleAccent}>Interactive 3D avatar out.</span>
+          One image in.<br />
+          <span className={styles.titleAccent}>Rigged 3D splat out.</span>
         </h1>
         <p className={styles.subtitle}>
-          Turn any portrait or full body into a living avatar for your website.
-          It looks at your visitors and reacts to hover. One line of HTML.
+          Turn any portrait, full body, or object image into an interactive 3D Gaussian asset for your website.
+          It follows your visitors and reacts to hover. One line of HTML.
         </p>
         <div className={styles.heroBadges}>
           <a href="https://github.com/affromero/splattie" target="_blank" rel="noopener noreferrer" className={styles.badge}>
@@ -170,13 +184,16 @@ export default function Home() {
 
       <section className={styles.gallerySection}>
         <h2 className={styles.sectionTitle}>Try it</h2>
-        <p className={styles.sectionSubtitle}>Click an avatar to bring it to life. The carousel pauses while you play.</p>
+        <p className={styles.sectionSubtitle}>Click an asset to bring it to life. The carousel pauses while you play.</p>
 
         <div className={styles.categoryLabel}>Heads<span className={styles.categoryHint}>eyes follow your cursor</span></div>
         <Carousel category="head" demos={HEADS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
 
         <div className={styles.categoryLabel}>Bodies<span className={styles.categoryHint}>head &amp; torso turn toward you</span></div>
         <Carousel category="body" demos={BODIES} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
+
+        <div className={styles.categoryLabel}>Objects<span className={styles.categoryHint}>rigged from a single image</span></div>
+        <Carousel category="object" demos={OBJECTS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
 
         {activeDemo && (
           <div className={styles.editorSection} ref={editorRef}>
@@ -206,13 +223,13 @@ export default function Home() {
           <div className={styles.step}>
             <div className={styles.stepNumber}>1</div>
             <h3 className={styles.stepTitle}>Upload</h3>
-            <p className={styles.stepDesc}>A portrait or a full-body photo</p>
+            <p className={styles.stepDesc}>A portrait, full-body photo, or object image</p>
           </div>
           <div className={styles.stepDivider} />
           <div className={styles.step}>
             <div className={styles.stepNumber}>2</div>
             <h3 className={styles.stepTitle}>Generate</h3>
-            <p className={styles.stepDesc}>LAM (heads) or LHM (bodies) reconstructs a 3D Gaussian avatar</p>
+            <p className={styles.stepDesc}>LAM, LHM, or TRELLIS + Puppeteer reconstructs a rigged 3D Gaussian asset</p>
           </div>
           <div className={styles.stepDivider} />
           <div className={styles.step}>
@@ -225,7 +242,7 @@ export default function Home() {
 
       <section className={styles.embedSection}>
         <h2 className={styles.sectionTitle}>Add to your site</h2>
-        <pre className={styles.codeBlock}><code>{`<splattie-widget src="avatar.splattie" />`}</code></pre>
+        <pre className={styles.codeBlock}><code>{`<splattie-widget src="asset.splattie" />`}</code></pre>
         <p className={styles.embedNote}>
           MIT licensed web component. Works in any framework.
         </p>
@@ -234,8 +251,8 @@ export default function Home() {
       {SELF_HOST && (
         <section className={styles.uploadSection}>
           <Link href="/create" className={styles.uploadBoxActive}>
-            <h2 className={styles.uploadTitle}>Upload your own photo</h2>
-            <p className={styles.uploadSubtitleActive}>Generate a 3D avatar on your local GPU</p>
+            <h2 className={styles.uploadTitle}>Upload your own image</h2>
+            <p className={styles.uploadSubtitleActive}>Generate a rigged 3D asset on your local GPU</p>
             <div className={styles.uploadPlaceholderActive}>
               <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                 <path d="M24 8v32M8 24h32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -255,8 +272,10 @@ export default function Home() {
         <p className={styles.footerMuted}>
           Built with <a href="https://github.com/aigc3d/LAM" target="_blank" rel="noopener noreferrer">LAM</a>{' '}
           + <a href="https://github.com/aigc3d/LHM" target="_blank" rel="noopener noreferrer">LHM</a>{' '}
+          + <a href="https://github.com/microsoft/TRELLIS" target="_blank" rel="noopener noreferrer">TRELLIS</a>{' '}
+          + <a href="https://github.com/snap-research/Puppeteer" target="_blank" rel="noopener noreferrer">Puppeteer</a>{' '}
           + <a href="https://sparkjs.dev" target="_blank" rel="noopener noreferrer">Spark</a>{'. '}
-          Demo avatars are AI-generated, not real people.
+          Demo assets are AI-generated, not real people.
         </p>
       </footer>
     </main>

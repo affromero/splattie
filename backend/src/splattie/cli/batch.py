@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
 from klogr import get_logger
@@ -13,6 +12,8 @@ from PIL import Image
 from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
 from splattie.methods.lhm.method import LHMMethod
+from splattie.methods.object.method import ObjectRigMethod
+from splattie.types import AssetType
 
 logger = get_logger()
 
@@ -20,9 +21,11 @@ _STORAGE = Path("data/generations")
 _IMAGE_EXTS = frozenset({".jpg", ".jpeg", ".png"})
 
 
-def _method_for(asset_type: Literal["head", "body"]) -> AssetGenerationMethod:
-    if asset_type == "body":
+def _method_for(asset_type: AssetType) -> AssetGenerationMethod:
+    if asset_type is AssetType.body:
         return LHMMethod()
+    if asset_type is AssetType.object:
+        return ObjectRigMethod()
     return LAMMethod()
 
 
@@ -40,14 +43,14 @@ def _generate_one(method: AssetGenerationMethod, image_path: Path, output_path: 
 def generate_splattie_batch(
     images_dir: Path,
     output_dir: Path,
-    asset_type: Literal["head", "body"] = "head",
+    asset_type: AssetType = AssetType.head,
 ) -> None:
-    """Batch-generate `.splattie` files from a directory of head/body source images.
+    """Batch-generate `.splattie` files from a directory of source images.
 
     Args:
         images_dir: Directory of input images (.jpg/.jpeg/.png).
         output_dir: Directory to write `<image-stem>.splattie` bundles into.
-        asset_type: `head` uses LAM, `body` uses LHM.
+        asset_type: `head` uses LAM, `body` uses LHM, `object` uses TRELLIS + Puppeteer.
 
     """
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -57,7 +60,7 @@ def generate_splattie_batch(
         return
 
     method = _method_for(asset_type)
-    logger.info(f"{asset_type}: loading method for {len(image_files)} images")
+    logger.info(f"{asset_type.value}: loading method for {len(image_files)} images")
     method.load()
     try:
         for index, image_path in enumerate(image_files, 1):

@@ -26,12 +26,16 @@ rig + states.json).
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Self
 
 import numpy as np
 import numpy.typing as npt
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
+from pydantic import ConfigDict, Field, TypeAdapter, model_validator
+from pydantic.dataclasses import dataclass
 
 from splattie.methods.bundle_common import (
     RigSpec,
@@ -104,6 +108,7 @@ JOINTS_NAME: tuple[str, ...] = (
 
 # How many joints each gaussian binds to in the bundle (SMPL-X LBS is sparse).
 _TOP_K = 4
+_PYDANTIC_CONFIG = ConfigDict(extra="forbid", populate_by_name=True)
 
 # Lower-arm region: a gaussian is "forearm/hand" when its nearest joint is the elbow,
 # wrist, or a finger. Only these are re-bound — rigidly, to the elbow (_LOWER_ARM_TARGETS)
@@ -126,40 +131,193 @@ BODY_RIG = RigSpec(
     expression=None,
 )
 
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyCameraConfig:
+    """Widget camera config serialized into body states.json."""
+
+    theta: float
+    phi: float
+    radius: float
+    fov: float
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyGhostConfig:
+    """Subtle idle motion config."""
+
+    amplitude: float
+    frequency: float
+    wobble: float
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyExpressionConfig:
+    """Per-state body expression coefficients."""
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyTrackingConfig:
+    """Body widget pointer tracking gains."""
+
+    head: float
+    torso: float
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyStateDefinition:
+    """One body interaction state."""
+
+    ghost: BodyGhostConfig
+    expression: BodyExpressionConfig
+    camera: BodyCameraConfig
+    rotation: tuple[float, float, float]
+    tracking: BodyTrackingConfig
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyStateSet:
+    """Body widget states."""
+
+    idle: BodyStateDefinition
+    hover: BodyStateDefinition
+    click: BodyStateDefinition
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyTransitionConfig:
+    """Widget transition config."""
+
+    duration: float
+    easing: str
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyTransitions:
+    """Body state transition configs."""
+
+    idle_hover: BodyTransitionConfig
+    hover_idle: BodyTransitionConfig
+    any_click: BodyTransitionConfig
+
+    def jsonable(self) -> Mapping[str, object]:
+        """Return the widget's transition-key shape."""
+        return {
+            "idle->hover": TypeAdapter(BodyTransitionConfig).dump_python(self.idle_hover, mode="json"),
+            "hover->idle": TypeAdapter(BodyTransitionConfig).dump_python(self.hover_idle, mode="json"),
+            "*->click": TypeAdapter(BodyTransitionConfig).dump_python(self.any_click, mode="json"),
+        }
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyWidgetDefaults:
+    """Body widget default config."""
+
+    camera: BodyCameraConfig
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodyWidgetConfig:
+    """Full body states.json payload."""
+
+    defaults: BodyWidgetDefaults
+    states: BodyStateSet
+    transitions: BodyTransitions
+
+    def jsonable(self) -> Mapping[str, object]:
+        """Return the widget states.json shape."""
+        payload = TypeAdapter(BodyWidgetConfig).dump_python(self, mode="json")
+        payload["transitions"] = self.transitions.jsonable()
+        return payload
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodySkeleton:
+    """SMPL-X skeleton schema consumed by the widget."""
+
+    names: list[str]
+    parents: list[int]
+    rest_positions: list[tuple[float, float, float]] = Field(..., alias="restPositions")
+    rig: str = BODY_RIG.rig
+    joint_count: int | None = Field(default=None, alias="jointCount")
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> Self:
+        """Validate skeleton array lengths."""
+        joint_count = self.joint_count or len(self.names)
+        if joint_count != len(self.names):
+            msg = "body skeleton jointCount must match names"
+            raise ValueError(msg)
+        if len(self.parents) != len(self.names) or len(self.rest_positions) != len(self.names):
+            msg = "body skeleton names, parents, and restPositions must match"
+            raise ValueError(msg)
+        self.joint_count = joint_count
+        return self
+
+    def jsonable(self) -> Mapping[str, object]:
+        """Return the skeleton JSON payload."""
+        return TypeAdapter(BodySkeleton).dump_python(self, mode="json", by_alias=True)
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class BodySparseWeights:
+    """Sparse top-K per-gaussian SMPL-X LBS weights."""
+
+    num_gaussians: int = Field(..., alias="numGaussians")
+    joint_count: int = Field(..., alias="jointCount")
+    k: int
+    indices: list[int]
+    weights: list[float]
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> Self:
+        """Validate sparse weight array lengths."""
+        expected = self.num_gaussians * self.k
+        if len(self.indices) != expected or len(self.weights) != expected:
+            msg = f"body weights length must be numGaussians*k ({expected})"
+            raise ValueError(msg)
+        return self
+
+    def jsonable(self) -> Mapping[str, object]:
+        """Return the weights JSON payload."""
+        return TypeAdapter(BodySparseWeights).dump_python(self, mode="json", by_alias=True)
+
+
 # Default widget states for a body. Parallels DEFAULT_STATES_HEAD but tracks
 # head + torso look-at (the chosen body interaction) instead of eyes, and frames
 # the full standing figure. The editor (1.E) tunes camera/pose per body.
-DEFAULT_STATES_BODY: dict = {
-    "defaults": {"camera": {"theta": 0, "phi": 90, "radius": 2.4, "fov": 45}},
-    "states": {
-        "idle": {
-            "ghost": {"amplitude": 0.004, "frequency": 0.3, "wobble": 0.2},
-            "expression": {},
-            "camera": {"theta": 0, "phi": 90, "radius": 2.4, "fov": 45},
-            "rotation": [0, 0, 0],
-            "tracking": {"head": 1.0, "torso": 0.3},
-        },
-        "hover": {
-            "ghost": {"amplitude": 0.006, "frequency": 0.5, "wobble": 0.3},
-            "expression": {},
-            "camera": {"theta": 0, "phi": 90, "radius": 2.2, "fov": 45},
-            "rotation": [0, 0, 0],
-            "tracking": {"head": 1.0, "torso": 0.5},
-        },
-        "click": {
-            "ghost": {"amplitude": 0.002, "frequency": 0.8, "wobble": 0.1},
-            "expression": {},
-            "camera": {"theta": 0, "phi": 88, "radius": 2.0, "fov": 48},
-            "rotation": [0, 0, 0],
-            "tracking": {"head": 0.6, "torso": 0.2},
-        },
-    },
-    "transitions": {
-        "idle->hover": {"duration": 0.3, "easing": "ease-out"},
-        "hover->idle": {"duration": 0.5, "easing": "ease-in"},
-        "*->click": {"duration": 0.1, "easing": "snap"},
-    },
-}
+BODY_CAMERA = BodyCameraConfig(theta=0, phi=90, radius=2.4, fov=45)
+DEFAULT_STATES_BODY = BodyWidgetConfig(
+    defaults=BodyWidgetDefaults(camera=BODY_CAMERA),
+    states=BodyStateSet(
+        idle=BodyStateDefinition(
+            ghost=BodyGhostConfig(amplitude=0.004, frequency=0.3, wobble=0.2),
+            expression=BodyExpressionConfig(),
+            camera=BODY_CAMERA,
+            rotation=(0, 0, 0),
+            tracking=BodyTrackingConfig(head=1.0, torso=0.3),
+        ),
+        hover=BodyStateDefinition(
+            ghost=BodyGhostConfig(amplitude=0.006, frequency=0.5, wobble=0.3),
+            expression=BodyExpressionConfig(),
+            camera=BodyCameraConfig(theta=0, phi=90, radius=2.2, fov=45),
+            rotation=(0, 0, 0),
+            tracking=BodyTrackingConfig(head=1.0, torso=0.5),
+        ),
+        click=BodyStateDefinition(
+            ghost=BodyGhostConfig(amplitude=0.002, frequency=0.8, wobble=0.1),
+            expression=BodyExpressionConfig(),
+            camera=BodyCameraConfig(theta=0, phi=88, radius=2.0, fov=48),
+            rotation=(0, 0, 0),
+            tracking=BodyTrackingConfig(head=0.6, torso=0.2),
+        ),
+    ),
+    transitions=BodyTransitions(
+        idle_hover=BodyTransitionConfig(duration=0.3, easing="ease-out"),
+        hover_idle=BodyTransitionConfig(duration=0.5, easing="ease-in"),
+        any_click=BodyTransitionConfig(duration=0.1, easing="snap"),
+    ),
+)
 
 
 @jaxtyped(typechecker=beartype)
@@ -189,8 +347,8 @@ def extract_body_rig(
     smplx_model: object,
     betas: Float[npt.NDArray[np.float32], "n_betas"],
     posed_joints: Float[npt.NDArray[np.float32], "55 3"] | None = None,
-) -> tuple[dict, dict]:
-    """Extract (skeleton, sparse-weights) dicts from the loaded LHM SMPL-X model.
+) -> tuple[BodySkeleton, BodySparseWeights]:
+    """Extract skeleton and sparse weights from the loaded LHM SMPL-X model.
 
     ``posed_joints`` (from ``infer_mesh``'s ``<stem>_joints.json``) are the joints in
     the baked-pose frame; when given they become the skeleton's rest positions so the
@@ -208,20 +366,20 @@ def extract_body_rig(
     joints = posed_joints if posed_joints is not None else _rest_joints(smplx_model, betas)  # [55, 3]
     parents = _smplx_parents(smplx_model)
 
-    skeleton = {
-        "rig": "smplx",
-        "jointCount": len(JOINTS_NAME),
-        "names": list(JOINTS_NAME),
-        "parents": parents,
-        "restPositions": joints.tolist(),
-    }
-    lbs_weights = {
-        "numGaussians": n_gaussians,
-        "jointCount": len(JOINTS_NAME),
-        "k": _TOP_K,
-        "indices": top.reshape(-1).tolist(),
-        "weights": top_w.reshape(-1).astype(np.float32).round(6).tolist(),
-    }
+    skeleton = BodySkeleton(
+        rig="smplx",
+        joint_count=len(JOINTS_NAME),
+        names=list(JOINTS_NAME),
+        parents=parents,
+        rest_positions=[tuple(float(value) for value in row) for row in joints],
+    )
+    lbs_weights = BodySparseWeights(
+        num_gaussians=n_gaussians,
+        joint_count=len(JOINTS_NAME),
+        k=_TOP_K,
+        indices=top.reshape(-1).astype(int).tolist(),
+        weights=top_w.reshape(-1).astype(np.float32).round(6).astype(float).tolist(),
+    )
     return skeleton, lbs_weights
 
 
@@ -271,8 +429,8 @@ def parse_ply_xyz(data: bytes) -> Float[npt.NDArray[np.float32], "n 3"]:
 @jaxtyped(typechecker=beartype)
 def reweight_lower_arm_rigid(
     positions: Float[npt.NDArray[np.float32], "n 3"],
-    skeleton: dict,
-    lbs_weights: dict,
+    skeleton: BodySkeleton,
+    lbs_weights: BodySparseWeights,
     *,
     sigma: float = 0.10,
 ) -> None:
@@ -286,17 +444,17 @@ def reweight_lower_arm_rigid(
     swing as one rigid piece. Leg/torso gaussians (nearest joint outside the arm) are
     left untouched. Mutates ``lbs_weights`` in place (its ``indices`` / ``weights``).
     """
-    names = skeleton["names"]
-    rest = np.asarray(skeleton["restPositions"], dtype=np.float32)  # [J, 3]
+    names = skeleton.names
+    rest = np.asarray(skeleton.rest_positions, dtype=np.float32)  # [J, 3]
     arm_class = np.array(
         [i for i, n in enumerate(names) if n in _ARM_JOINTS or any(t in n for t in _FINGER_TOKENS)],
         dtype=np.int64,
     )
     targets = np.array(sorted(i for i, n in enumerate(names) if n in _LOWER_ARM_TARGETS), dtype=np.int64)
-    k = int(lbs_weights["k"])
+    k = int(lbs_weights.k)
     n = positions.shape[0]
-    idx = np.asarray(lbs_weights["indices"], dtype=np.int64).reshape(n, k)
-    wt = np.asarray(lbs_weights["weights"], dtype=np.float64).reshape(n, k)
+    idx = np.asarray(lbs_weights.indices, dtype=np.int64).reshape(n, k)
+    wt = np.asarray(lbs_weights.weights, dtype=np.float64).reshape(n, k)
 
     dist2 = ((positions[:, None, :] - rest[None, :, :]) ** 2).sum(-1)  # [N, J]
     is_arm = np.isin(dist2.argmin(axis=1), arm_class)  # nearest joint is arm-region
@@ -315,8 +473,8 @@ def reweight_lower_arm_rigid(
     wt[is_arm, :take] = top[is_arm]
     if take < k:
         wt[is_arm, take:] = 0.0
-    lbs_weights["indices"] = idx.reshape(-1).tolist()
-    lbs_weights["weights"] = np.round(wt, 6).reshape(-1).tolist()
+    lbs_weights.indices = idx.reshape(-1).astype(int).tolist()
+    lbs_weights.weights = np.round(wt, 6).reshape(-1).astype(float).tolist()
 
 
 @jaxtyped(typechecker=beartype)
@@ -345,15 +503,15 @@ def build_body_splattie(
 
     skeleton_path = output_dir / BODY_RIG.skeleton_file
     weights_path = output_dir / BODY_RIG.weights_file
-    skeleton_path.write_text(json.dumps(skeleton))
-    weights_path.write_text(json.dumps(lbs_weights))
+    skeleton_path.write_text(json.dumps(skeleton.jsonable()))
+    weights_path.write_text(json.dumps(lbs_weights.jsonable()))
 
     num_gaussians = count_ply_vertices(ply_path)
     manifest = build_manifest(
         splat_filename=ply_path.name,
         num_gaussians=num_gaussians,
         widget_version=read_widget_version(),
-        asset_type=AssetType.BODY,
+        asset_type=AssetType.body,
         rig=BODY_RIG,
         generator_method="lhm",
         generator_method_version="500m-siggraph2025",
@@ -365,7 +523,7 @@ def build_body_splattie(
         output_path=bundle_path,
         splat_path=ply_path,
         manifest=manifest,
-        states=DEFAULT_STATES_BODY,
+        states=DEFAULT_STATES_BODY.jsonable(),
         rig_files={
             BODY_RIG.skeleton_file: skeleton_path,
             BODY_RIG.weights_file: weights_path,

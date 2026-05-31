@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import os
 import secrets
-from typing import Annotated, Any
+from collections.abc import Mapping
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import ConfigDict, Field, TypeAdapter, ValidationError
+from pydantic.dataclasses import dataclass
 
 from splattie.stats.store import StatsStore
 
@@ -47,16 +49,21 @@ def require_admin(request: Request) -> None:
 
 
 Store = Annotated[StatsStore, Depends(get_store)]
+_PYDANTIC_CONFIG = ConfigDict(extra="forbid", populate_by_name=True)
 
 
-class TrackPayload(BaseModel):
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class TrackPayload:
     """Beacon payload posted by the frontend on page views and avatar events."""
 
     type: str = Field(default="pageview", max_length=32)
     path: str = Field(default="/", max_length=512)
     referrer: str | None = Field(default=None, max_length=2048)
     country: str | None = Field(default=None, max_length=32)
-    meta: dict[str, Any] | None = None
+    meta: Mapping[str, object] | None = None
+
+
+_TRACK_PAYLOAD = TypeAdapter(TrackPayload)
 
 
 @router.post("/track", status_code=204)
@@ -68,7 +75,7 @@ async def track(request: Request, store: Store) -> Response:
     """
     raw = await request.body()
     try:
-        payload = TrackPayload.model_validate_json(raw) if raw else TrackPayload()
+        payload = _TRACK_PAYLOAD.validate_json(raw) if raw else TrackPayload()
     except ValidationError:
         return Response(status_code=204)  # never fail a beacon on bad input
 

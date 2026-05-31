@@ -22,28 +22,29 @@ MIT / Apache-2.0 runtime dependencies (commercial-safe):
 - Next.js, React (Vercel, Meta) - MIT
 - gsplat (https://github.com/nerfstudio-project/gsplat) - Apache 2.0
 - LAM code itself (https://github.com/aigc3d/LAM) - Apache 2.0
+- LHM code itself (https://github.com/aigc3d/LHM) - Apache 2.0
+- TRELLIS code itself (https://github.com/microsoft/TRELLIS) - MIT
+- Puppeteer code itself (https://github.com/snap-research/Puppeteer) - Apache 2.0
 
 The widget, format, and demo `.splattie` files in apps/web/public/demos/ are
-commercial-use safe. Build commercial products with `<splattie-widget>` freely.
+commercial-use safe as runtime assets. Build commercial products with
+`<splattie-widget>` freely.
 
 ================================================================================
-Demo portraits (Pexels free license)
+Demo assets
 ================================================================================
 
-apps/web/public/demos/*.splattie and apps/web/public/demos/thumbs/*.jpg
+apps/web/public/demos/{heads,bodies,objects}/*.splattie and thumbnails
 
-  Source: https://www.pexels.com
-  License: Pexels free license - commercial use allowed, no attribution
-  required (we attribute anyway).
-  Photographers: Shiny Diamond, TUBARONES PHOTOGRAPHY, ShotPot,
-    Tima Miroshnichenko (x2), Daniel Hoffman Jackson.
+  Source images: AI-generated synthetic images made for Splattie demos.
+  Notes: no real people, no photo attributions, no likeness rights intended.
 
 ================================================================================
 GPU pipeline third-party
 ================================================================================
 
 The backend (backend/) wraps these components to generate `.splattie` files
-from photos:
+from images:
 
 LAM (Large Avatar Model) - Apache 2.0 (commercial OK)
   Source: https://github.com/aigc3d/LAM
@@ -53,6 +54,23 @@ LAM (Large Avatar Model) - Apache 2.0 (commercial OK)
   Notes: LAM code itself is commercial-friendly, but it loads FLAME at
   runtime; FLAME's terms then apply to the combined system.
 
+LHM (Large Animatable Human Model) - Apache 2.0 (commercial OK)
+  Source: https://github.com/aigc3d/LHM
+  License: Apache 2.0 (verified in backend/vendor/LHM/LICENSE)
+  Bundled as: git submodule at backend/vendor/LHM.
+  Notes: LHM code itself is commercial-friendly, but body generation loads
+  SMPL-X at runtime; SMPL-X's terms then apply to the combined system.
+
+TRELLIS - MIT (commercial OK)
+  Source: https://github.com/microsoft/TRELLIS
+  License: MIT (verified in backend/vendor/TRELLIS/LICENSE)
+  Bundled as: git submodule at backend/vendor/TRELLIS.
+
+Puppeteer - Apache 2.0 (commercial OK)
+  Source: https://github.com/snap-research/Puppeteer
+  License: Apache 2.0 (verified in backend/vendor/Puppeteer/LICENSE)
+  Bundled as: git submodule at backend/vendor/Puppeteer.
+
 FLAME (Faces Learned with an Articulated Model and Expressions) - NON-COMMERCIAL
   Source: https://flame.is.tue.mpg.de
   License: non-commercial research license. Requires attribution.
@@ -60,24 +78,34 @@ FLAME (Faces Learned with an Articulated Model and Expressions) - NON-COMMERCIAL
   Commercial license: contact MPI for Intelligent Systems
   (https://flame.is.tue.mpg.de) before commercial use.
 
+SMPL-X - NON-COMMERCIAL
+  Source: https://smpl-x.is.tue.mpg.de
+  License: non-commercial research license. Requires attribution.
+  Bundled as: model files downloaded by backend/scripts/setup-gpu.sh
+  Commercial license: contact MPI for Intelligent Systems
+  (https://www.is.mpg.de) before commercial use.
+
 ================================================================================
 Path to commercial use
 ================================================================================
 
-You have three options for using Splattie commercially:
+You have these options for using Splattie commercially:
 
 1. Use only the widget + format. Generate `.splattie` files through your own
    pipeline. The widget loads any `.splattie` that follows the spec - it does
    not require LAM or FLAME at runtime.
 
-2. License FLAME commercially with MPI for Intelligent Systems. The rest of
-   the stack (LAM Apache 2.0 + gsplat Apache 2.0 + Three.js MIT + Spark MIT)
-   is already commercial-safe.
+2. License FLAME and/or SMPL-X commercially with MPI for Intelligent Systems
+   when using the reference head or body generators. The rest of the stack is
+   Apache 2.0 / MIT.
 
-3. Implement an alternative head-generation method behind the
-   `HeadGenerationMethod` protocol (see backend/src/splattie/methods/).
-   Bring your own commercially-licensed head reconstruction model and face
-   model. The rest of the stack stays the same.
+3. Use the object generator path when FLAME / SMPL-X are not needed. TRELLIS,
+   Puppeteer, gsplat, Three.js, and Spark are MIT / Apache 2.0.
+
+4. Implement an alternative generation method behind the `AssetGenerationMethod`
+   protocol (see backend/src/splattie/methods/). Bring your own
+   commercially-licensed reconstruction model and rig. The rest of the stack
+   stays the same.
 
 The `.splattie` format itself is method-agnostic. `manifest.json.generator.method`
 declares which method produced the file; the widget does not care.

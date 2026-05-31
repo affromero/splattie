@@ -17,9 +17,12 @@ from __future__ import annotations
 import hashlib
 import json
 import zipfile
-from dataclasses import dataclass
+from collections.abc import Mapping, MutableMapping
 from datetime import datetime, timezone
 from pathlib import Path
+
+from pydantic import ConfigDict, Field, TypeAdapter
+from pydantic.dataclasses import dataclass
 
 from splattie.types import AssetType, SplatFormat
 
@@ -29,7 +32,15 @@ WIDGET_PKG_JSON = REPO_ROOT / "packages" / "splattie-widget" / "package.json"
 WIDGET_PUBLIC = REPO_ROOT / "packages" / "splattie-widget" / "public"
 
 
-@dataclass(frozen=True)
+@dataclass(config=ConfigDict(frozen=True), kw_only=True)
+class RigExpressionSpec:
+    """Manifest expression metadata for expression-capable rigs."""
+
+    system: str
+    basis: object | None
+
+
+@dataclass(config=ConfigDict(frozen=True), kw_only=True)
 class RigSpec:
     """The rig-specific shape of a `.splattie` for one asset type.
 
@@ -44,7 +55,7 @@ class RigSpec:
     splat_format: SplatFormat
     skeleton_file: str
     weights_file: str
-    expression: dict | None
+    expression: RigExpressionSpec | None
 
 
 # The FLAME-20k head rig. Skeleton + weights are canonical (identical for every
@@ -55,46 +66,158 @@ HEAD_RIG = RigSpec(
     splat_format=SplatFormat.PLY,
     skeleton_file="bone_tree.json",
     weights_file="lbs_weight_20k.json",
-    expression={"system": "flame-pca", "basis": None},
+    expression=RigExpressionSpec(system="flame-pca", basis=None),
 )
+
+_PYDANTIC_CONFIG = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadCameraConfig:
+    """Widget camera config serialized into head states.json."""
+
+    theta: float
+    phi: float
+    radius: float
+    fov: float
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadAutoBlinkConfig:
+    """Head auto-blink defaults."""
+
+    interval: tuple[int, int]
+    duration: int
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadGhostConfig:
+    """Subtle idle motion config."""
+
+    amplitude: float
+    frequency: float
+    wobble: float
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadExpressionConfig:
+    """Per-state FLAME expression coefficients."""
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadTrackingConfig:
+    """Head widget pointer tracking gains."""
+
+    eyes: float
+    head: float
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadStateDefinition:
+    """One head interaction state."""
+
+    ghost: HeadGhostConfig
+    expression: HeadExpressionConfig
+    camera: HeadCameraConfig
+    rotation: tuple[float, float, float]
+    tracking: HeadTrackingConfig
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadStateSet:
+    """Head widget states."""
+
+    idle: HeadStateDefinition
+    hover: HeadStateDefinition
+    click: HeadStateDefinition
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadTransitionConfig:
+    """Widget transition config."""
+
+    duration: float
+    easing: str
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadTransitions:
+    """Head state transition configs."""
+
+    idle_hover: HeadTransitionConfig
+    hover_idle: HeadTransitionConfig
+    any_click: HeadTransitionConfig
+
+    def jsonable(self) -> Mapping[str, object]:
+        """Return the widget's transition-key shape."""
+        return {
+            "idle->hover": TypeAdapter(HeadTransitionConfig).dump_python(self.idle_hover, mode="json"),
+            "hover->idle": TypeAdapter(HeadTransitionConfig).dump_python(self.hover_idle, mode="json"),
+            "*->click": TypeAdapter(HeadTransitionConfig).dump_python(self.any_click, mode="json"),
+        }
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadWidgetDefaults:
+    """Head widget default config."""
+
+    camera: HeadCameraConfig
+    auto_blink: HeadAutoBlinkConfig = Field(..., alias="autoBlink")
+
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HeadWidgetConfig:
+    """Full head states.json payload."""
+
+    defaults: HeadWidgetDefaults
+    states: HeadStateSet
+    transitions: HeadTransitions
+
+    def jsonable(self) -> Mapping[str, object]:
+        """Return the widget states.json shape."""
+        payload = TypeAdapter(HeadWidgetConfig).dump_python(self, mode="json", by_alias=True)
+        payload["transitions"] = self.transitions.jsonable()
+        return payload
+
 
 # Default widget states baked into a head `.splattie`. Mirrors the head branch of
 # the widget's `createDefaultConfig('head')` (StateConfig.ts). Kept here because the
 # Python bundler cannot import the TS source.
-DEFAULT_STATES_HEAD: dict = {
-    "defaults": {
-        "camera": {"theta": 0, "phi": 75, "radius": 0.5, "fov": 60},
-        "autoBlink": {"interval": [2000, 7000], "duration": 150},
-    },
-    "states": {
-        "idle": {
-            "ghost": {"amplitude": 0.003, "frequency": 0.4, "wobble": 0.2},
-            "expression": {},
-            "camera": {"theta": 0, "phi": 75, "radius": 0.5, "fov": 60},
-            "rotation": [0, 0, 0],
-            "tracking": {"eyes": 1.0, "head": 0.1},
-        },
-        "hover": {
-            "ghost": {"amplitude": 0.005, "frequency": 0.6, "wobble": 0.4},
-            "expression": {},
-            "camera": {"theta": 0, "phi": 75, "radius": 0.45, "fov": 60},
-            "rotation": [-2, 0, -1],
-            "tracking": {"eyes": 1.0, "head": 0.3},
-        },
-        "click": {
-            "ghost": {"amplitude": 0.001, "frequency": 1.0, "wobble": 0.1},
-            "expression": {},
-            "camera": {"theta": 0, "phi": 70, "radius": 0.4, "fov": 65},
-            "rotation": [3, 0, 0],
-            "tracking": {"eyes": 0.5, "head": 0.0},
-        },
-    },
-    "transitions": {
-        "idle->hover": {"duration": 0.3, "easing": "ease-out"},
-        "hover->idle": {"duration": 0.5, "easing": "ease-in"},
-        "*->click": {"duration": 0.1, "easing": "snap"},
-    },
-}
+HEAD_CAMERA = HeadCameraConfig(theta=0, phi=75, radius=0.5, fov=60)
+DEFAULT_STATES_HEAD = HeadWidgetConfig(
+    defaults=HeadWidgetDefaults(
+        camera=HEAD_CAMERA,
+        auto_blink=HeadAutoBlinkConfig(interval=(2000, 7000), duration=150),
+    ),
+    states=HeadStateSet(
+        idle=HeadStateDefinition(
+            ghost=HeadGhostConfig(amplitude=0.003, frequency=0.4, wobble=0.2),
+            expression=HeadExpressionConfig(),
+            camera=HEAD_CAMERA,
+            rotation=(0, 0, 0),
+            tracking=HeadTrackingConfig(eyes=1.0, head=0.1),
+        ),
+        hover=HeadStateDefinition(
+            ghost=HeadGhostConfig(amplitude=0.005, frequency=0.6, wobble=0.4),
+            expression=HeadExpressionConfig(),
+            camera=HeadCameraConfig(theta=0, phi=75, radius=0.45, fov=60),
+            rotation=(-2, 0, -1),
+            tracking=HeadTrackingConfig(eyes=1.0, head=0.3),
+        ),
+        click=HeadStateDefinition(
+            ghost=HeadGhostConfig(amplitude=0.001, frequency=1.0, wobble=0.1),
+            expression=HeadExpressionConfig(),
+            camera=HeadCameraConfig(theta=0, phi=70, radius=0.4, fov=65),
+            rotation=(3, 0, 0),
+            tracking=HeadTrackingConfig(eyes=0.5, head=0.0),
+        ),
+    ),
+    transitions=HeadTransitions(
+        idle_hover=HeadTransitionConfig(duration=0.3, easing="ease-out"),
+        hover_idle=HeadTransitionConfig(duration=0.5, easing="ease-in"),
+        any_click=HeadTransitionConfig(duration=0.1, easing="snap"),
+    ),
+)
 
 
 def read_widget_version() -> str:
@@ -126,9 +249,12 @@ def build_manifest(
     generator_method_version: str = "20k-siggraph2025",
     generator_tool: str,
     source_image_path: Path | None = None,
-) -> dict:
+) -> MutableMapping[str, object]:
     """Build a `.splattie` manifest from an asset type and its `RigSpec`."""
-    manifest: dict = {
+    expression = (
+        TypeAdapter(RigExpressionSpec).dump_python(rig.expression, mode="json") if rig.expression is not None else None
+    )
+    manifest: MutableMapping[str, object] = {
         "format": "splattie",
         "formatVersion": widget_version,
         "assetType": AssetType(asset_type).value,
@@ -150,7 +276,7 @@ def build_manifest(
             "type": "lbs",
             "skeleton": {"file": rig.skeleton_file, "rig": rig.rig},
             "weights": {"file": rig.weights_file},
-            "expression": rig.expression,
+            "expression": expression,
         },
         "widget": {"config": "states.json"},
     }
@@ -164,9 +290,9 @@ def bundle_splattie(
     *,
     output_path: Path,
     splat_path: Path,
-    manifest: dict,
-    states: dict,
-    rig_files: dict[str, Path] | None = None,
+    manifest: Mapping[str, object],
+    states: Mapping[str, object],
+    rig_files: Mapping[str, Path] | None = None,
 ) -> Path:
     """Write a widget-loadable `.splattie` ZIP.
 

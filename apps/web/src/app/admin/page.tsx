@@ -59,8 +59,8 @@ function Dashboard({ stats, days }: { stats: AdminStats; days: number }) {
         <Card label="Pageviews" value={s.pageviews} hint={`last ${days}d`} />
         <Card label="Today" value={s.pageviews_today} hint="pageviews · 24h" />
         <Card label="Last 7 days" value={s.pageviews_7d} hint="pageviews" />
-        <Card label="Avatars created" value={s.avatar_creates} hint={`last ${days}d`} />
-        <Card label="Avatar views" value={s.avatar_views} hint={`last ${days}d`} />
+        <Card label="Assets created" value={s.avatar_creates} hint={`last ${days}d`} />
+        <Card label="Asset views" value={s.avatar_views} hint={`last ${days}d`} />
         <Card label="Editor opens" value={s.editor_opens} hint={`last ${days}d`} />
         <Card label="Bots filtered" value={s.bots} hint={`last ${days}d`} muted />
       </section>

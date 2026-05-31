@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import logging
-
 import numpy as np
 import numpy.typing as npt
 from beartype import beartype
 from jaxtyping import Bool, UInt8, jaxtyped
+from klogr import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 @jaxtyped(typechecker=beartype)
@@ -22,7 +21,7 @@ def segment_head(
     Primary segmentation happens client-side via SAM 3 ONNX.
     """
     h, w = image.shape[:2]
-    logger.info("SAM 3 segmentation (stub): %dx%d image", w, h)
+    logger.info(f"SAM 3 segmentation (stub): {w}x{h} image")
 
     mask = np.zeros((h, w), dtype=np.bool_)
     cy, cx = h // 2, w // 2

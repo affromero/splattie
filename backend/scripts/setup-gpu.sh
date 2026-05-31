@@ -6,7 +6,10 @@ echo "Requires: CUDA 12.x, Python 3.10+"
 
 cd "$(dirname "$0")/.."
 
-echo "[1/3] Installing all Python deps via uv sync --extra gpu --extra cuda..."
+echo "[1/5] Initializing vendor submodules recursively..."
+git submodule update --init --recursive vendor/LAM vendor/LHM vendor/TRELLIS vendor/Puppeteer
+
+echo "[2/5] Installing all Python deps via uv sync --extra gpu --extra cuda..."
 # Everything is declared in pyproject — no pip. The `gpu` extra is wheels; the
 # `cuda` extra is the build-from-source pytorch3d/nvdiffrast/simple-knn + chumpy,
 # compiled by uv against the in-env torch via [tool.uv] no-build-isolation-package
@@ -15,7 +18,7 @@ echo "[1/3] Installing all Python deps via uv sync --extra gpu --extra cuda..."
 # flame2023.pkl unpickles.
 uv sync --extra gpu --extra cuda
 
-echo "[2/3] Building the FaceBoxes Cython extension (in-repo, not a package)..."
+echo "[3/5] Building the FaceBoxes Cython extension (in-repo, not a package)..."
 # build.py must run with the venv's python (the repo's make.sh hardcodes system
 # python3, producing a .so for the wrong Python ABI).
 BACKEND_DIR="$PWD"
@@ -23,7 +26,7 @@ cd vendor/LAM/external/landmark_detection/FaceBoxesV2/utils/
 uv run --project "$BACKEND_DIR" python build.py build_ext --inplace
 cd "$BACKEND_DIR"
 
-echo "[3/3] Downloading model weights..."
+echo "[4/5] Downloading LAM model weights..."
 uv run python <<'PY'
 import glob
 import os
@@ -66,6 +69,51 @@ if os.path.isdir(flame_src) and not os.path.exists(flame_dst):
 elif not os.path.exists(flame_dst):
     print(f"WARNING: {flame_dst} missing — populate with FLAME 2023 (license-gated) or fetch LHM weights first")
 print("Weights ready")
+PY
+
+echo "[5/5] Downloading object-generation weights..."
+uv run python <<'PY'
+from pathlib import Path
+
+from huggingface_hub import hf_hub_download, snapshot_download
+
+puppeteer = Path("vendor/Puppeteer")
+
+# TRELLIS image pipeline weights; from_pretrained can fetch lazily, but setup-gpu
+# makes production readiness explicit and avoids failing the first user request.
+snapshot_download("microsoft/TRELLIS-image-large")
+
+# Puppeteer skeleton generation.
+hf_hub_download(
+    repo_id="Maikou/Michelangelo",
+    filename="checkpoints/aligned_shape_latents/shapevae-256.ckpt",
+    local_dir=puppeteer / "skeleton" / "third_partys" / "Michelangelo",
+)
+hf_hub_download(
+    repo_id="Seed3D/Puppeteer",
+    filename="skeleton_ckpts/puppeteer_skeleton_w_diverse_pose.pth",
+    local_dir=puppeteer / "skeleton",
+)
+
+# Puppeteer skinning. The skinning code imports Michelangelo from its own
+# third_partys folder, so point it at the skeleton-stage copy.
+src = (puppeteer / "skeleton" / "third_partys" / "Michelangelo").resolve()
+dst = puppeteer / "skinning" / "third_partys" / "Michelangelo"
+if not dst.exists():
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.symlink_to(src, target_is_directory=True)
+
+hf_hub_download(
+    repo_id="mikaelaangel/partfield-ckpt",
+    filename="model_objaverse.ckpt",
+    local_dir=puppeteer / "skinning" / "third_partys" / "PartField" / "ckpt",
+)
+hf_hub_download(
+    repo_id="Seed3D/Puppeteer",
+    filename="skinning_ckpts/puppeteer_skin_w_diverse_pose_depth1.pth",
+    local_dir=puppeteer / "skinning",
+)
+print("Object weights ready")
 PY
 
 echo "=== Setup complete ==="

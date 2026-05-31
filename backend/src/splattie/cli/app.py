@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import tyro
 
-from splattie.cli import batch, bundle_tools, demos, flame_exports
+from splattie.cli import batch, bundle_tools, demos, flame_exports, object_bundle
 
 
 def main() -> None:
@@ -22,6 +22,7 @@ def main() -> None:
             "generate-splattie-batch": batch.generate_splattie_batch,
             "regen-demo-avatars": demos.regen_demo_avatars,
             "install-demos": demos.install_demos,
+            "bundle-object": object_bundle.bundle_object,
             "shrink-expression-basis": bundle_tools.shrink_expression_basis,
         }
     )

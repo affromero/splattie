@@ -25,6 +25,8 @@ from splattie.methods.lhm.bundle import (
     BODY_RIG,
     DEFAULT_STATES_BODY,
     JOINTS_NAME,
+    BodySkeleton,
+    BodySparseWeights,
     parse_ply_xyz,
     reweight_lower_arm_rigid,
 )
@@ -83,8 +85,9 @@ def test_joints_name_is_smplx_55() -> None:
 
 def test_default_states_body_tracks_head_and_torso() -> None:
     """Body states mirror the head's idle/hover/click but track head/torso look-at."""
-    assert set(DEFAULT_STATES_BODY["states"]) == {"idle", "hover", "click"}
-    tracking = DEFAULT_STATES_BODY["states"]["idle"]["tracking"]
+    states = DEFAULT_STATES_BODY.jsonable()
+    assert set(states["states"]) == {"idle", "hover", "click"}
+    tracking = states["states"]["idle"]["tracking"]
     assert "head" in tracking
     assert "torso" in tracking
     assert "eyes" not in tracking  # bodies look-at, they don't have eye-tracking
@@ -95,7 +98,7 @@ def test_build_manifest_body_shape() -> None:
         splat_filename="x.ply",
         num_gaussians=3,
         widget_version="9.9.9",
-        asset_type=AssetType.BODY,
+        asset_type=AssetType.body,
         rig=BODY_RIG,
         generator_method="lhm",
         generator_tool="test",
@@ -114,7 +117,7 @@ def test_body_bundle_is_widget_loadable(fake_ply: Path, tmp_path: Path) -> None:
         splat_filename="body.ply",
         num_gaussians=count_ply_vertices(fake_ply),
         widget_version=read_widget_version(),
-        asset_type=AssetType.BODY,
+        asset_type=AssetType.body,
         rig=BODY_RIG,
         generator_method="lhm",
         generator_tool="test",
@@ -123,7 +126,7 @@ def test_body_bundle_is_widget_loadable(fake_ply: Path, tmp_path: Path) -> None:
         output_path=out,
         splat_path=fake_ply,
         manifest=manifest,
-        states=DEFAULT_STATES_BODY,
+        states=DEFAULT_STATES_BODY.jsonable(),
         rig_files={"skeleton.json": skel, "lbs_weights.json": wts},
     )
 
@@ -164,21 +167,27 @@ def test_reweight_lower_arm_rigid_rebinds_lower_arm_and_spares_legs() -> None:
     rest[names.index("L_Wrist")] = [0.70, 0.5, 0.0]
     rest[names.index("L_Index_1")] = [0.80, 0.5, 0.0]
     rest[names.index("L_Ankle")] = [0.10, -1.0, 0.0]
-    skeleton = {"names": names, "restPositions": rest}
+    skeleton = BodySkeleton(
+        rig="smplx",
+        joint_count=len(names),
+        names=names,
+        parents=[-1, *range(len(names) - 1)],
+        rest_positions=rest,
+    )
 
     wrist, elbow, ankle = (names.index(n) for n in ("L_Wrist", "L_Elbow", "L_Ankle"))
     # hand gaussian (near wrist/finger), forearm gaussian (at elbow), ankle gaussian
     positions = np.array([[0.75, 0.5, 0.0], [0.45, 0.5, 0.0], [0.10, -1.0, 0.0]], dtype=np.float32)
-    weights = {
-        "numGaussians": 3,
-        "jointCount": len(names),
-        "k": 4,
-        "indices": [wrist, 0, 0, 0, elbow, wrist, 0, 0, ankle, 0, 0, 0],
-        "weights": [1.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
-    }
+    weights = BodySparseWeights(
+        num_gaussians=3,
+        joint_count=len(names),
+        k=4,
+        indices=[wrist, 0, 0, 0, elbow, wrist, 0, 0, ankle, 0, 0, 0],
+        weights=[1.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+    )
 
     reweight_lower_arm_rigid(positions, skeleton, weights)
-    idx, wt = weights["indices"], weights["weights"]
+    idx, wt = weights.indices, weights.weights
 
     # hand gaussian (row 0) re-bound rigidly to the elbow, no longer the wrist
     row0 = [idx[j] for j in range(4) if wt[j] > 0]

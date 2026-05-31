@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
-// The /view/[id] page is a client component; per-avatar metadata lives here.
+// The /view/[id] page is a client component; per-asset metadata lives here.
 export async function generateMetadata({
   params,
 }: {
@@ -9,11 +9,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   return {
-    title: 'Interactive 3D avatar · Splattie',
-    description: 'An interactive 3D avatar that reacts to your cursor, made with Splattie.',
+    title: 'Interactive 3D asset · Splattie',
+    description: 'An interactive rigged 3D Gaussian asset that reacts to your cursor, made with Splattie.',
     alternates: { canonical: `/view/${id}` },
     openGraph: {
-      title: 'Interactive 3D avatar · Splattie',
+      title: 'Interactive 3D asset · Splattie',
       description: 'Reacts to your cursor. Made with Splattie.',
       url: `/view/${id}`,
     },

@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0] - 2026-05-31
+
+### Added
+- General-purpose object `.splattie` generation through TRELLIS reconstruction, Puppeteer skeleton/weight generation, object binding, and `.splattie` bundle export.
+- Object demos: 8 Gemini-generated source objects, public object `.splattie` bundles, landing-page object carousel, and Playwright coverage for object rendering and editor controls.
+- Object editor support with object-specific follow sliders, rig joint controls, skeleton overlay, edit-pose mode, and drag-to-pose terminal handles.
+- Forked TRELLIS and Puppeteer submodules on Splattie's branches so runtime patches stay tracked with the main pipeline.
+
+### Changed
+- All project versions now align on `0.3.0`: root package, web app, backend package, widget package, `.splattie` `formatVersion`, and release notes.
+- Public web copy and README positioning now describe rigged Gaussian assets, not only avatars.
+- Backend first-party logging now uses `klogr`, and Python typing hooks forbid `dict`/`Dict` annotations and stdlib dataclasses outside vendor code.
+
+### Fixed
+- Object bundle orientation now exports with the production viewer transform so generated objects render upright in the widget.
+- Object editor categories no longer show head-only smile/jaw controls, and sliders reflect object rig state.
+
 ## [0.2.0] - 2026-05-31
 
 ### Added

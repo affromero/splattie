@@ -4,13 +4,13 @@ import type { ReactNode } from 'react';
 // The /create page is a client component, so its metadata lives in this
 // server-component layout segment.
 export const metadata: Metadata = {
-  title: 'Create your avatar · Splattie',
+  title: 'Create your asset · Splattie',
   description:
-    'Upload a photo and generate an interactive 3D avatar that reacts to your visitors. One line of HTML to embed.',
+    'Upload an image and generate an interactive rigged 3D asset that reacts to your visitors. One line of HTML to embed.',
   alternates: { canonical: '/create' },
   openGraph: {
-    title: 'Create your avatar · Splattie',
-    description: 'Turn a portrait into a lifelike 3D avatar that reacts to your visitors.',
+    title: 'Create your asset · Splattie',
+    description: 'Turn a portrait, full body, or object image into an interactive 3D asset.',
     url: '/create',
   },
 };

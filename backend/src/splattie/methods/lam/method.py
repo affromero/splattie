@@ -7,7 +7,6 @@ Calls LAM's Python API directly from vendor/LAM submodule.
 from __future__ import annotations
 
 import contextlib
-import logging
 import os
 import sys
 import threading
@@ -19,6 +18,7 @@ import numpy as np
 import numpy.typing as npt
 from beartype import beartype
 from jaxtyping import Bool, UInt8, jaxtyped
+from klogr import get_logger
 
 from splattie.methods.bundle_common import (
     DEFAULT_STATES_HEAD,
@@ -31,7 +31,7 @@ from splattie.methods.bundle_common import (
 from splattie.methods.registry import registry
 from splattie.types import AssetType, GenerationResult, MethodCapabilities, MethodInfo
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 STORAGE_DIR = Path("data/generations")
 VENDOR_LAM = Path(__file__).resolve().parents[4] / "vendor" / "LAM"
@@ -187,7 +187,7 @@ class LAMMethod:
             description="Single image → drivable 3DGS head with FLAME LBS animation",
             paper_url="https://arxiv.org/abs/2502.17796",
             repo_url="https://github.com/aigc3d/LAM",
-            asset_type="head",
+            asset_type=AssetType.head,
         )
 
     @property
@@ -321,14 +321,14 @@ class LAMMethod:
             # shared bundler then wraps it with the canonical FLAME rig + manifest
             # so the served .splattie matches a batch-built head demo in shape.
             cano_gs.save_ply(str(ply_path), rgb2sh=True, offset2xyz=False)
-        logger.info("PLY saved: %s (%d KB)", ply_path.name, ply_path.stat().st_size // 1024)
+        logger.info(f"PLY saved: {ply_path.name} ({ply_path.stat().st_size // 1024} KB)")
 
         num_gaussians = count_ply_vertices(ply_path)
         manifest = build_manifest(
             splat_filename=f"{model_id}.ply",
             num_gaussians=num_gaussians,
             widget_version=read_widget_version(),
-            asset_type=AssetType.HEAD,
+            asset_type=AssetType.head,
             rig=HEAD_RIG,
             generator_tool="lam/method.py",
             source_image_path=img_path,
@@ -338,10 +338,10 @@ class LAMMethod:
             output_path=splattie_path,
             splat_path=ply_path,
             manifest=manifest,
-            states=DEFAULT_STATES_HEAD,
+            states=DEFAULT_STATES_HEAD.jsonable(),
         )
         bundle_size = splattie_path.stat().st_size
-        logger.info("Bundle: %s (%d KB)", splattie_path.name, bundle_size // 1024)
+        logger.info(f"Bundle: {splattie_path.name} ({bundle_size // 1024} KB)")
 
         bundle_url = f"/storage/{model_id}/{model_id}.splattie"
         return GenerationResult(

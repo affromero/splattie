@@ -1,9 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const port = process.env.SPLATTIE_WEB_E2E_PORT ?? '4001';
+const baseURL = `http://localhost:${port}`;
+
 /**
  * E2E config for the localhost body/head widget tests. Runs the real Next dev
- * server on :4001 and drives chromium with software WebGL (swiftshader) so the
- * Spark gaussian-splat renderer works headless in CI.
+ * server and drives chromium with software WebGL (swiftshader) so the Spark
+ * gaussian-splat renderer works headless in CI.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -13,7 +16,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:4001',
+    baseURL,
     ...devices['Desktop Chrome'],
     launchOptions: {
       args: [
@@ -25,8 +28,8 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:4001',
+    command: `npx next dev -p ${port}`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

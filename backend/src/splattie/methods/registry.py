@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from splattie.types import MethodInfo
@@ -14,8 +15,8 @@ class MethodRegistry:
     """Singleton registry for asset generation methods."""
 
     def __init__(self) -> None:
-        self._methods: dict[str, type[AssetGenerationMethod]] = {}
-        self._instances: dict[str, AssetGenerationMethod] = {}
+        self._methods: MutableMapping[str, type[AssetGenerationMethod]] = {}
+        self._instances: MutableMapping[str, AssetGenerationMethod] = {}
 
     def register(self, method_cls: type[AssetGenerationMethod]) -> type[AssetGenerationMethod]:
         """Register a method class. Can be used as a decorator."""

@@ -3,15 +3,41 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+from pydantic import ConfigDict, Field, TypeAdapter
+from pydantic.dataclasses import dataclass
 
 from splattie.methods.registry import registry
 
 router = APIRouter()
+_PYDANTIC_CONFIG = ConfigDict(extra="forbid", populate_by_name=True)
 
-_NO_GPU: dict = {"available": False, "device": None, "modelLoaded": False}
+
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class GpuStatus:
+    """GPU status payload returned by the health route."""
+
+    available: bool
+    device: str | None
+    model_loaded: bool = Field(alias="modelLoaded")
+    vram_total_mb: int | None = Field(default=None, alias="vramTotalMb")
+    vram_used_mb: int | None = Field(default=None, alias="vramUsedMb")
 
 
-def _gpu_status() -> dict:
+@dataclass(config=_PYDANTIC_CONFIG, kw_only=True)
+class HealthResponse:
+    """Service health payload."""
+
+    status: str
+    gpu: GpuStatus
+    methods_loaded: list[str] = Field(alias="methodsLoaded")
+
+
+_HEALTH_RESPONSE = TypeAdapter(HealthResponse)
+_NO_GPU = GpuStatus(available=False, device=None, model_loaded=False)
+
+
+def _gpu_status() -> GpuStatus:
     """Check GPU availability and LAM model status."""
     try:
         import torch
@@ -27,22 +53,22 @@ def _gpu_status() -> dict:
 
     from splattie.methods.lam.method import _lam_model
 
-    return {
-        "available": True,
-        "device": device_name,
-        "vramTotalMb": vram_total_mb,
-        "vramUsedMb": vram_used_mb,
-        "modelLoaded": _lam_model is not None,
-    }
+    return GpuStatus(
+        available=True,
+        device=device_name,
+        vram_total_mb=vram_total_mb,
+        vram_used_mb=vram_used_mb,
+        model_loaded=_lam_model is not None,
+    )
 
 
 @router.get("/health")
-def health() -> dict:
+def health() -> JSONResponse:
     """Return service health status."""
     methods = registry.list_available()
-    gpu = _gpu_status()
-    return {
-        "status": "ok",
-        "gpu": gpu,
-        "methodsLoaded": [m.id for m in methods],
-    }
+    payload = HealthResponse(
+        status="ok",
+        gpu=_gpu_status(),
+        methods_loaded=[m.id for m in methods],
+    )
+    return JSONResponse(_HEALTH_RESPONSE.dump_python(payload, mode="json", by_alias=True, exclude_none=True))

@@ -21,12 +21,15 @@
 
   #pose-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 5; display: none; }
   #pose-overlay.active { display: block; }
+  .rig-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .rig-lines line { stroke: rgba(126,184,240,0.34); stroke-width: 1.2; }
   .ik-handle {
     position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px;
     border-radius: 50%; background: rgba(126,184,240,0.45); border: 2px solid #7eb8f0;
     cursor: grab; pointer-events: auto; touch-action: none; transition: background 0.1s;
   }
   .ik-handle:hover { background: rgba(126,184,240,0.7); }
+  .ik-handle.selected { background: rgba(96,208,128,0.65); border-color: #60d080; }
   .ik-handle.dragging { cursor: grabbing; background: rgba(196,160,240,0.8); border-color: #c4a0f0; }
   .pose-hint { font-size: 0.6rem; color: #555; margin: 0.2rem 0; line-height: 1.4; }
   .pose-btn {
@@ -34,6 +37,19 @@
     color: #7eb8f0; font: inherit; font-size: 0.7rem; cursor: pointer; margin-top: 0.2rem;
   }
   .pose-btn.active { background: #7eb8f0; color: #0e0e14; font-weight: bold; }
+  .rig-joint {
+    margin: 0.55rem 0 0.25rem; padding-top: 0.45rem; border-top: 1px solid #1e1e2a;
+    color: #888; font-size: 0.62rem; word-break: break-word;
+  }
+  .rig-joint:first-child { margin-top: 0.15rem; padding-top: 0; border-top: none; }
+  .rig-meta { color: #444; font-size: 0.56rem; margin-top: 1px; }
+  .rig-select { display: flex; flex-wrap: wrap; gap: 4px; margin: 0.45rem 0 0.55rem; }
+  .rig-chip {
+    border: 1px solid #2a2a3a; background: #1a1a24; color: #777;
+    font: inherit; font-size: 0.58rem; padding: 3px 5px; cursor: pointer; border-radius: 2px;
+    max-width: 100%; overflow-wrap: anywhere;
+  }
+  .rig-chip.selected { border-color: #60d080; color: #d8ffe4; }
 
   .panel {
     width: 240px;
@@ -157,7 +173,7 @@
   <div class="main" id="main"></div>
   <div class="panel" id="panel"></div>
 
-  <script src="/splattie-widget.cdn.js?v=4"></script>
+  <script src="/splattie-widget.cdn.js"></script>
   <script type="module">
     import { inspectSplattie } from '/splattie-format.js';
 
@@ -176,6 +192,7 @@
     let poseMode = false;
     let poseRaf = 0;
     let draggingChain = null;
+    let selectedObjectJoint = null;
 
     let config = null;
     let defaults = null;
@@ -217,6 +234,7 @@
       poseOverlay = null;
       poseMode = false;
       draggingChain = null;
+      selectedObjectJoint = null;
       main.innerHTML = '';
     }
 
@@ -376,11 +394,13 @@
 
       const state = config.states[currentState];
       const def = defaults.states[currentState];
+      const isHead = widget.assetType === 'head';
       const isBody = widget.assetType === 'body';
+      const isObject = widget.assetType === 'object';
 
-      // FLAME blendshapes are head-only. Bodies set machine states via tracking
-      // (head/torso look-at), camera, ghost + rotation.
-      if (!isBody) addSection('expression', () => {
+      // FLAME blendshapes are head-only. Bodies expose semantic head/torso
+      // tracking, while arbitrary objects only expose category-agnostic controls.
+      if (isHead) addSection('expression', () => {
         if (!state.expression) state.expression = {};
         if (!def.expression) def.expression = {};
         const boneKeys = ['smile', 'mouthFrown', 'lipPucker', 'jawOpen', 'browRaiseL', 'browRaiseR', 'browFrownL', 'browFrownR', 'eyeSquint', 'cheekPuff', 'noseSneer', 'neckTilt', 'neckYaw', 'neckRoll', 'gazeX', 'gazeY'];
@@ -411,22 +431,32 @@
         addSlider('roll', state, 'rotation', -30, 30, 0.1, 2, def.rotation[2]);
       });
 
-      addSection('tracking', () => {
+      if (isObject) addSection('follow', () => {
+        if (state.tracking.torso === undefined) state.tracking.torso = def.tracking.torso ?? 0;
+        if (state.tracking.head === undefined) state.tracking.head = def.tracking.head ?? 0;
+        addSlider('root', state.tracking, 'torso', 0, 1, 0.01, undefined, def.tracking.torso ?? 0);
+        addSlider('joints', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head ?? 0);
+      });
+
+      if (!isObject) addSection('tracking', () => {
         if (isBody) {
           if (state.tracking.torso === undefined) state.tracking.torso = def.tracking.torso ?? 0;
           addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head ?? 1);
           addSlider('torso', state.tracking, 'torso', 0, 1, 0.01, undefined, def.tracking.torso ?? 0);
-        } else {
-          addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
-          addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
+          return;
         }
+        addSlider('eyes', state.tracking, 'eyes', 0, 1, 0.01, undefined, def.tracking.eyes);
+        addSlider('head', state.tracking, 'head', 0, 1, 0.01, undefined, def.tracking.head);
       });
 
-      // Body-only: IK limb posing via on-canvas drag handles.
-      if (isBody) addSection('pose', () => {
+      if (isObject) addSection('rig', () => addObjectRigControls(state));
+
+      if (isBody || isObject) addSection('pose', () => {
         const hint = document.createElement('div');
         hint.className = 'pose-hint';
-        hint.textContent = 'Pose this state by dragging the dots on the hands & feet.';
+        hint.textContent = isObject
+          ? 'Pose this state by dragging skeleton handles on terminal joints.'
+          : 'Pose this state by dragging the dots on the hands & feet.';
         getContainer().appendChild(hint);
         const btn = document.createElement('button');
         btn.className = 'pose-btn' + (poseMode ? ' active' : '');
@@ -564,6 +594,174 @@
       getContainer().appendChild(group);
     }
 
+    function getRigJoints() {
+      if (widget.rigJoints) return widget.rigJoints();
+      const bones = widget.spark && widget.spark.bones ? widget.spark.bones : [];
+      return bones
+        .filter((bone) => !bone.virtual)
+        .map((bone) => ({ name: bone.name, index: bone.idx, parentIndex: bone.parentIdx }));
+    }
+
+    function normalizeQuat(q) {
+      const x = Number(q && q[0]) || 0;
+      const y = Number(q && q[1]) || 0;
+      const z = Number(q && q[2]) || 0;
+      const w = Number(q && q[3]) || 1;
+      const len = Math.hypot(x, y, z, w) || 1;
+      return [x / len, y / len, z / len, w / len];
+    }
+
+    function quatToEulerDegrees(q) {
+      const [x, y, z, w] = normalizeQuat(q);
+      const x2 = x + x, y2 = y + y, z2 = z + z;
+      const xx = x * x2, xy = x * y2, xz = x * z2;
+      const yy = y * y2, yz = y * z2, zz = z * z2;
+      const wx = w * x2, wy = w * y2, wz = w * z2;
+      const m11 = 1 - (yy + zz);
+      const m12 = xy - wz;
+      const m13 = xz + wy;
+      const m23 = yz - wx;
+      const m33 = 1 - (xx + yy);
+      const clamp = (v) => Math.max(-1, Math.min(1, v));
+      let rx, ry, rz;
+      ry = Math.asin(clamp(m13));
+      if (Math.abs(m13) < 0.9999999) {
+        rx = Math.atan2(-m23, m33);
+        rz = Math.atan2(-m12, m11);
+      } else {
+        const m22 = 1 - (xx + zz);
+        const m32 = yz + wx;
+        rx = Math.atan2(m32, m22);
+        rz = 0;
+      }
+      const toDeg = 180 / Math.PI;
+      return [rx * toDeg, ry * toDeg, rz * toDeg];
+    }
+
+    function quatFromEulerDegrees(rx, ry, rz) {
+      const toRad = Math.PI / 180;
+      const x = rx * toRad, y = ry * toRad, z = rz * toRad;
+      const c1 = Math.cos(x / 2), c2 = Math.cos(y / 2), c3 = Math.cos(z / 2);
+      const s1 = Math.sin(x / 2), s2 = Math.sin(y / 2), s3 = Math.sin(z / 2);
+      return [
+        s1 * c2 * c3 + c1 * s2 * s3,
+        c1 * s2 * c3 - s1 * c2 * s3,
+        c1 * c2 * s3 + s1 * s2 * c3,
+        c1 * c2 * c3 - s1 * s2 * s3,
+      ];
+    }
+
+    function addObjectRigControls(state) {
+      const joints = getRigJoints();
+      if (!joints.length) {
+        const hint = document.createElement('div');
+        hint.className = 'pose-hint';
+        hint.textContent = 'This object bundle did not expose editable rig joints.';
+        getContainer().appendChild(hint);
+        return;
+      }
+
+      if (!state.pose) state.pose = {};
+      const pose = state.pose;
+      const hint = document.createElement('div');
+      hint.className = 'pose-hint';
+      hint.textContent = 'Select a skeleton joint, then tune its local rotation for this state.';
+      getContainer().appendChild(hint);
+
+      const names = new Set(joints.map((joint) => joint.name));
+      if (!selectedObjectJoint || !names.has(selectedObjectJoint)) {
+        const handles = widget.objectPoseHandles ? widget.objectPoseHandles() : [];
+        selectedObjectJoint = handles[0]?.joint || joints.find((joint) => joint.parentIndex >= 0)?.name || joints[0].name;
+      }
+      const select = document.createElement('div');
+      select.className = 'rig-select';
+      for (const joint of joints) {
+        const chip = document.createElement('button');
+        chip.className = 'rig-chip' + (joint.name === selectedObjectJoint ? ' selected' : '');
+        chip.textContent = joint.name;
+        chip.title = joint.parentIndex < 0 ? 'root joint' : `parent ${joint.parentIndex}`;
+        chip.onclick = () => {
+          selectedObjectJoint = joint.name;
+          if (poseMode) buildHandles();
+          buildPanel();
+        };
+        select.appendChild(chip);
+      }
+      getContainer().appendChild(select);
+
+      if (Object.keys(pose).length) {
+        const reset = document.createElement('button');
+        reset.className = 'pose-btn';
+        reset.textContent = 'reset rig state';
+        reset.onclick = () => {
+          config.states[currentState].pose = {};
+          configured.add(currentState);
+          applyConfig();
+          widget._stateMachine?.forceState(currentState);
+          buildPanel();
+        };
+        getContainer().appendChild(reset);
+      }
+
+      const joint = joints.find((candidate) => candidate.name === selectedObjectJoint) || joints[0];
+      const title = document.createElement('div');
+      title.className = 'rig-joint';
+      title.textContent = joint.name;
+      const meta = document.createElement('div');
+      meta.className = 'rig-meta';
+      meta.textContent = joint.parentIndex < 0 ? 'root joint' : `parent ${joint.parentIndex}`;
+      title.appendChild(meta);
+      getContainer().appendChild(title);
+
+      const euler = quatToEulerDegrees(pose[joint.name] || [0, 0, 0, 1]);
+      addRigAxisSlider(joint.name, 'pitch', 0, euler, pose);
+      addRigAxisSlider(joint.name, 'yaw', 1, euler, pose);
+      addRigAxisSlider(joint.name, 'roll', 2, euler, pose);
+    }
+
+    function addRigAxisSlider(jointName, label, axisIndex, euler, pose) {
+      const group = document.createElement('div');
+      group.className = 'slider-group rig-axis';
+      const top = document.createElement('div');
+      top.className = 'slider-top';
+      const lbl = document.createElement('label');
+      lbl.textContent = label;
+      const controls = document.createElement('div');
+      controls.className = 'val-controls';
+      const minus = document.createElement('button'); minus.className = 'pm-btn'; minus.textContent = '−';
+      const val = document.createElement('span'); val.className = 'val';
+      const plus = document.createElement('button'); plus.className = 'pm-btn'; plus.textContent = '+';
+      controls.append(minus, val, plus);
+      top.append(lbl, controls);
+
+      const input = document.createElement('input');
+      input.type = 'range'; input.min = -120; input.max = 120; input.step = 1;
+      const fmt = (v) => Number(v).toFixed(0);
+      const writeValue = (raw) => {
+        const v = Math.max(-120, Math.min(120, Number(raw)));
+        euler[axisIndex] = v;
+        writeRigEuler(jointName, euler, pose);
+        input.value = v;
+        val.textContent = fmt(v);
+      };
+      input.value = euler[axisIndex];
+      val.textContent = fmt(euler[axisIndex]);
+      input.oninput = () => writeValue(input.value);
+      input.ondblclick = () => writeValue(0);
+      minus.onclick = () => writeValue(euler[axisIndex] - 1);
+      plus.onclick = () => writeValue(euler[axisIndex] + 1);
+      group.append(top, input);
+      getContainer().appendChild(group);
+    }
+
+    function writeRigEuler(jointName, euler, pose) {
+      if (euler.every((n) => Math.abs(n) < 0.001)) delete pose[jointName];
+      else pose[jointName] = quatFromEulerDegrees(euler[0], euler[1], euler[2]);
+      configured.add(currentState);
+      applyConfig();
+      widget._stateMachine?.forceState(currentState);
+    }
+
     function applyConfig() {
       if (!widget._stateMachine) return;
       widget._stateMachine.updateStates(JSON.parse(JSON.stringify(config.states)));
@@ -640,6 +838,28 @@
 
     function buildHandles() {
       poseOverlay.innerHTML = '';
+      if (widget.assetType === 'object') {
+        const graph = widget.objectRigGraph ? widget.objectRigGraph() : { edges: [], handles: widget.objectPoseHandles ? widget.objectPoseHandles() : [] };
+        drawObjectRigLines(graph);
+        const handles = graph.handles;
+        for (const h of handles) {
+          const dot = document.createElement('div');
+          dot.className = 'ik-handle' + (h.joint === selectedObjectJoint ? ' selected' : '');
+          dot.dataset.handle = h.handleJoint;
+          dot.dataset.joint = h.joint;
+          dot.title = `${h.handleJoint} → ${h.joint}`;
+          dot.onclick = () => {
+            selectedObjectJoint = h.joint;
+            buildPanel();
+            buildHandles();
+          };
+          dot.onpointerdown = (e) => startObjectPoseDrag(e, h, dot);
+          poseOverlay.appendChild(dot);
+        }
+        updateHandlePositions();
+        return;
+      }
+
       const handles = widget.bodyIKHandles ? widget.bodyIKHandles() : [];
       for (const h of handles) {
         const dot = document.createElement('div');
@@ -655,11 +875,48 @@
     // Re-project handle positions each frame so they track the camera (radius/zoom)
     // and the posed body; off-screen joints (e.g. feet) clamp to the canvas edge.
     function updateHandlePositions() {
-      if (!poseMode || !widget.bodyIKHandles) return;
+      if (!poseMode) return;
+      if (widget.assetType === 'object') {
+        const graph = widget.objectRigGraph ? widget.objectRigGraph() : { edges: [], handles: widget.objectPoseHandles ? widget.objectPoseHandles() : [] };
+        drawObjectRigLines(graph);
+        const handles = graph.handles;
+        for (const h of handles) {
+          if (h.handleJoint === draggingChain) continue;
+          const dot = poseOverlay.querySelector('[data-handle="' + h.handleJoint + '"]');
+          if (dot) {
+            const [x, y] = clampToCanvas(h.sx, h.sy);
+            dot.style.left = x + 'px';
+            dot.style.top = y + 'px';
+            dot.classList.toggle('selected', h.joint === selectedObjectJoint);
+          }
+        }
+        return;
+      }
+      if (!widget.bodyIKHandles) return;
       for (const h of widget.bodyIKHandles()) {
         if (h.chain === draggingChain) continue;
         const dot = poseOverlay.querySelector('[data-chain="' + h.chain + '"]');
         if (dot) { const [x, y] = clampToCanvas(h.sx, h.sy); dot.style.left = x + 'px'; dot.style.top = y + 'px'; }
+      }
+    }
+
+    function drawObjectRigLines(graph) {
+      let svg = poseOverlay.querySelector('.rig-lines');
+      if (!svg) {
+        svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('rig-lines');
+        poseOverlay.prepend(svg);
+      }
+      const rect = poseOverlay.getBoundingClientRect();
+      svg.setAttribute('viewBox', `0 0 ${rect.width || 1} ${rect.height || 1}`);
+      svg.replaceChildren();
+      for (const edge of graph.edges || []) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', String(edge.x1));
+        line.setAttribute('y1', String(edge.y1));
+        line.setAttribute('x2', String(edge.x2));
+        line.setAttribute('y2', String(edge.y2));
+        svg.appendChild(line);
       }
     }
 
@@ -683,6 +940,50 @@
         dot.classList.remove('dragging');
         document.removeEventListener('pointermove', move);
         document.removeEventListener('pointerup', up);
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+    }
+
+    function startObjectPoseDrag(e, handle, dot) {
+      e.preventDefault();
+      selectedObjectJoint = handle.joint;
+      draggingChain = handle.handleJoint;
+      dot.classList.add('dragging');
+      dot.setPointerCapture(e.pointerId);
+      const state = config.states[currentState];
+      if (!state.pose) state.pose = {};
+      const pose = state.pose;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const base = quatToEulerDegrees(pose[handle.joint] || [0, 0, 0, 1]);
+      const move = (ev) => {
+        const canvas = widget.querySelector('canvas');
+        const rect = canvas.getBoundingClientRect();
+        const [cx, cy] = clampToCanvas(ev.clientX - rect.left, ev.clientY - rect.top);
+        const solved = widget.solveObjectHandleToScreen
+          ? widget.solveObjectHandleToScreen(handle.handleJoint, cx, cy)
+          : null;
+        if (solved) writePose(solved);
+        else {
+          const dx = ev.clientX - startX;
+          const dy = ev.clientY - startY;
+          writeRigEuler(handle.joint, [
+            Math.max(-120, Math.min(120, base[0] - dy * 0.45)),
+            Math.max(-120, Math.min(120, base[1] + dx * 0.45)),
+            base[2],
+          ], pose);
+        }
+        dot.style.left = cx + 'px';
+        dot.style.top = cy + 'px';
+      };
+      const up = () => {
+        draggingChain = null;
+        dot.classList.remove('dragging');
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        buildPanel();
+        if (poseMode) buildHandles();
       };
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
