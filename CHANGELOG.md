@@ -1,15 +1,23 @@
 # Changelog
 
-## [0.2.0] - 2026-05-28
+## [0.2.0] - 2026-05-31
+
+### Added
+- Full body avatar support alongside heads: LHM/SMPL-X generation, body `.splattie` bundles with skeleton and LBS weights, body-aware API/model metadata, and head/body category selection.
+- Body editing in the web experience: separate head/body demo carousels, body-aware inline editor, full-body framing, body pose controls, and Playwright coverage for body rendering and IK handle dragging.
+- GPU-backed test coverage for head and body generation, with `RUN_GPU_TESTS=1` running the full inference path and normal pytest runs keeping GPU checks explicitly opt-in.
+- Release-aligned CLI commands for demo generation, batch `.splattie` generation, manifest updates, expression-basis shrinking, and FLAME/ARKit basis exports.
 
 ### Changed
-- **Protocol generalized for multi-asset support (Phase 1.A of bodies).** `HeadGenerationMethod` → `AssetGenerationMethod`; `MethodInfo` gains an `asset_type` discriminator (`head`/`body`/`object`); `GenerationResult.flame_params_url` → `rig_params_url`. The `/models` endpoint now surfaces `assetType`.
-- **Widget bundle format `0.1.1` → `0.2.0`:** manifest gains a required `assetType` field. All `.splattie` bundles regenerated. `TrackingConfig.body` replaced by `armReach` + `shoulderFollow` (body-only).
-- **One shared `.splattie` bundler** (`backend/src/splattie/methods/bundle_common.py`): `/generate-from-upload` and the demo batch script now emit the identical, widget-loadable bundle shape. The API path previously emitted a manifestless, non-loadable ZIP.
-- `/generate-from-upload` accepts `?method=<id>` to select the generation method.
+- All project versions now align on `0.2.0`: root package, web app, backend package, widget package, `.splattie` `formatVersion`, and release tags.
+- `.splattie` format `0.2.0` requires `assetType` so bundles can represent heads, bodies, and future general-purpose objects.
+- Demo assets were regenerated and compressed for the bodies release, including compressed PLY bundles, smaller expression basis assets, updated thumbnails, and cache-busted public assets.
+- Backend script entrypoints were folded into the typed `splattie` CLI so release tooling runs in-process on Python 3.11.
 
-### Removed
-- **LAM demo fallback** (`_fallback` + GPU-error swallow): generation failures now raise (HTTP 500) instead of silently serving a demo bundle — honoring the no-fallback rule.
+### Fixed
+- Body pose/export issues that caused stretched arms, T-pose fallback behavior, inconsistent per-state poses, and incorrect full-body framing.
+- Reduced-motion and stale widget-bundle issues that could leave the inline body editor blank or hide body IK handles.
+- API and deployment rough edges around camelCase responses, asset-type query parsing, CPU/GPU backend split, and reproducible frozen uv installs.
 
 ## [0.1.1] - 2026-05-28
 
