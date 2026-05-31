@@ -1,6 +1,6 @@
 # CLAUDE.md — Splattie
 
-> Upload a photo. Get a 3D head whose eyes follow your cursor.
+> Generate interactive 3D avatars and objects for the web.
 
 ## Tech Stack
 
@@ -9,7 +9,7 @@
 | Frontend | Next.js 15 App Router, TypeScript strict, CSS Modules |
 | 3D Rendering | LAM_WebRender (gaussian-splat-renderer-for-lam), WebGL |
 | Backend (GPU) | Python 3.10, FastAPI, uv + pyproject.toml |
-| Asset Generation | LAM (SIGGRAPH 2025) heads — swappable via AssetGenerationMethod protocol (`asset_type`: head/body/object) |
+| Asset Generation | LAM (SIGGRAPH 2025) heads and LHM/SMPL-X bodies — swappable via AssetGenerationMethod protocol (`asset_type`: head/body/object) |
 | Animation | ARKit blendshapes via FLAME mesh (client-side, 60fps) |
 | Face Detection | readPixels after WebGL render (pixel-perfect) |
 | Compression | @playcanvas/splat-transform (PLY → SPZ) |
