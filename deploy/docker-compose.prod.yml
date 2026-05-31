@@ -6,14 +6,14 @@
 # handles visitor analytics (/track, /admin/stats) + /health.
 #
 # Head generation (/create) is for self-hosters only — see
-# docker-compose.gpu.yml for the GPU "processing" backend.
+# deploy/docker-compose.gpu.yml for the GPU "processing" backend.
 #
 # Secrets are interpolated from a Doppler-fed environment
 # (doppler run … / a 0600 .env); none are committed.
 services:
     web:
         build:
-            context: .
+            context: ..
             dockerfile: apps/web/Dockerfile
             args:
         # Baked into the client bundle at build time. The beacon posts here.
@@ -38,7 +38,7 @@ services:
   # Serving backend (CPU-only): analytics + health. No GPU, no torch.
     backend:
         build:
-            context: .
+            context: ..
             dockerfile: backend/Dockerfile.cpu
         ports:
             - 8000:8000

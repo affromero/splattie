@@ -11,12 +11,12 @@ Thanks for your interest! Splattie has three main pieces:
 ```bash
 git clone https://github.com/affromero/splattie.git
 cd splattie
-git submodule update --init
+git submodule update --init packages/splattie-widget
 npm install
 npm run dev
 ```
 
-Open [http://localhost:4001](http://localhost:4001) - you'll see the landing page with 6 demos working out of the box. No GPU needed.
+Open [http://localhost:4001](http://localhost:4001) - you'll see the landing page with 24 demos working out of the box. No GPU needed.
 
 ## Where to file issues
 

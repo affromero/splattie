@@ -24,7 +24,7 @@
 ---
 
 <p align="center">
-  <img src="demo.gif" alt="Splattie Demo" width="600" />
+  <img src="docs/assets/demo.gif" alt="Splattie Demo" width="600" />
 </p>
 
 Splattie turns one image into an **interactive rigged 3D Gaussian Splatting asset** — a **head**, **full body**, or **object** — that lives on your website. Eyes follow the cursor, heads and torsos turn toward visitors, bodies add cursor-driven arm IK, and objects expose skeleton handles for pose editing. Hover and click trigger smooth state transitions. Rendered client-side. One file, one tag.
@@ -53,7 +53,7 @@ Spark renders splats. SuperSplat edits them. StorySplat hosts them. **Nothing ma
 ```bash
 git clone https://github.com/affromero/splattie.git
 cd splattie
-git submodule update --init
+git submodule update --init packages/splattie-widget
 npm install
 npm run dev
 ```
@@ -140,9 +140,12 @@ splattie/
 │   ├── vendor/LHM/                 # LHM submodule (SIGGRAPH 2025)
 │   ├── vendor/TRELLIS/             # TRELLIS submodule (MIT)
 │   └── vendor/Puppeteer/           # Puppeteer submodule (Apache 2.0)
-├── Dockerfile.backend              # GPU image
-├── apps/web/Dockerfile             # Web image (port 4001)
-└── deploy/Caddyfile                # Reverse proxy fragment for splattie.app
+├── deploy/                         # Compose recipes + Caddy fragment
+│   ├── docker-compose.dev.yml      # Local Docker stack
+│   ├── docker-compose.prod.yml     # CPU serving stack for splattie.app
+│   ├── docker-compose.gpu.yml      # Self-host GPU stack
+│   └── Caddyfile                   # Reverse proxy fragment for splattie.app
+└── docs/assets/demo.gif            # README demo media
 ```
 
 | Component | Technology |

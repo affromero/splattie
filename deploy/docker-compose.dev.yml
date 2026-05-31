@@ -1,0 +1,27 @@
+---
+services:
+    web:
+        build:
+            context: ..
+            dockerfile: apps/web/Dockerfile
+            args:
+                NEXT_PUBLIC_API_URL: http://localhost:8000
+                NEXT_PUBLIC_SELF_HOST: 'true'
+        ports:
+            - 4001:4001
+        environment:
+            - BACKEND_INTERNAL_URL=http://backend:8000
+        depends_on:
+            - backend
+
+    backend:
+        build:
+            context: ..
+            dockerfile: backend/Dockerfile.cpu
+        ports:
+            - 8000:8000
+        volumes:
+            - backend-data:/app/backend/data
+
+volumes:
+    backend-data:

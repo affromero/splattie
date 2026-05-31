@@ -61,8 +61,8 @@ bash scripts/setup-gpu.sh   # torch, CUDA extensions, LAM weights, Blender, FBX 
 ### Docker
 
 ```bash
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f deploy/docker-compose.prod.yml build
+docker compose -f deploy/docker-compose.prod.yml up -d
 ```
 
 ## Key Rules

@@ -3,7 +3,7 @@
 # analytics (/track, /admin/stats), /health, and static storage. The GPU
 # routes (/generate, /segment) are intentionally unavailable here — head
 # generation runs on the separate GPU "processing" backend
-# (backend/Dockerfile, see docker-compose.gpu.yml). Torch/CUDA are never
+# (backend/Dockerfile, see deploy/docker-compose.gpu.yml). Torch/CUDA are never
 # installed, so this image is small enough for a normal CPU VPS.
 # ──────────────────────────────────────────────────────────────────────────
 FROM python:3.10-slim AS base

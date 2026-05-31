@@ -4,15 +4,15 @@
 # For self-hosters who want to generate their own avatars. Runs the full GPU
 # backend (LAM + CUDA: /generate, /segment) and a web UI with /create enabled
 # (SELF_HOST=true). Requires an NVIDIA GPU + the nvidia container runtime.
-# The public splattie.app deploy does NOT use this — see docker-compose.prod.yml.
+# The public splattie.app deploy does NOT use this — see deploy/docker-compose.prod.yml.
 #
 # Build the GPU image once (slow, multi-GB) then bring up:
-#   doppler run -p splattie -c prd -- docker compose -f docker-compose.gpu.yml up -d --build
+#   doppler run -p splattie -c prd -- docker compose -f deploy/docker-compose.gpu.yml up -d --build
 # (or supply ADMIN_* via a local .env)
 services:
     web:
         build:
-            context: .
+            context: ..
             dockerfile: apps/web/Dockerfile
             args:
         # Point the browser at this host's GPU backend; override for remote.
@@ -34,7 +34,7 @@ services:
   # analytics for the self-host instance (single backend here).
     gpu-backend:
         build:
-            context: .
+            context: ..
             dockerfile: backend/Dockerfile
         ports:
             - 8000:8000
