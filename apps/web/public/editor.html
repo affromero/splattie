@@ -7,6 +7,18 @@
   .main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
   .main > splattie-widget { flex: 1; }
 
+  .editor-home {
+    position: fixed; top: 10px; left: 10px; z-index: 30;
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 30px; padding: 0 10px 0 8px; border-radius: 4px;
+    border: 1px solid rgba(126,184,240,0.32);
+    background: rgba(8,8,12,0.78); color: #d7eaff;
+    font: 700 11px/1 ui-monospace, monospace; letter-spacing: 0.02em;
+    cursor: pointer; backdrop-filter: blur(8px);
+  }
+  .editor-home:hover { border-color: #7eb8f0; color: #fff; }
+  .editor-home img { width: 16px; height: 15px; display: block; }
+
   #pose-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 5; display: none; }
   #pose-overlay.active { display: block; }
   .ik-handle {
@@ -138,6 +150,10 @@
   }
 </style></head>
 <body>
+  <button class="editor-home" id="editor-home" type="button" aria-label="Back to Splattie">
+    <img src="/logo.svg" alt="">
+    <span>Splattie</span>
+  </button>
   <div class="main" id="main"></div>
   <div class="panel" id="panel"></div>
 
@@ -175,6 +191,25 @@
     //
     // The widget only reads `src` in connectedCallback, so loading a new file
     // means recreating the element rather than mutating the attribute.
+    document.getElementById('editor-home').onclick = function () {
+      try {
+        if (document.referrer) {
+          var referrer = new URL(document.referrer);
+          if (referrer.origin === location.origin && history.length > 1) {
+            history.back();
+            return;
+          }
+        }
+      } catch (e) {}
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.location.href = '/';
+          return;
+        }
+      } catch (e) {}
+      location.href = '/';
+    };
+
     function clearStage() {
       if (liveInterval) { clearInterval(liveInterval); liveInterval = null; }
       if (poseRaf) { cancelAnimationFrame(poseRaf); poseRaf = 0; }
@@ -707,8 +742,10 @@
       try {
         var tip = document.createElement('div');
         tip.textContent = 'Runs entirely in your browser \u2014 your file is never uploaded or stored.';
-        tip.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;max-width:320px;font:10px/1.4 ui-monospace,monospace;color:#7eb8f0;background:rgba(8,8,12,0.88);border:1px solid #1e1e2a;border-radius:4px;padding:6px 9px;pointer-events:none';
+        tip.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;max-width:320px;font:10px/1.4 ui-monospace,monospace;color:#7eb8f0;background:rgba(8,8,12,0.88);border:1px solid #1e1e2a;border-radius:4px;padding:6px 9px;pointer-events:none;opacity:1;transition:opacity 450ms ease';
         document.body.appendChild(tip);
+        window.setTimeout(function () { tip.style.opacity = '0'; }, 4500);
+        window.setTimeout(function () { tip.remove(); }, 5100);
       } catch (e) {}
     })();
     </script>

@@ -30,6 +30,19 @@ test('landing carousels + inline body editor render on localhost', async ({ page
     .poll(async () => (await canvas.screenshot()).length, { timeout: 25_000, intervals: [500, 500, 1000] })
     .toBeGreaterThan(40_000);
 
+  // Reduced-motion should stop autonomous idle animation, not cursor-driven
+  // tracking. The previous regression stopped the widget render loop entirely.
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.4);
+  await page.waitForTimeout(500);
+  await expect
+    .poll(async () => {
+      return await page.frameLocator('iframe[title*="body" i]').locator('splattie-widget').evaluate((el) => {
+        return (el as unknown as { cursor?: { smoothX: number } }).cursor?.smoothX ?? 0;
+      });
+    }, { timeout: 5_000, intervals: [100, 200, 300] })
+    .toBeGreaterThan(0.2);
+
   // With an avatar selected (auto-scroll paused), the carousel stays trackpad-
   // scrollable so you can browse and pick another.
   const carousel = page.locator('[data-category="body"]');

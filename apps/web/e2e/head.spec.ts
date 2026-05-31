@@ -12,6 +12,12 @@ test('head .splattie renders and the editor shows blendshape controls', async ({
   page.on('pageerror', (e) => pageErrors.push(String(e)));
 
   await page.goto(`/editor.html?src=${HEAD_SRC}`);
+  await expect(page.getByRole('button', { name: 'Back to Splattie' })).toBeVisible();
+
+  const privacyNotice = page.getByText('Runs entirely in your browser');
+  await expect(privacyNotice).toBeVisible();
+  await expect(privacyNotice).toBeHidden({ timeout: 7_000 });
+
   await page.waitForFunction(
     () => {
       const w = document.querySelector('splattie-widget') as unknown as { _stateMachine?: unknown };
