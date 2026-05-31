@@ -1,6 +1,7 @@
 [submodule "backend/vendor/LAM"]
 	path = backend/vendor/LAM
 	url = https://github.com/affromero/LAM.git
+	branch = splattie-patches
 [submodule "packages/splattie-widget"]
 	path = packages/splattie-widget
 	url = https://github.com/affromero/splattie-widget.git
