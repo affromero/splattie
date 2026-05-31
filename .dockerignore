@@ -1,0 +1,44 @@
+# ── Docker build context excludes ────────────────────────────────────────
+# Shared by every service that builds from the repo root (context: ..):
+# apps/web/Dockerfile (which does `COPY . .`), backend/Dockerfile.cpu, and the
+# self-host backend/Dockerfile (GPU). Without these excludes the context is
+# ~1.7GB — dominated by the .git history of binary demo files, host-installed
+# node_modules, and Next.js build output — making every deploy slow and baking
+# junk (and the transient .env secrets) into image layers.
+#
+# Do NOT exclude backend/vendor: the GPU image COPYs backend/vendor/LAM.
+# Do NOT exclude apps/web/public: it holds the demo .splattie files we serve.
+# ──────────────────────────────────────────────────────────────────────────
+
+# Version control
+.git
+**/.git
+
+# Node deps + Next.js output (reinstalled via `npm ci` and rebuilt in-image)
+node_modules
+**/node_modules
+.next
+**/.next
+
+# Python caches / virtualenvs
+**/__pycache__
+**/*.py[cod]
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+
+# Local runtime data (analytics db lives in the backend-data volume, not the image)
+backend/data
+
+# Secrets — the deploy writes a transient 0600 .env at the repo root for
+# compose interpolation; it must never reach a build layer. (.env.example stays.)
+.env
+.env.local
+.env.*.local
+
+# Test / tooling output + OS cruft
+**/test-results
+**/playwright-report
+**/.DS_Store
+**/*.log

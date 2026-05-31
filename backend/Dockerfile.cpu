@@ -6,7 +6,7 @@
 # (backend/Dockerfile, see deploy/docker-compose.gpu.yml). Torch/CUDA are never
 # installed, so this image is small enough for a normal CPU VPS.
 # ──────────────────────────────────────────────────────────────────────────
-FROM python:3.10-slim AS base
+FROM python:3.11-slim AS base
 
 ENV PYTHONUNBUFFERED=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -25,7 +25,7 @@ WORKDIR /app/backend
 # No torch/CUDA — the GPU routes import those lazily and 503 when absent.
 COPY backend/pyproject.toml backend/.python-version ./
 COPY backend/uv.lock* ./
-RUN uv venv --python 3.10 .venv
+RUN uv venv --python 3.11 .venv
 ENV PATH="/app/backend/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/backend/.venv"
 # --frozen: install the cpu subset straight from the lock without re-resolving. The
