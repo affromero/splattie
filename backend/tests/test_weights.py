@@ -16,17 +16,7 @@ import pytest
 from splattie.methods.lam.method import MODEL_ZOO, VENDOR_LAM
 from splattie.methods.lhm.runtime import VENDOR_LHM
 from splattie.methods.registry import registry
-
-
-def cuda_available() -> bool:
-    """Return True on a real GPU runner — where setup-gpu.sh has downloaded the weights."""
-    try:
-        import torch
-
-        return torch.cuda.is_available()
-    except Exception:
-        return False
-
+from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
 
 _LHM_SNAPSHOTS = VENDOR_LHM / "pretrained_models" / "huggingface" / "models--3DAIGC--LHM-500M" / "snapshots"
 
@@ -60,7 +50,7 @@ def test_every_registered_pipeline_has_weight_checks() -> None:
     )
 
 
-@pytest.mark.skipif(not cuda_available(), reason="model weights are only provisioned on a GPU runner (setup-gpu.sh)")
+@pytest.mark.skipif(not gpu_tests_enabled(), reason=GPU_TEST_SKIP_REASON)
 @pytest.mark.parametrize(
     ("pipeline", "name", "path", "kind"),
     _PIPELINE_WEIGHTS,

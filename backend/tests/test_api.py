@@ -9,6 +9,8 @@ import pytest
 from httpx import AsyncClient
 from PIL import Image
 
+from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
+
 # A committed demo portrait — LAM's FLAME tracking needs a real face.
 _FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "heads" / "h1.jpg"
 
@@ -18,16 +20,6 @@ def _face_png_bytes() -> io.BytesIO:
     Image.open(_FACE_IMAGE).convert("RGB").save(buf, format="PNG")
     buf.seek(0)
     return buf
-
-
-def cuda_available() -> bool:
-    """Return True when torch and a CUDA device are present (real GPU runner)."""
-    try:
-        import torch
-
-        return torch.cuda.is_available()
-    except Exception:
-        return False
 
 
 async def test_health(client: AsyncClient) -> None:
@@ -94,7 +86,7 @@ async def test_generate_from_upload_propagates_load_failure(
         await client.post("/generate-from-upload", files={"image": ("test.png", buf, "image/png")})
 
 
-@pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
+@pytest.mark.skipif(not gpu_tests_enabled(), reason=GPU_TEST_SKIP_REASON)
 @pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
 async def test_generate_from_upload_produces_bundle(client: AsyncClient) -> None:
     response = await client.post(
@@ -107,7 +99,7 @@ async def test_generate_from_upload_produces_bundle(client: AsyncClient) -> None
     assert data["splattieUrl"].endswith(".splattie")
 
 
-@pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
+@pytest.mark.skipif(not gpu_tests_enabled(), reason=GPU_TEST_SKIP_REASON)
 @pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
 async def test_generate(client: AsyncClient) -> None:
     seg_response = await client.post(

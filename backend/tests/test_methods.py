@@ -12,6 +12,7 @@ from splattie.methods.lam.method import LAMMethod
 from splattie.methods.lhm.method import LHMMethod
 from splattie.methods.registry import registry
 from splattie.types import AssetType
+from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
 
 _DEMOS = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos"
 # A committed demo portrait — LAM's FLAME tracking needs a real face.
@@ -19,16 +20,6 @@ _FACE_IMAGE = _DEMOS / "heads" / "h1.jpg"
 # A committed full-body demo — LHM segments the person (rembg) and requires a portrait
 # (taller-than-wide) person bbox, so the body pipeline needs a standing-figure image.
 _BODY_IMAGE = _DEMOS / "bodies" / "b1.jpg"
-
-
-def cuda_available() -> bool:
-    """Return True when torch and a CUDA device are present (real GPU runner)."""
-    try:
-        import torch
-
-        return torch.cuda.is_available()
-    except Exception:
-        return False
 
 
 def test_lam_implements_protocol() -> None:
@@ -73,7 +64,7 @@ def test_lam_generate_propagates_load_failure(monkeypatch: pytest.MonkeyPatch) -
         method.generate(image, mask)
 
 
-@pytest.mark.skipif(not cuda_available(), reason="LAM inference requires CUDA + weights")
+@pytest.mark.skipif(not gpu_tests_enabled(), reason=GPU_TEST_SKIP_REASON)
 @pytest.mark.skipif(not _FACE_IMAGE.exists(), reason="demo portrait not present")
 def test_lam_generate_produces_bundle() -> None:
     """On a real GPU, generation produces a widget-loadable `.splattie` bundle."""
@@ -149,7 +140,7 @@ def test_lhm_generate_propagates_load_failure(monkeypatch: pytest.MonkeyPatch) -
         method.generate(image, mask)
 
 
-@pytest.mark.skipif(not cuda_available(), reason="LHM inference requires CUDA + weights")
+@pytest.mark.skipif(not gpu_tests_enabled(), reason=GPU_TEST_SKIP_REASON)
 @pytest.mark.skipif(not _BODY_IMAGE.exists(), reason="demo body image not present")
 def test_lhm_generate_produces_body() -> None:
     """On a real GPU, LHM produces a canonical-pose body gaussian asset from one body image."""

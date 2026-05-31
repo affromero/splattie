@@ -1,21 +1,4 @@
-#!/usr/bin/env python3
-r"""Add manifest.json to existing .splattie files.
-
-Idempotent. For each .splattie in the input directory:
-  1. Open the ZIP
-  2. Skip if it already has a manifest.json with a matching formatVersion
-  3. Parse PLY header for vertex count
-  4. Compute SHA-256 of the corresponding source thumbnail (if present)
-  5. Build a manifest matching the current widget package.json version
-  6. Re-bundle with the manifest as the first entry
-
-Runs on any machine (no GPU required) - just rewrites ZIPs.
-
-Usage:
-    python backend/scripts/add_manifest_to_splattie.py \
-        --splatties-dir apps/web/public/demos \
-        --thumbs-dir apps/web/public/demos/thumbs
-"""
+"""Bundle maintenance commands for existing `.splattie` assets."""
 
 from __future__ import annotations
 
@@ -28,17 +11,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
-import tyro
+import numpy as np
 from klogr import get_logger
 
 from splattie.compression.compressed_ply import compress_ply
+from splattie.methods.bundle_common import read_widget_version
 
 logger = get_logger()
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-BACKEND_DIR = SCRIPT_DIR.parent if SCRIPT_DIR.name == "scripts" else SCRIPT_DIR
-REPO_ROOT = BACKEND_DIR.parent
-WIDGET_PKG_JSON = REPO_ROOT / "packages" / "splattie-widget" / "package.json"
 
 ATTRIBUTIONS = {
     "3762763": "Shiny Diamond",
@@ -48,11 +27,6 @@ ATTRIBUTIONS = {
     "8727554": "Tima Miroshnichenko",
     "35466969": "Daniel Hoffman Jackson",
 }
-
-
-def read_widget_version() -> str:
-    """Read the widget package version (used as the manifest formatVersion)."""
-    return json.loads(WIDGET_PKG_JSON.read_text())["version"]
 
 
 def count_ply_vertices_bytes(data: bytes) -> int:
@@ -88,7 +62,41 @@ def find_thumb(thumbs_dir: Path, stem: str) -> Path | None:
     return None
 
 
-def build_manifest(
+def _animation_manifest(names: set[str], asset_type: str) -> dict:
+    if asset_type == "body":
+        animation: dict = {"type": "lbs", "expression": None}
+        if "skeleton.json" in names:
+            animation["skeleton"] = {"file": "skeleton.json", "rig": "smplx"}
+        if "lbs_weights.json" in names:
+            animation["weights"] = {"file": "lbs_weights.json"}
+        return animation
+
+    animation = {"type": "lbs", "expression": {"system": "flame-pca", "basis": None}}
+    if "bone_tree.json" in names:
+        animation["skeleton"] = {"file": "bone_tree.json", "rig": "flame"}
+    if "lbs_weight_20k.json" in names:
+        animation["weights"] = {"file": "lbs_weight_20k.json"}
+    return animation
+
+
+def _topology(asset_type: str) -> str:
+    if asset_type == "body":
+        return "smplx-voxel"
+    if asset_type == "object":
+        return "object-auto"
+    return "flame-20k"
+
+
+def _generator_method(asset_type: str) -> str:
+    if asset_type == "body":
+        return "lhm"
+    if asset_type == "object":
+        return "object"
+    return "lam"
+
+
+def build_legacy_manifest(
+    *,
     stem: str,
     splat_entry: str,
     splat_format: str,
@@ -96,19 +104,17 @@ def build_manifest(
     thumb_path: Path | None,
     widget_version: str,
     asset_type: str,
-    *,
-    has_skeleton: bool,
-    has_weights: bool,
+    names: set[str],
 ) -> dict:
-    """Build the .splattie manifest dict for one bundle."""
+    """Build the .splattie manifest dict for one legacy bundle."""
     manifest: dict = {
         "format": "splattie",
         "formatVersion": widget_version,
         "assetType": asset_type,
         "generator": {
-            "method": "lam",
-            "methodVersion": "20k-siggraph2025",
-            "tool": "add_manifest_to_splattie.py",
+            "method": _generator_method(asset_type),
+            "methodVersion": "20k-siggraph2025" if asset_type == "head" else None,
+            "tool": "splattie add-manifest",
             "createdAt": datetime.now(timezone.utc).isoformat(),
         },
         "avatar": {
@@ -116,19 +122,14 @@ def build_manifest(
                 "file": splat_entry,
                 "format": splat_format,
                 "numGaussians": num_gaussians,
-                "topology": "flame-20k",
+                "topology": _topology(asset_type),
             },
         },
-        "animation": {
-            "type": "lbs",
-            "expression": {"system": "flame-pca", "basis": None},
-        },
+        "animation": _animation_manifest(names, asset_type),
         "widget": {"config": "states.json"},
     }
-    if has_skeleton:
-        manifest["animation"]["skeleton"] = {"file": "bone_tree.json", "rig": "flame"}
-    if has_weights:
-        manifest["animation"]["weights"] = {"file": "lbs_weight_20k.json"}
+    if manifest["generator"]["methodVersion"] is None:
+        del manifest["generator"]["methodVersion"]
 
     metadata: dict = {}
     if thumb_path is not None:
@@ -145,7 +146,12 @@ def build_manifest(
 
 
 def rebundle(
-    splattie_path: Path, thumbs_dir: Path, widget_version: str, asset_type: str, *, compress: bool = False
+    splattie_path: Path,
+    thumbs_dir: Path,
+    widget_version: str,
+    asset_type: str,
+    *,
+    compress: bool = False,
 ) -> str:
     """Re-bundle one .splattie with a current manifest; return a status string."""
     stem = splattie_path.stem
@@ -153,17 +159,11 @@ def rebundle(
 
     with zipfile.ZipFile(str(splattie_path), "r") as zf:
         names = set(zf.namelist())
-
         existing = json.loads(zf.read("manifest.json").decode("utf-8")) if "manifest.json" in names else None
-
         splat_entry, splat_format = find_splat_entry(zf)
         splat_bytes = zf.read(splat_entry)
-        # 'element vertex' is present in both standard and compressed PLY headers.
         num_gaussians = count_ply_vertices_bytes(splat_bytes)
         already_compressed = b"packed_position" in splat_bytes[:1024]
-
-        # Nothing to do only when the manifest is current (version + asset type) AND
-        # there's no compression left to apply.
         already_current = (
             existing is not None
             and existing.get("formatVersion") == widget_version
@@ -171,15 +171,8 @@ def rebundle(
         )
         if already_current and not (compress and not already_compressed):
             return f"skip (already v{widget_version}, {asset_type})"
+        payload = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
 
-        has_skeleton = "bone_tree.json" in names
-        has_weights = "lbs_weight_20k.json" in names
-
-        payload: dict[str, bytes] = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
-
-    # Compress the PLY payload to compressed PLY in place (hard-fails on error). The
-    # entry keeps its .ply name and manifest format stays "ply": compressed PLY has the
-    # 'ply' magic, so Spark loads it via its correct PLY reader (SPZ does not).
     if compress and not already_compressed:
         with tempfile.TemporaryDirectory() as td:
             ply_tmp = Path(td) / f"{stem}.ply"
@@ -190,44 +183,41 @@ def rebundle(
         payload[splat_entry] = comp_bytes
         note = f", {len(splat_bytes) // 1024}KB ply -> {len(comp_bytes) // 1024}KB compressed.ply"
 
-    thumb_path = find_thumb(thumbs_dir, stem)
-    manifest = build_manifest(
+    manifest = build_legacy_manifest(
         stem=stem,
         splat_entry=splat_entry,
         splat_format=splat_format,
         num_gaussians=num_gaussians,
-        thumb_path=thumb_path,
+        thumb_path=find_thumb(thumbs_dir, stem),
         widget_version=widget_version,
         asset_type=asset_type,
-        has_skeleton=has_skeleton,
-        has_weights=has_weights,
+        names=set(payload),
     )
 
     tmp_path = splattie_path.with_suffix(splattie_path.suffix + ".tmp")
     with zipfile.ZipFile(str(tmp_path), "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("manifest.json", json.dumps(manifest, indent=2))
         for name, data in payload.items():
-            if name == "manifest.json":
-                continue
-            zf.writestr(name, data)
+            if name != "manifest.json":
+                zf.writestr(name, data)
     tmp_path.replace(splattie_path)
     return f"rebundled (v{widget_version}, {num_gaussians} gaussians, format={splat_format}{note})"
 
 
-def main(
+def add_manifest(
     splatties_dir: Path,
     thumbs_dir: Path,
     asset_type: Literal["head", "body", "object"] = "head",
     *,
     compress: bool = False,
 ) -> None:
-    """Add manifest.json to every .splattie in a directory (rewrites in place).
+    """Add or update manifest.json in every .splattie in a directory.
 
     Args:
         splatties_dir: Directory of .splattie bundles to process.
         thumbs_dir: Directory of source thumbnails (for sourceImageHash + attribution).
         asset_type: Asset type recorded in the manifest (head/body/object).
-        compress: Compress PLY payloads to compressed PLY via splat-transform before re-bundling.
+        compress: Compress PLY payloads to compressed PLY before re-bundling.
 
     """
     splatties_dir = splatties_dir.resolve()
@@ -242,19 +232,57 @@ def main(
     widget_version = read_widget_version()
     logger.info(f"Widget version: {widget_version}")
     logger.info(f"Splatties dir:  {splatties_dir}")
-    logger.info(f"Thumbs dir:     {thumbs_dir}\n")
+    logger.info(f"Thumbs dir:     {thumbs_dir}")
 
     splatties = sorted(splatties_dir.glob("*.splattie"))
     if not splatties:
         logger.info(f"No .splattie files in {splatties_dir}")
         return
 
-    for p in splatties:
-        status = rebundle(p, thumbs_dir, widget_version, asset_type, compress=compress)
-        logger.info(f"  {p.name}: {status}")
+    for path in splatties:
+        status = rebundle(path, thumbs_dir, widget_version, asset_type, compress=compress)
+        logger.info(f"  {path.name}: {status}")
 
-    logger.info(f"\nProcessed {len(splatties)} file(s).")
+    logger.info(f"Processed {len(splatties)} file(s).")
 
 
-if __name__ == "__main__":
-    tyro.cli(main)
+def shrink_expression_basis(basis_path: Path, output: Path | None = None) -> None:
+    """Transcode an expression-basis .bin from float32 EXPR to float16 EXPH.
+
+    Args:
+        basis_path: Path to the float32 (EXPR) expression_basis.bin.
+        output: Where to write the float16 (EXPH) .bin. Defaults to overwriting basis_path.
+
+    """
+    out = output or basis_path
+    data = basis_path.read_bytes()
+    magic = data[:4]
+    if magic == b"EXPH":
+        logger.info(f"{basis_path.name} is already float16 (EXPH); nothing to do.")
+        return
+    if magic != b"EXPR":
+        msg = f"Unexpected magic {magic!r} in {basis_path} (expected EXPR)"
+        raise ValueError(msg)
+
+    num_verts, num_expr = np.frombuffer(data, dtype="<u4", count=2, offset=4).tolist()
+    basis32 = np.frombuffer(data, dtype="<f4", offset=12).reshape(num_verts, num_expr, 3)
+    basis16 = basis32.astype(np.float16)
+
+    with out.open("wb") as f:
+        f.write(b"EXPH")
+        f.write(np.asarray([num_verts, num_expr], dtype="<u4").tobytes())
+        f.write(basis16.tobytes())
+
+    before, after = len(data), out.stat().st_size
+    logger.info(
+        f"{out.name}: {before // 1024} KB (f32) -> {after // 1024} KB (f16), "
+        f"{num_verts} verts x {num_expr} expr"
+    )
+
+    json_path = basis_path.with_suffix(".json")
+    if json_path.exists():
+        meta = json.loads(json_path.read_text())
+        meta["bytes"] = int(after)
+        meta["format"] = "float16_le, shape (num_vertices, num_expressions, 3)"
+        out.with_suffix(".json").write_text(json.dumps(meta, indent=2))
+        logger.info(f"Updated sidecar: {out.with_suffix('.json').name}")

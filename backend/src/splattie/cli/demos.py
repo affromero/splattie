@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from dotenv import load_dotenv
 from klogr import get_logger
 from PIL import Image
 
