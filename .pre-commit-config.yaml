@@ -16,7 +16,9 @@ default_install_hook_types:
 default_language_version:
     python: python3
 
-# Never touch vendored submodules, built/generated artifacts, or lockfiles.
+# General hooks skip vendored submodules, built/generated artifacts, and lockfiles.
+# The uv hooks below are the only hooks allowed to regenerate backend/uv.lock
+# and exported requirements files.
 exclude: |
     (?x)^(
       backend/vendor/.*|
@@ -139,3 +141,39 @@ repos:
             files: ^(apps/web/src/|packages/splattie-widget/src/).*\.(ts|tsx)$
             pass_filenames: false
             require_serial: true
+
+          # Backend dependency hygiene follows Hax-CV's shape: a local uv-sync
+          # hook plus uv-pre-commit exports. Splattie's uv project is under
+          # backend/, so all commands run with --directory backend.
+          - id: uv-lock
+            name: uv-lock (backend)
+            entry: uv lock --directory backend
+            language: system
+            pass_filenames: false
+            always_run: true
+            stages: [pre-commit, pre-merge-commit, pre-push]
+
+          - id: uv-sync
+            name: uv-sync cpu (backend)
+            entry: uv sync --directory backend --extra cpu --inexact
+            language: system
+            pass_filenames: false
+            always_run: true
+            stages: [pre-commit, pre-merge-commit, pre-push]
+
+    - repo: https://github.com/astral-sh/uv-pre-commit
+      rev: 0.9.17
+      hooks:
+          - id: uv-export
+            name: uv-export backend cpu
+            args: [--directory, backend, --frozen, --extra=cpu, --output-file=requirements_cpu.txt, --no-hashes]
+            pass_filenames: false
+            always_run: true
+            stages: [pre-commit, pre-merge-commit, pre-push]
+
+          - id: uv-export
+            name: uv-export backend gpu
+            args: [--directory, backend, --frozen, --extra=gpu, --extra=cuda, --output-file=requirements_gpu.txt, --no-hashes]
+            pass_filenames: false
+            always_run: true
+            stages: [pre-commit, pre-merge-commit, pre-push]
