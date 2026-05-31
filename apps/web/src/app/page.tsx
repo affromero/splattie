@@ -16,7 +16,7 @@ interface Demo {
 // Demos live in category subfolders: /demos/{heads,bodies}/<id>.{jpg,splattie}.
 // ASSET_VERSION cache-busts the .splattie when its contents change (the browser
 // otherwise serves the cached copy, surviving a hard-refresh). Bump on demo changes.
-const ASSET_VERSION = '5';
+const ASSET_VERSION = '6';
 const folder = (c: Category): string => (c === 'head' ? 'heads' : 'bodies');
 const demoThumb = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.jpg`;
 const demoSrc = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.splattie?v=${ASSET_VERSION}`;

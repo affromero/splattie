@@ -28,8 +28,11 @@ dependencies = [
   "uvicorn[standard]>=0.30.0"
 ]
 name = "splattie"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 version = "0.1.0"
+
+[project.scripts]
+splattie = "splattie.cli.app:main"
 
 [project.optional-dependencies]
 # CPU-only: enough to run the FastAPI server (GPU routes return 503).
