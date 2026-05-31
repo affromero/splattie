@@ -240,8 +240,7 @@ def _parse_skin_line(path: Path, line_no: int, parts: Sequence[str]) -> VertexSk
         msg = f"{path}:{line_no}: skin line must contain vertex plus joint/weight pairs"
         raise ValueError(msg)
     influences = tuple(
-        JointInfluence(joint_name=parts[idx], weight=float(parts[idx + 1]))
-        for idx in range(2, len(parts), 2)
+        JointInfluence(joint_name=parts[idx], weight=float(parts[idx + 1])) for idx in range(2, len(parts), 2)
     )
     return VertexSkin(vertex_index=int(parts[1]), influences=influences)
 

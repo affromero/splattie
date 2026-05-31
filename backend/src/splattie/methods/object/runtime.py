@@ -18,12 +18,26 @@ VENDOR_TRELLIS = VENDOR_ROOT / "TRELLIS"
 VENDOR_PUPPETEER = VENDOR_ROOT / "Puppeteer"
 
 PUPPETEER_SKELETON_WEIGHTS = VENDOR_PUPPETEER / "skeleton" / "skeleton_ckpts" / "puppeteer_skeleton_w_diverse_pose.pth"
-PUPPETEER_SKINNING_WEIGHTS = VENDOR_PUPPETEER / "skinning" / "skinning_ckpts" / "puppeteer_skin_w_diverse_pose_depth1.pth"
+PUPPETEER_SKINNING_WEIGHTS = (
+    VENDOR_PUPPETEER / "skinning" / "skinning_ckpts" / "puppeteer_skin_w_diverse_pose_depth1.pth"
+)
 PUPPETEER_MICHELANGELO = (
-    VENDOR_PUPPETEER / "skeleton" / "third_partys" / "Michelangelo" / "checkpoints" / "aligned_shape_latents" / "shapevae-256.ckpt"
+    VENDOR_PUPPETEER
+    / "skeleton"
+    / "third_partys"
+    / "Michelangelo"
+    / "checkpoints"
+    / "aligned_shape_latents"
+    / "shapevae-256.ckpt"
 )
 PUPPETEER_SKINNING_MICHELANGELO = (
-    VENDOR_PUPPETEER / "skinning" / "third_partys" / "Michelangelo" / "checkpoints" / "aligned_shape_latents" / "shapevae-256.ckpt"
+    VENDOR_PUPPETEER
+    / "skinning"
+    / "third_partys"
+    / "Michelangelo"
+    / "checkpoints"
+    / "aligned_shape_latents"
+    / "shapevae-256.ckpt"
 )
 PUPPETEER_PARTFIELD = VENDOR_PUPPETEER / "skinning" / "third_partys" / "PartField" / "ckpt" / "model_objaverse.ckpt"
 

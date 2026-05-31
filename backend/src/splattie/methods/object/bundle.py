@@ -385,10 +385,7 @@ class RigSkeleton:
             rig=self.rig,
             joint_count=self.joint_count,
             names=[self.names[old_idx] for old_idx in order],
-            parents=[
-                -1 if self.parents[old_idx] == -1 else old_to_new[self.parents[old_idx]]
-                for old_idx in order
-            ],
+            parents=[-1 if self.parents[old_idx] == -1 else old_to_new[self.parents[old_idx]] for old_idx in order],
             rest_positions=[self.rest_positions[old_idx] for old_idx in order],
         )
         remapped_weights = SparseLbsWeights(
@@ -583,7 +580,11 @@ def transform_gaussian_ply(ply: BinaryPly, transform: ObjectViewerTransform = OB
     if {"nx", "ny", "nz"}.issubset(out.dtype.names or ()):
         normals = np.column_stack([out["nx"], out["ny"], out["nz"]]).astype(np.float32)
         transformed_normals = _transform_points(normals, transform)
-        out["nx"], out["ny"], out["nz"] = transformed_normals[:, 0], transformed_normals[:, 1], transformed_normals[:, 2]
+        out["nx"], out["ny"], out["nz"] = (
+            transformed_normals[:, 0],
+            transformed_normals[:, 1],
+            transformed_normals[:, 2],
+        )
 
     if {"rot_0", "rot_1", "rot_2", "rot_3"}.issubset(out.dtype.names or ()):
         rotations = np.column_stack([out[f"rot_{idx}"] for idx in range(4)]).astype(np.float32)
@@ -628,7 +629,9 @@ def read_lbs_weights_binary(path: Path) -> SparseLbsWeights:
         msg = f"{path} has {len(data)} bytes, expected {expected_size}"
         raise ValueError(msg)
     indices = np.frombuffer(data, dtype="<u2", count=count, offset=indices_offset).astype(int).tolist()
-    values = np.frombuffer(data, dtype="<f2", count=count, offset=weights_offset).astype(np.float32).astype(float).tolist()
+    values = (
+        np.frombuffer(data, dtype="<f2", count=count, offset=weights_offset).astype(np.float32).astype(float).tolist()
+    )
     return SparseLbsWeights(
         num_gaussians=num_gaussians,
         joint_count=joint_count,
