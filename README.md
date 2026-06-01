@@ -36,6 +36,25 @@ Splattie turns one image into an **interactive rigged 3D Gaussian Splatting asse
 
 This repo contains the **landing page**, the **GPU generation pipeline**, and the **`.splattie` format spec**. The web component itself lives in a separate repo: [**affromero/splattie-widget**](https://github.com/affromero/splattie-widget) (published as [`@afromero/splattie-widget`](https://www.npmjs.com/package/@afromero/splattie-widget) on npm). If you only want to embed a `.splattie` asset on your site, you don't need this repo.
 
+<details>
+<summary>Contents</summary>
+
+- [Why](#why)
+- [Try it](#try-it)
+- [Run it locally](#run-it-locally)
+  - [Frontend only](#frontend-only-no-gpu-1-minute)
+  - [Self-host the full app](#self-host-the-full-app-with-gpu)
+  - [Generate `.splattie` files from the CLI](#generate-splattie-files-from-the-cli-gpu)
+  - [Widget development](#widget-development)
+- [The `.splattie` format](#the-splattie-format)
+- [Architecture](#architecture)
+- [API](#api)
+- [Contributing](#contributing)
+- [Acknowledgements](#acknowledgements)
+- [License](#license)
+
+</details>
+
 ## Why
 
 Spark renders splats. SuperSplat edits them. StorySplat hosts them. **Nothing makes them react.** Splattie is the interaction layer - a portable `.splattie` bundle plus a web component that reads it.
@@ -92,6 +111,40 @@ ADMIN_PASSWORD=change-me SESSION_SECRET=change-me ADMIN_API_TOKEN=change-me \
 ```
 
 Now [http://localhost:4001/create](http://localhost:4001/create) accepts images and generates a 3D **head** (LAM), **body** (LHM), or **object** (TRELLIS + Puppeteer), then routes you to the state editor where you can tune the interactions and download the `.splattie`. No CLI required.
+
+### Generate `.splattie` files from the CLI (GPU)
+
+If you have shell access on a GPU machine and only want output files, use the backend batch CLI directly. Run this after the GPU setup step above; the command loads the selected generator once and writes one `.splattie` per input image.
+
+```bash
+cd backend
+bash scripts/setup-gpu.sh
+
+mkdir -p /tmp/splattie-out
+uv run splattie generate-splattie-batch \
+  --images-dir /path/to/source-images \
+  --output-dir /tmp/splattie-out \
+  --asset-type head
+```
+
+Use `--asset-type body` for LHM/SMPL-X bodies or `--asset-type object` for TRELLIS + Puppeteer rigged objects. Input images can be `.jpg`, `.jpeg`, or `.png`; outputs are named after the input stems.
+
+If you prefer Docker on the GPU host:
+
+```bash
+git submodule update --init --recursive packages/splattie-widget backend/vendor/LAM backend/vendor/LHM backend/vendor/TRELLIS backend/vendor/Puppeteer
+ADMIN_PASSWORD=change-me SESSION_SECRET=change-me ADMIN_API_TOKEN=change-me \
+  docker compose -f deploy/docker-compose.gpu.yml build gpu-backend
+
+docker run --rm --gpus all --shm-size 16g \
+  -v /path/to/source-images:/inputs:ro \
+  -v /tmp/splattie-out:/outputs \
+  deploy-gpu-backend:latest \
+  uv run --no-sync splattie generate-splattie-batch \
+    --images-dir /inputs \
+    --output-dir /outputs \
+    --asset-type object
+```
 
 ### Widget development
 
