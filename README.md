@@ -45,6 +45,7 @@ This repo contains the **landing page**, the **GPU generation pipeline**, and th
   - [Frontend only](#frontend-only-no-gpu-1-minute)
   - [Self-host the full app](#self-host-the-full-app-with-gpu)
   - [Generate `.splattie` files from the CLI](#generate-splattie-files-from-the-cli-gpu)
+  - [GPU runtime and memory](#gpu-runtime-and-memory)
   - [Widget development](#widget-development)
 - [The `.splattie` format](#the-splattie-format)
 - [Architecture](#architecture)
@@ -145,6 +146,18 @@ docker run --rm --gpus all --shm-size 16g \
     --output-dir /outputs \
     --asset-type object
 ```
+
+### GPU runtime and memory
+
+Measured on June 1, 2026 from the uv-managed `backend/.venv` on an NVIDIA H100 80GB HBM3, using one demo image and the cold CLI command above after weights were already downloaded. Peak GPU memory is the highest `nvidia-smi --query-compute-apps=used_memory` sample during the run; it includes framework allocator reservations and should not be read as a hard minimum.
+
+| Asset type | Pipeline | Input | Cold CLI time | Peak GPU memory | Output bundle |
+|------------|----------|-------|---------------|-----------------|---------------|
+| Head | LAM-20K + FLAME tracking | `h1.jpg` | 98 s | 12.0 GiB (12,240 MiB) | 1.7 MiB |
+| Body | LHM-500M + Multi-HMR | `b1.jpg` | 100 s | 15.1 GiB (15,430 MiB) | 2.4 MiB |
+| Object | TRELLIS-image-large + Puppeteer | `o1.jpg` | 118 s | 70.6 GiB (72,324 MiB) | 16.6 MiB |
+
+The API server and batch CLI load each method once and reuse it for multiple images, so multi-image batches amortize model startup. Different GPUs, drivers, PyTorch allocator behavior, input complexity, and TRELLIS output density can move both time and peak memory.
 
 ### Widget development
 
