@@ -1,115 +1,85 @@
-# ── Splattie GPU Backend ────────────────────────────────────────────────
-# nvidia/cuda 12.1.1 + Python 3.10 + uv + Blender 4.2 + FBX SDK + LAM
-# ──────────────────────────────────────────────────────────────────────
-
+# syntax=docker/dockerfile:1.7
+# Splattie GPU backend
+#
+# CUDA 12.1 + Python 3.11 + uv + the full generation stack:
+# LAM heads, LHM bodies, TRELLIS reconstruction, and Puppeteer rigging.
 FROM nvidia/cuda:12.1.1-devel-ubuntu22.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+ENV CUDA_HOME=/usr/local/cuda
+ENV FORCE_CUDA=1
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
+ENV PATH=/usr/local/cuda/bin:${PATH}
+ENV TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0"
+ENV UV_LINK_MODE=copy
 
-# ── System packages + Python 3.10 via deadsnakes ─────────────────────
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-      software-properties-common && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-      python3.10 python3.10-dev python3.10-venv python3.10-distutils \
-      curl ca-certificates git wget xz-utils libgl1 libglib2.0-0 \
-      libxrender1 libsm6 libxext6 libgomp1 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
+      build-essential \
+      ca-certificates \
+      cmake \
+      curl \
+      git \
+      libegl1 \
+      libgl1 \
+      libglib2.0-0 \
+      libgomp1 \
+      libsm6 \
+      libx11-6 \
+      libxext6 \
+      libxi6 \
+      libxkbcommon0 \
+      libxrender1 \
+      libxrandr2 \
+      ninja-build \
+      pkg-config \
+      wget \
+      xz-utils && \
     rm -rf /var/lib/apt/lists/*
 
-# ── uv ───────────────────────────────────────────────────────────────
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
+ENV PATH=/root/.local/bin:${PATH}
 
-# ── Blender 4.2 headless ─────────────────────────────────────────────
-RUN wget -q https://mirror.clarkson.edu/blender/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz \
-      -O /tmp/blender.tar.xz && \
-    tar -xJf /tmp/blender.tar.xz -C /opt/ && \
-    ln -s /opt/blender-4.2.0-linux-x64/blender /usr/local/bin/blender && \
-    rm /tmp/blender.tar.xz
-ENV BLENDER_PATH="/opt/blender-4.2.0-linux-x64"
-
-# ── FBX SDK ──────────────────────────────────────────────────────────
-RUN wget -q https://damassets.autodesk.net/content/dam/autodesk/www/files/fbx202037_fbxpythonsdk_linux.tar.gz \
-      -O /tmp/fbx_sdk.tar.gz && \
-    mkdir -p /tmp/fbx_sdk && \
-    tar -xzf /tmp/fbx_sdk.tar.gz -C /tmp/fbx_sdk && \
-    yes yes | python3 /tmp/fbx_sdk/fbx202037_fbxpythonsdk_linux /opt/fbx_sdk && \
-    cp /opt/fbx_sdk/lib/Python310_x64/* \
-       /usr/lib/python3/dist-packages/ 2>/dev/null || \
-    cp /opt/fbx_sdk/lib/Python310_x64/* \
-       /usr/local/lib/python3.10/dist-packages/ 2>/dev/null || true && \
-    rm -rf /tmp/fbx_sdk /tmp/fbx_sdk.tar.gz
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv python install 3.11.15
 
 WORKDIR /app
 
-# ── Python dependencies ──────────────────────────────────────────────
-# Copy backend project metadata first for layer caching
-COPY backend/pyproject.toml backend/.python-version backend/
+# Copy metadata, setup script, and vendored generator source before app source
+# so the slow CUDA/weight layer is cacheable.
+COPY backend/pyproject.toml backend/uv.lock backend/.python-version backend/
+COPY backend/scripts/setup-gpu.sh backend/scripts/setup-gpu.sh
+COPY backend/vendor/ backend/vendor/
+
 WORKDIR /app/backend
 
-# Create venv and install base deps
-RUN uv venv --python 3.10 .venv
-ENV PATH="/app/backend/.venv/bin:$PATH"
-ENV VIRTUAL_ENV="/app/backend/.venv"
+RUN uv venv --python 3.11 .venv
+ENV PATH=/app/backend/.venv/bin:${PATH}
+ENV VIRTUAL_ENV=/app/backend/.venv
 
-RUN uv sync --extra gpu --inexact --no-install-project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    SPLATTIE_SKIP_SUBMODULE_UPDATE=1 \
+    SPLATTIE_UV_SYNC_FLAGS="--frozen --no-install-project" \
+    SPLATTIE_UV_RUN_FLAGS="--no-sync" \
+    bash scripts/setup-gpu.sh
 
-# ── PyTorch + xformers (CUDA 12.1) ──────────────────────────────────
-RUN uv pip install \
-      torch==2.3.0 torchvision==0.18.0 \
-      --index-url https://download.pytorch.org/whl/cu121 && \
-    uv pip install \
-      xformers==0.0.26.post1 \
-      --index-url https://download.pytorch.org/whl/cu121
+COPY packages/splattie-widget/package.json /app/packages/splattie-widget/package.json
+COPY packages/splattie-widget/public/ /app/packages/splattie-widget/public/
 
-# ── LAM vendor + CUDA extensions ─────────────────────────────────────
-COPY backend/vendor/LAM /app/backend/vendor/LAM
+RUN uv run --no-sync python - <<'PY'
+from rembg import new_session
+import torch
 
-RUN uv pip install --no-build-isolation \
-      "git+https://github.com/ashawkey/diff-gaussian-rasterization/" \
-      "git+https://github.com/camenduru/simple-knn/" \
-      "nvdiffrast@git+https://github.com/ShenhanQian/nvdiffrast@backface-culling" \
-      "git+https://github.com/facebookresearch/pytorch3d.git"
+torch.hub.load_state_dict_from_url(
+    "https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_reg4_pretrain.pth",
+    map_location="cpu",
+)
+new_session("u2net")
+PY
 
-# ── LAM Python dependencies ──────────────────────────────────────────
-RUN uv pip install --no-build-isolation \
-      face-detection-tflite scikit-image==0.20.0 "rembg[gpu]" chumpy accelerate \
-      huggingface-hub==0.23.2
-
-# ── Build FaceBoxes C extension ──────────────────────────────────────
-RUN cd /app/backend/vendor/LAM/external/landmark_detection/FaceBoxesV2/utils/ && \
-    sh make.sh
-
-# ── Download model weights from HuggingFace ──────────────────────────
-RUN python3 -c " \
-from huggingface_hub import snapshot_download; \
-import os; \
-lam_dir = '/app/backend/vendor/LAM'; \
-os.makedirs(f'{lam_dir}/model_zoo/lam_models/releases/lam', exist_ok=True); \
-snapshot_download('3DAIGC/LAM-20K', local_dir=f'{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k'); \
-os.makedirs(f'{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k/step_045500', exist_ok=True); \
-os.path.exists(f'{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k/step_045500/model.safetensors') or \
-  os.symlink('../model.safetensors', f'{lam_dir}/model_zoo/lam_models/releases/lam/lam-20k/step_045500/model.safetensors'); \
-os.makedirs(f'{lam_dir}/model_zoo/human_parametric_models', exist_ok=True); \
-snapshot_download('3DAIGC/LAM-assets', local_dir=f'{lam_dir}/model_zoo/human_parametric_models'); \
-import tarfile, glob; \
-[tarfile.open(p).extractall(f'{lam_dir}/model_zoo/human_parametric_models') for p in glob.glob(f'{lam_dir}/model_zoo/human_parametric_models/*.tar')]; \
-print('Weights ready'); \
-"
-
-# ── Download OAC template assets ─────────────────────────────────────
-RUN wget -q https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/sample_oac.tar \
-      -O /tmp/sample_oac.tar && \
-    tar -xf /tmp/sample_oac.tar -C /app/backend/vendor/LAM/ && \
-    rm /tmp/sample_oac.tar
-
-# ── Backend source code ─────────────────────────────────────────────
 COPY backend/src/ /app/backend/src/
-RUN uv pip install -e /app/backend --no-build-isolation
+RUN uv pip install -e /app/backend
 
 RUN mkdir -p /app/backend/data/uploads /app/backend/data/generations
 

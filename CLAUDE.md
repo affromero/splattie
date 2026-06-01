@@ -8,8 +8,8 @@
 |-------|-----------|
 | Frontend | Next.js 15 App Router, TypeScript strict, CSS Modules |
 | 3D Rendering | LAM_WebRender (gaussian-splat-renderer-for-lam), WebGL |
-| Backend (GPU) | Python 3.10, FastAPI, uv + pyproject.toml |
-| Asset Generation | LAM (SIGGRAPH 2025) heads and LHM/SMPL-X bodies — swappable via AssetGenerationMethod protocol (`asset_type`: head/body/object) |
+| Backend (GPU) | Python 3.11, FastAPI, uv + pyproject.toml |
+| Asset Generation | LAM (SIGGRAPH 2025) heads, LHM/SMPL-X bodies, and TRELLIS + Puppeteer objects — swappable via AssetGenerationMethod protocol (`asset_type`: head/body/object) |
 | Animation | ARKit blendshapes via FLAME mesh (client-side, 60fps) |
 | Face Detection | readPixels after WebGL render (pixel-perfect) |
 | Compression | @playcanvas/splat-transform (PLY → SPZ) |
@@ -20,7 +20,10 @@
 - `apps/web/` — Next.js frontend (npm workspace)
 - `backend/` — FastAPI GPU service (Python, NOT npm workspace)
 - `packages/lam-renderer/` — LAM_WebRender submodule (built with Vite)
-- `backend/vendor/LAM/` — LAM submodule
+- `backend/vendor/LAM/` — LAM head-generation submodule
+- `backend/vendor/LHM/` — LHM body-generation submodule
+- `backend/vendor/TRELLIS/` — TRELLIS image-to-3D reconstruction submodule
+- `backend/vendor/Puppeteer/` — Puppeteer skeleton + skinning submodule
 
 ## Commands
 
@@ -55,7 +58,7 @@ npm run build:renderer   # Build + patch + deploy to apps/web/public/demo/
 
 ```bash
 cd backend
-bash scripts/setup-gpu.sh   # torch, CUDA extensions, LAM weights, Blender, FBX SDK
+bash scripts/setup-gpu.sh   # torch, CUDA extensions, LAM/LHM/TRELLIS/Puppeteer weights
 ```
 
 ### Docker
@@ -63,6 +66,7 @@ bash scripts/setup-gpu.sh   # torch, CUDA extensions, LAM weights, Blender, FBX 
 ```bash
 docker compose -f deploy/docker-compose.prod.yml build
 docker compose -f deploy/docker-compose.prod.yml up -d
+docker compose -f deploy/docker-compose.gpu.yml up -d --build  # self-host GPU stack
 ```
 
 ## Key Rules

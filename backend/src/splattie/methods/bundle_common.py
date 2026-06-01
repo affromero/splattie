@@ -18,7 +18,7 @@ import hashlib
 import json
 import zipfile
 from collections.abc import Mapping, MutableMapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import ConfigDict, Field, TypeAdapter
@@ -262,7 +262,7 @@ def build_manifest(
             "method": generator_method,
             "methodVersion": generator_method_version,
             "tool": generator_tool,
-            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "createdAt": datetime.now(UTC).isoformat(),
         },
         "avatar": {
             "splat": {

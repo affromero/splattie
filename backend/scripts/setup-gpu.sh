@@ -2,32 +2,72 @@
 set -e
 
 echo "=== Splattie GPU Backend Setup ==="
-echo "Requires: CUDA 12.x, Python 3.10+"
+echo "Requires: CUDA 12.x, Python 3.11+"
 
 cd "$(dirname "$0")/.."
 
-echo "[1/5] Initializing vendor submodules recursively..."
-git submodule update --init --recursive vendor/LAM vendor/LHM vendor/TRELLIS vendor/Puppeteer
+echo "[1/6] Initializing vendor submodules recursively..."
+if [[ "${SPLATTIE_SKIP_SUBMODULE_UPDATE:-0}" == "1" ]]; then
+  echo "Skipping submodule update (SPLATTIE_SKIP_SUBMODULE_UPDATE=1)"
+else
+  git submodule update --init --recursive vendor/LAM vendor/LHM vendor/TRELLIS vendor/Puppeteer
+fi
 
-echo "[2/5] Installing all Python deps via uv sync --extra gpu --extra cuda..."
-# Everything is declared in pyproject — no pip. The `gpu` extra is wheels; the
-# `cuda` extra is the build-from-source pytorch3d/nvdiffrast/simple-knn + chumpy,
-# compiled by uv against the in-env torch via [tool.uv] no-build-isolation-package
-# + [tool.uv.extra-build-dependencies] + [tool.uv.sources]. A runtime shim in
+echo "[2/6] Installing all Python deps via uv sync --extra gpu --extra cuda..."
+# Everything is resolved by uv from pyproject. chumpy's legacy setup.py imports
+# the pip module during a no-build-isolation build, so seed that module without
+# ever invoking raw pip. The `gpu` extra is wheels; the `cuda` extra is the
+# build-from-source pytorch3d/nvdiffrast/simple-knn + chumpy, compiled by uv
+# against the in-env torch via [tool.uv] no-build-isolation-package +
+# [tool.uv.extra-build-dependencies] + [tool.uv.sources]. A runtime shim in
 # lam/method.py restores the py3.11/numpy names chumpy 0.70 needs when FLAME's
 # flame2023.pkl unpickles.
-uv sync --extra gpu --extra cuda
+uv pip install pip setuptools wheel
+uv sync --extra gpu --extra cuda ${SPLATTIE_UV_SYNC_FLAGS:-}
 
-echo "[3/5] Building the FaceBoxes Cython extension (in-repo, not a package)..."
+echo "[3/6] Building the FaceBoxes Cython extension (in-repo, not a package)..."
 # build.py must run with the venv's python (the repo's make.sh hardcodes system
 # python3, producing a .so for the wrong Python ABI).
 BACKEND_DIR="$PWD"
 cd vendor/LAM/external/landmark_detection/FaceBoxesV2/utils/
-uv run --project "$BACKEND_DIR" python build.py build_ext --inplace
+uv run --project "$BACKEND_DIR" ${SPLATTIE_UV_RUN_FLAGS:-} python build.py build_ext --inplace
 cd "$BACKEND_DIR"
 
-echo "[4/5] Downloading LAM model weights..."
-uv run python <<'PY'
+echo "[4/6] Downloading LHM model weights..."
+uv run ${SPLATTIE_UV_RUN_FLAGS:-} python <<'PY'
+import tarfile
+import urllib.request
+from pathlib import Path
+
+from huggingface_hub import snapshot_download
+
+lhm_dir = Path("vendor/LHM")
+snapshot_download("3DAIGC/LHM-500M", cache_dir=lhm_dir / "pretrained_models" / "huggingface")
+
+human_files = lhm_dir / "pretrained_models" / "human_model_files"
+if not human_files.exists():
+    prior_tar = lhm_dir / "LHM_prior_model.tar"
+    urllib.request.urlretrieve(
+        "https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM_prior_model.tar",
+        prior_tar,
+    )
+    with tarfile.open(prior_tar) as tf:
+        tf.extractall(lhm_dir)
+    prior_tar.unlink()
+
+dense_points = lhm_dir / "pretrained_models" / "dense_sample_points" / "1_20000.ply"
+if not dense_points.exists():
+    dense_points.parent.mkdir(parents=True, exist_ok=True)
+    urllib.request.urlretrieve(
+        "https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LHM/1_20000.ply",
+        dense_points,
+    )
+
+print("LHM weights ready")
+PY
+
+echo "[5/6] Downloading LAM model weights..."
+uv run ${SPLATTIE_UV_RUN_FLAGS:-} python <<'PY'
 import glob
 import os
 import shutil
@@ -71,8 +111,8 @@ elif not os.path.exists(flame_dst):
 print("Weights ready")
 PY
 
-echo "[5/5] Downloading object-generation weights..."
-uv run python <<'PY'
+echo "[6/6] Downloading object-generation weights..."
+uv run ${SPLATTIE_UV_RUN_FLAGS:-} python <<'PY'
 from pathlib import Path
 
 from huggingface_hub import hf_hub_download, snapshot_download

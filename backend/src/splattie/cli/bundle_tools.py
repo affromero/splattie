@@ -8,7 +8,7 @@ import json
 import tempfile
 import zipfile
 from collections.abc import Mapping, MutableMapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -123,7 +123,7 @@ def build_legacy_manifest(
             "method": _generator_method(asset_type),
             "methodVersion": "20k-siggraph2025" if asset_type is AssetType.head else None,
             "tool": "splattie add-manifest",
-            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "createdAt": datetime.now(UTC).isoformat(),
         },
         "avatar": {
             "splat": {

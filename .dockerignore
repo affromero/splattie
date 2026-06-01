@@ -6,7 +6,7 @@
 # node_modules, and Next.js build output — making every deploy slow and baking
 # junk (and the transient .env secrets) into image layers.
 #
-# Do NOT exclude backend/vendor: the GPU image COPYs backend/vendor/LAM.
+# Do NOT exclude backend/vendor: the GPU image COPYs the vendored generator code.
 # Do NOT exclude apps/web/public: it holds the demo .splattie files we serve.
 # ──────────────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,17 @@ node_modules
 
 # Local runtime data (analytics db lives in the backend-data volume, not the image)
 backend/data
+
+# Local model caches / generated weights. The GPU image downloads these during
+# setup so the build context stays source-only and reproducible.
+backend/vendor/**/.cache
+backend/vendor/**/.lam_assets_download
+backend/vendor/**/pretrained_models
+backend/vendor/LAM/model_zoo
+backend/vendor/Puppeteer/**/checkpoints
+backend/vendor/Puppeteer/**/ckpt
+backend/vendor/Puppeteer/**/skeleton_ckpts
+backend/vendor/Puppeteer/**/skinning_ckpts
 
 # Secrets — the deploy writes a transient 0600 .env at the repo root for
 # compose interpolation; it must never reach a build layer. (.env.example stays.)

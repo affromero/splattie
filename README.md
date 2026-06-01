@@ -83,6 +83,14 @@ cd ../
 npm run dev
 ```
 
+Docker self-host path:
+
+```bash
+git submodule update --init --recursive packages/splattie-widget backend/vendor/LAM backend/vendor/LHM backend/vendor/TRELLIS backend/vendor/Puppeteer
+ADMIN_PASSWORD=change-me SESSION_SECRET=change-me ADMIN_API_TOKEN=change-me \
+  docker compose -f deploy/docker-compose.gpu.yml up -d --build
+```
+
 Now [http://localhost:4001/create](http://localhost:4001/create) accepts images and generates a 3D **head** (LAM), **body** (LHM), or **object** (TRELLIS + Puppeteer), then routes you to the state editor where you can tune the interactions and download the `.splattie`. No CLI required.
 
 ### Widget development

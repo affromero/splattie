@@ -1,21 +1,21 @@
 ---
-# Splattie SELF-HOST stack (GPU "processing" backend).
+# Splattie self-host stack with the full GPU generation backend.
 #
-# For self-hosters who want to generate their own avatars. Runs the full GPU
-# backend (LAM + CUDA: /generate, /segment) and a web UI with /create enabled
-# (SELF_HOST=true). Requires an NVIDIA GPU + the nvidia container runtime.
-# The public splattie.app deploy does NOT use this — see deploy/docker-compose.prod.yml.
+# Runs heads (LAM), bodies (LHM), objects (TRELLIS + Puppeteer rigging), and a
+# web UI with /create enabled. Requires an NVIDIA GPU plus the NVIDIA container
+# toolkit on the host. The public splattie.app deploy does not use this stack;
+# see deploy/docker-compose.prod.yml for the CPU serving stack.
 #
 # Build the GPU image once (slow, multi-GB) then bring up:
 #   doppler run -p splattie -c prd -- docker compose -f deploy/docker-compose.gpu.yml up -d --build
-# (or supply ADMIN_* via a local .env)
+# Or supply ADMIN_* through a local .env file.
 services:
     web:
         build:
             context: ..
             dockerfile: apps/web/Dockerfile
             args:
-        # Point the browser at this host's GPU backend; override for remote.
+                # Baked into the client bundle at build time.
                 NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
                 NEXT_PUBLIC_SELF_HOST: 'true'
         ports:
@@ -27,11 +27,10 @@ services:
             - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Doppler or .env}
             - GOOGLE_SITE_VERIFICATION=${GOOGLE_SITE_VERIFICATION:-}
         depends_on:
-            - gpu-backend
+            gpu-backend:
+                condition: service_healthy
         restart: unless-stopped
 
-  # Processing backend (GPU): head generation with LAM + CUDA. Also serves
-  # analytics for the self-host instance (single backend here).
     gpu-backend:
         build:
             context: ..
@@ -39,11 +38,21 @@ services:
         ports:
             - 8000:8000
         environment:
+            - NVIDIA_VISIBLE_DEVICES=all
+            - NVIDIA_DRIVER_CAPABILITIES=compute,utility
             - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Doppler or .env}
             - STATS_SALT=${STATS_SALT:-}
         volumes:
             - gpu-backend-data:/app/backend/data
+        gpus: all
+        shm_size: 16gb
         restart: unless-stopped
+        healthcheck:
+            test: [CMD, curl, -fsS, http://localhost:8000/health]
+            interval: 30s
+            timeout: 5s
+            retries: 5
+            start_period: 45s
         deploy:
             resources:
                 reservations:
