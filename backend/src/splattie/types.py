@@ -1,6 +1,6 @@
 """Shared Pydantic models and enums for the Splattie API."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
@@ -21,7 +21,7 @@ class CamelModel(BaseModel):
     )
 
 
-class AssetType(str, Enum):
+class AssetType(StrEnum):
     """The kind of asset a generation method produces.
 
     `str`-valued so it serializes to its plain value (`"head"`) in JSON/Pydantic
@@ -33,7 +33,7 @@ class AssetType(str, Enum):
     object = "object"
 
 
-class SplatFormat(str, Enum):
+class SplatFormat(StrEnum):
     """On-disk gaussian-splat container format inside a `.splattie` bundle."""
 
     PLY = "ply"

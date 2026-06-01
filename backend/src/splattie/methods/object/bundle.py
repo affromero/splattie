@@ -13,7 +13,7 @@ import json
 import math
 import struct
 from collections.abc import Mapping
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import BinaryIO, Protocol, Self
 
@@ -47,14 +47,14 @@ class HasDType(Protocol):
     dtype: np.dtype
 
 
-class ObjectTransformName(str, Enum):
+class ObjectTransformName(StrEnum):
     """Supported object coordinate transforms."""
 
     IDENTITY = "identity"
     VIEWER_UPRIGHT_180X = "viewer-upright-180x"
 
 
-class QuaternionAxis(str, Enum):
+class QuaternionAxis(StrEnum):
     """Widget quaternion helper axes."""
 
     X = "x"
