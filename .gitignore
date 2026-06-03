@@ -65,3 +65,4 @@ backend/.venv/
 .vscode/
 *.swp
 *.swo
+backend/vendor/SMAL/
