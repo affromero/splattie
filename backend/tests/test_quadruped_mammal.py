@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pytest
 
 from splattie.methods.quadruped_mammal import runtime
-from splattie.methods.quadruped_mammal.bind import quadruped_widget_config
+from splattie.methods.quadruped_mammal.bind import (
+    _MAX_CENTER_YAW,
+    _canonical_transform,
+    quadruped_widget_config,
+)
 from splattie.methods.quadruped_mammal.fit import _initial_alignment, _swap_lr, _umeyama
 from splattie.methods.quadruped_mammal.gaussians import viewmat
 from splattie.methods.quadruped_mammal.keypoints import _reproj_error, _triangulate_one
@@ -101,3 +107,56 @@ def test_smal_forward_neutral_matches_template() -> None:
     assert vertices.shape == (smal.V, 3)
     assert joints.shape == (smal.K, 3)
     assert float((vertices - smal.v_template).abs().max()) < 1e-5  # neutral == shaped template
+
+
+def _synthetic_quadruped(head_yaw_deg: float, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
+    """SMAL-indexed joints + head gaussians in a canonical frame (body forward +Z, up +Y).
+
+    The head gaussians (muzzle + asymmetric forward-leaning ears + skull) are turned about +Y by
+    ``head_yaw_deg`` around the head joint, so the muzzle's true facing is a known angle. The ears probe
+    that the muzzle estimate's Y-gating ignores high features.
+    """
+    j = np.zeros((33, 3), np.float32)
+    j[0], j[6], j[15], j[16] = (0, 0.0, 0.0), (0, 0.10, 0.30), (0, 0.20, 0.55), (0, 0.30, 0.75)
+    j[25] = (0, -0.05, -0.45)  # tail base
+    j[10], j[14], j[20], j[24] = (0.2, -0.5, 0.3), (-0.2, -0.5, 0.3), (0.2, -0.5, -0.3), (-0.2, -0.5, -0.3)
+    muzzle = j[16] + np.column_stack(
+        [rng.normal(0, 0.025, 400), rng.normal(-0.03, 0.025, 400), rng.uniform(0.06, 0.30, 400)]
+    )
+    ears = j[16] + np.column_stack(
+        [rng.uniform(-0.14, -0.04, 120), rng.uniform(0.20, 0.32, 120), rng.uniform(0.04, 0.16, 120)]
+    )
+    skull = j[16] + rng.normal(0, 0.05, (250, 3))
+    head = np.vstack([muzzle, ears, skull]).astype(np.float32)
+    th = math.radians(head_yaw_deg)
+    ry = np.array([[math.cos(th), 0, math.sin(th)], [0, 1, 0], [-math.sin(th), 0, math.cos(th)]], np.float32)
+    head = ((head - j[16]) @ ry.T + j[16]).astype(np.float32)
+    return j, head
+
+
+@pytest.mark.parametrize("head_yaw", [0.0, 15.0, -18.0, 45.0])
+def test_canonical_transform_uprights_body_and_centers_head(head_yaw: float) -> None:
+    rng = np.random.default_rng(7)
+    joints, head = _synthetic_quadruped(head_yaw, rng)
+    # Place the animal in an arbitrary world frame (azimuth + tilt), as a reconstruction would.
+    a, b = 1.1, 0.25
+    rz = np.array([[math.cos(a), -math.sin(a), 0], [math.sin(a), math.cos(a), 0], [0, 0, 1]])
+    rx = np.array([[1, 0, 0], [0, math.cos(b), -math.sin(b)], [0, math.sin(b), math.cos(b)]])
+    world = (rz @ rx).astype(np.float32)
+    jw, hw = (joints @ world.T).astype(np.float32), (head @ world.T).astype(np.float32)
+
+    matrix = np.asarray(_canonical_transform(jw, hw).matrix, np.float32)
+    assert np.allclose(matrix @ matrix.T, np.eye(3), atol=1e-4)  # proper rotation
+    assert abs(float(np.linalg.det(matrix)) - 1.0) < 1e-4
+
+    jf, pts = jw @ matrix.T, hw @ matrix.T
+    up = jf[[0, 6]].mean(0) - jf[[10, 14, 20, 24]].mean(0)
+    assert (up / np.linalg.norm(up))[1] > 0.97  # body stands upright (+Y)
+
+    near = pts[np.linalg.norm(pts - jf[16], axis=1) < 0.45]
+    low = near[near[:, 1] <= jf[16][1] + 0.06]
+    muzzle = low if len(low) >= 50 else near
+    fwd = muzzle[muzzle[:, 2] >= np.percentile(muzzle[:, 2], 75)].mean(0) - jf[16]
+    residual = abs(math.degrees(math.atan2(float(fwd[0]), float(fwd[2]))))
+    expected = max(0.0, abs(head_yaw) - math.degrees(_MAX_CENTER_YAW))  # clamp leaves a residual past the cap
+    assert abs(residual - expected) < 7.0

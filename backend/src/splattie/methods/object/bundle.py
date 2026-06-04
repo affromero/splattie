@@ -52,6 +52,7 @@ class ObjectTransformName(StrEnum):
 
     IDENTITY = "identity"
     VIEWER_UPRIGHT_180X = "viewer-upright-180x"
+    FIT_CANONICAL = "fit-canonical"
 
 
 class QuaternionAxis(StrEnum):
