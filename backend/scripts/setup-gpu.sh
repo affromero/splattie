@@ -6,14 +6,14 @@ echo "Requires: CUDA 12.x, Python 3.11+"
 
 cd "$(dirname "$0")/.."
 
-echo "[1/6] Initializing vendor submodules recursively..."
+echo "[1/7] Initializing vendor submodules recursively..."
 if [[ "${SPLATTIE_SKIP_SUBMODULE_UPDATE:-0}" == "1" ]]; then
   echo "Skipping submodule update (SPLATTIE_SKIP_SUBMODULE_UPDATE=1)"
 else
   git submodule update --init --recursive vendor/LAM vendor/LHM vendor/TRELLIS vendor/Puppeteer
 fi
 
-echo "[2/6] Installing all Python deps via uv sync --extra gpu --extra cuda..."
+echo "[2/7] Installing all Python deps via uv sync --extra gpu --extra cuda..."
 # Everything is resolved by uv from pyproject. chumpy's legacy setup.py imports
 # the pip module during a no-build-isolation build, so seed that module without
 # ever invoking raw pip. The `gpu` extra is wheels; the `cuda` extra is the
@@ -25,7 +25,7 @@ echo "[2/6] Installing all Python deps via uv sync --extra gpu --extra cuda..."
 uv pip install pip setuptools wheel
 uv sync --extra gpu --extra cuda ${SPLATTIE_UV_SYNC_FLAGS:-}
 
-echo "[3/6] Building the FaceBoxes Cython extension (in-repo, not a package)..."
+echo "[3/7] Building the FaceBoxes Cython extension (in-repo, not a package)..."
 # build.py must run with the venv's python (the repo's make.sh hardcodes system
 # python3, producing a .so for the wrong Python ABI).
 BACKEND_DIR="$PWD"
@@ -33,7 +33,7 @@ cd vendor/LAM/external/landmark_detection/FaceBoxesV2/utils/
 uv run --project "$BACKEND_DIR" ${SPLATTIE_UV_RUN_FLAGS:-} python build.py build_ext --inplace
 cd "$BACKEND_DIR"
 
-echo "[4/6] Downloading LHM model weights..."
+echo "[4/7] Downloading LHM model weights..."
 uv run ${SPLATTIE_UV_RUN_FLAGS:-} python <<'PY'
 import tarfile
 import urllib.request
@@ -66,7 +66,7 @@ if not dense_points.exists():
 print("LHM weights ready")
 PY
 
-echo "[5/6] Downloading LAM model weights..."
+echo "[5/7] Downloading LAM model weights..."
 uv run ${SPLATTIE_UV_RUN_FLAGS:-} python <<'PY'
 import glob
 import os
@@ -111,7 +111,7 @@ elif not os.path.exists(flame_dst):
 print("Weights ready")
 PY
 
-echo "[6/6] Downloading object-generation weights..."
+echo "[6/7] Downloading object-generation weights..."
 uv run ${SPLATTIE_UV_RUN_FLAGS:-} python <<'PY'
 from pathlib import Path
 
@@ -155,6 +155,26 @@ hf_hub_download(
 )
 print("Object weights ready")
 PY
+
+echo "[7/7] Setting up the quadruped-mammal runtime (SMAL + DeepLabCut/SuperAnimal)..."
+# SMAL parametric quadruped model (MPI noncommercial). Gitignored under vendor/SMAL.
+if [[ -n "${MPI_USERNAME:-}" && -n "${MPI_PASSWORD:-}" ]]; then
+  uv run ${SPLATTIE_UV_RUN_FLAGS:-} python scripts/download_smal.py
+else
+  echo "  Skipping SMAL download (MPI_USERNAME/MPI_PASSWORD unset). Fetch later via:"
+  echo "    doppler run -p splattie -c prd -- uv run python backend/scripts/download_smal.py"
+fi
+# SuperAnimal-Quadruped runs in an ISOLATED DeepLabCut venv: deeplabcut's deps conflict with
+# the backend's numpy<2 pin, so it cannot share this env. This is the one sanctioned uv-pip
+# exception — an out-of-project tool venv invoked only as a subprocess.
+DLC_PYTHON="${SPLATTIE_DLC_PYTHON:-$HOME/dlc-venv/bin/python}"
+DLC_VENV_DIR="$(dirname "$(dirname "$DLC_PYTHON")")"
+if [[ ! -x "$DLC_PYTHON" ]]; then
+  echo "  Creating DeepLabCut venv at $DLC_VENV_DIR ..."
+  uv venv "$DLC_VENV_DIR" --python 3.11
+  uv pip install --python "$DLC_PYTHON" "deeplabcut>=3.0"
+fi
+echo "  Quadruped runtime ready (SuperAnimal-Quadruped weights download lazily on first inference)."
 
 echo "=== Setup complete ==="
 echo "Run: uv run uvicorn splattie.api.app:create_app --factory --port 8000"

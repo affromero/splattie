@@ -177,6 +177,7 @@ extend-immutable-calls = ["fastapi.Body", "fastapi.Depends", "fastapi.Path", "fa
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D103", "S101"]
+"scripts/**" = ["INP001"]
 
 [tool.uv]
 # Build these against the already-installed torch (they import torch at build
