@@ -17,3 +17,7 @@
 	path = backend/vendor/Puppeteer
 	url = https://github.com/affromero/Puppeteer.git
 	branch = splattie
+[submodule "backend/vendor/TripoSplat"]
+	path = backend/vendor/TripoSplat
+	url = https://github.com/affromero/TripoSplat.git
+	branch = splattie

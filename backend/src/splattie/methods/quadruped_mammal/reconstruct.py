@@ -1,21 +1,61 @@
-"""TRELLIS reconstruction for the quadruped pipeline — gaussian PLY only.
+"""Image-to-3D-gaussian reconstruction for the quadruped pipeline — gaussian PLY only.
 
-The SMAL fit registers against the gaussian splat directly, so (unlike the object method)
-the TRELLIS mesh is not needed; this returns just the gaussian PLY path.
+The SMAL fit registers against the gaussian splat directly, so (unlike the object method) no mesh is
+needed; this returns just the gaussian PLY path. TRELLIS is the default backend; TripoSplat is an
+optional backend (VAST-AI) that reconstructs some animal faces more cleanly — selectable per call.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from splattie.methods.object.reconstruct import reconstruct_object_with_trellis
+from splattie.methods.object.runtime import (
+    VENDOR_TRIPOSPLAT,
+    python_module_args,
+    run_command,
+    vendor_python_env,
+)
+
+ReconstructBackend = Literal["trellis", "triposplat"]
 
 
-def reconstruct_gaussian_splat(*, image_path: Path, output_dir: Path, model_id: str) -> Path:
-    """Run TRELLIS and return the gaussian PLY path."""
+def reconstruct_gaussian_splat(
+    *, image_path: Path, output_dir: Path, model_id: str, backend: ReconstructBackend = "triposplat"
+) -> Path:
+    """Run the chosen image->3D-gaussian backend and return the gaussian PLY path.
+
+    TripoSplat is the default for animals: it reconstructs muzzles/faces far more cleanly than TRELLIS
+    (which melts flat/foreshortened animal faces). The object method keeps TRELLIS; pass backend="trellis"
+    to fall back here.
+    """
+    if backend == "triposplat":
+        return _reconstruct_with_triposplat(image_path=image_path, output_dir=output_dir, model_id=model_id)
     reconstruction = reconstruct_object_with_trellis(
         image_path=image_path,
         output_dir=output_dir,
         model_id=model_id,
     )
     return reconstruction.gaussian_ply
+
+
+def _reconstruct_with_triposplat(*, image_path: Path, output_dir: Path, model_id: str) -> Path:
+    """Run TripoSplat (optional backend) in its vendored subprocess; return only the gaussian PLY.
+
+    The object method also meshes the splat for Puppeteer; the SMAL fit skins the gaussians directly,
+    so the mesh step is skipped here.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    args = ["--image-path", str(image_path), "--output-dir", str(output_dir), "--model-id", model_id]
+    run_command(
+        python_module_args("splattie.methods.object.triposplat_runner", args),
+        cwd=VENDOR_TRIPOSPLAT,
+        env=vendor_python_env(pythonpath_roots=(VENDOR_TRIPOSPLAT,)),
+        label="TripoSplat quadruped reconstruction",
+    )
+    gaussian_ply = output_dir / f"{model_id}_gaussian.ply"
+    if not gaussian_ply.exists():
+        msg = f"TripoSplat did not produce expected gaussian PLY {gaussian_ply}"
+        raise FileNotFoundError(msg)
+    return gaussian_ply

@@ -10,7 +10,7 @@ echo "[1/7] Initializing vendor submodules recursively..."
 if [[ "${SPLATTIE_SKIP_SUBMODULE_UPDATE:-0}" == "1" ]]; then
   echo "Skipping submodule update (SPLATTIE_SKIP_SUBMODULE_UPDATE=1)"
 else
-  git submodule update --init --recursive vendor/LAM vendor/LHM vendor/TRELLIS vendor/Puppeteer
+  git submodule update --init --recursive vendor/LAM vendor/LHM vendor/TRELLIS vendor/TripoSplat vendor/Puppeteer
 fi
 
 echo "[2/7] Installing all Python deps via uv sync --extra gpu --extra cuda..."
@@ -122,6 +122,11 @@ puppeteer = Path("vendor/Puppeteer")
 # TRELLIS image pipeline weights; from_pretrained can fetch lazily, but setup-gpu
 # makes production readiness explicit and avoids failing the first user request.
 snapshot_download("microsoft/TRELLIS-image-large")
+
+# TripoSplat image->3D-gaussian weights (~3.8 GB) — the default reconstruction backend for the
+# quadruped_mammal pipeline (much cleaner animal faces than TRELLIS); objects still use TRELLIS.
+# Land them under vendor/TripoSplat/ckpts so the paths match triposplat.py's expected ckpts/ layout.
+snapshot_download("VAST-AI/TripoSplat", local_dir=str(Path("vendor/TripoSplat") / "ckpts"))
 
 # Puppeteer skeleton generation.
 hf_hub_download(

@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from splattie.methods.quadruped_mammal import runtime
 from splattie.methods.quadruped_mammal.bind import (
@@ -160,3 +164,19 @@ def test_canonical_transform_uprights_body_and_centers_head(head_yaw: float) -> 
     residual = abs(math.degrees(math.atan2(float(fwd[0]), float(fwd[2]))))
     expected = max(0.0, abs(head_yaw) - math.degrees(_MAX_CENTER_YAW))  # clamp leaves a residual past the cap
     assert abs(residual - expected) < 7.0
+
+
+def test_reconstruct_backend_selector(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The quadruped reconstruct dispatches to TripoSplat by default, TRELLIS on request."""
+    from splattie.methods.quadruped_mammal import reconstruct as recon
+
+    trellis_ply, tripo_ply = tmp_path / "trellis.ply", tmp_path / "tripo.ply"
+    monkeypatch.setattr(
+        recon, "reconstruct_object_with_trellis", lambda **_: type("R", (), {"gaussian_ply": trellis_ply})()
+    )
+    monkeypatch.setattr(recon, "_reconstruct_with_triposplat", lambda **_: tripo_ply)
+
+    common = {"image_path": tmp_path / "x.png", "output_dir": tmp_path, "model_id": "m"}
+    assert recon.reconstruct_gaussian_splat(**common) == tripo_ply  # default = triposplat
+    assert recon.reconstruct_gaussian_splat(**common, backend="triposplat") == tripo_ply
+    assert recon.reconstruct_gaussian_splat(**common, backend="trellis") == trellis_ply

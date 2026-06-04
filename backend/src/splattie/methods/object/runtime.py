@@ -15,7 +15,12 @@ logger = get_logger()
 
 VENDOR_ROOT = Path(__file__).resolve().parents[4] / "vendor"
 VENDOR_TRELLIS = VENDOR_ROOT / "TRELLIS"
+VENDOR_TRIPOSPLAT = VENDOR_ROOT / "TripoSplat"  # optional image->3D-gaussian backend (alongside TRELLIS)
 VENDOR_PUPPETEER = VENDOR_ROOT / "Puppeteer"
+
+# TripoSplat checkpoints, downloaded by setup-gpu.sh under vendor/TripoSplat/ckpts.
+TRIPOSPLAT_CKPTS = VENDOR_TRIPOSPLAT / "ckpts"
+TRIPOSPLAT_FLOW_MODEL = TRIPOSPLAT_CKPTS / "diffusion_models" / "triposplat_fp16.safetensors"
 
 PUPPETEER_SKELETON_WEIGHTS = VENDOR_PUPPETEER / "skeleton" / "skeleton_ckpts" / "puppeteer_skeleton_w_diverse_pose.pth"
 PUPPETEER_SKINNING_WEIGHTS = (
