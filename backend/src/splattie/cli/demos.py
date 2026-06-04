@@ -199,8 +199,52 @@ OBJECTS: tuple[DemoSubject, ...] = (
         subject="a small construction crane toy with rotating base, lattice arm, cable, and hook",
     ),
 )
+QUADRUPED_MAMMALS: tuple[DemoSubject, ...] = (
+    # Mostly in/near SMAL families (canid/felid/equid/bovid/cervid) for clean rigs, plus a
+    # capybara (rodent, out-of-family) as a cute experiment — verified at demo-install time.
+    DemoSubject(
+        asset_id="q1",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a German shorthaired pointer dog with a liver-and-white ticked short coat and folded ears",
+    ),
+    DemoSubject(
+        asset_id="q2",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a domestic short-haired tabby cat with brown mackerel stripes, white paws, and green eyes",
+    ),
+    DemoSubject(
+        asset_id="q3",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a red fox with a rich orange coat, white underbelly, black legs, and a bushy white-tipped tail",
+    ),
+    DemoSubject(
+        asset_id="q4",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a chestnut brown horse with a dark mane and tail and a short summer coat",
+    ),
+    DemoSubject(
+        asset_id="q5",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a black-and-white Holstein dairy cow with a pink udder and short horns",
+    ),
+    DemoSubject(
+        asset_id="q6",
+        asset_type=AssetType.quadruped_mammal,
+        subject="an adult red deer stag with a tan-brown coat, pale rump, and large branching antlers",
+    ),
+    DemoSubject(
+        asset_id="q7",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a young lamb with a fluffy cream-white woolly coat, pink ears, and slender dark legs",
+    ),
+    DemoSubject(
+        asset_id="q8",
+        asset_type=AssetType.quadruped_mammal,
+        subject="an adult capybara with coarse reddish-brown fur, a barrel-shaped body, short legs, and a blunt square snout",
+    ),
+)
 
-_DEMO_GROUPS: tuple[tuple[DemoSubject, ...], ...] = (HEADS, BODIES, OBJECTS)
+_DEMO_GROUPS: tuple[tuple[DemoSubject, ...], ...] = (HEADS, BODIES, OBJECTS, QUADRUPED_MAMMALS)
 
 
 def _selected_demo_groups(asset_type: AssetType | None) -> tuple[tuple[DemoSubject, ...], ...]:

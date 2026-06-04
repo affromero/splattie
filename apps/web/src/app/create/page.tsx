@@ -14,6 +14,7 @@ const ASSET_OPTIONS: { value: AssetType; label: string; hint: string }[] = [
   { value: 'head', label: 'Head', hint: 'clear, front-facing portrait' },
   { value: 'body', label: 'Body', hint: 'full body, head to feet' },
   { value: 'object', label: 'Object', hint: 'single isolated object' },
+  { value: 'quadruped_mammal', label: 'Animal', hint: 'four-legged mammal (cat, dog, horse, deer)' },
 ];
 
 const GENERATING_COPY: Record<AssetType, string> = {
