@@ -34,6 +34,7 @@ from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
 from splattie.methods.lhm.method import LHMMethod
 from splattie.methods.object.method import ObjectRigMethod
+from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
 from splattie.types import AssetType
 
 logger = get_logger()
@@ -377,14 +378,21 @@ def _regen(method: AssetGenerationMethod, images_dir: Path, output_dir: Path, as
     method.unload()
 
 
-def regen_demo_avatars(heads_dir: Path, bodies_dir: Path, output_dir: Path, objects_dir: Path | None = None) -> None:
-    """Rebuild head/body/object `.splattie` demos from source images, in-process.
+def regen_demo_avatars(
+    heads_dir: Path,
+    bodies_dir: Path,
+    output_dir: Path,
+    objects_dir: Path | None = None,
+    quadrupeds_dir: Path | None = None,
+) -> None:
+    """Rebuild head/body/object/quadruped `.splattie` demos from source images, in-process.
 
     Args:
         heads_dir: Directory of head source images (`<id>.png`).
         bodies_dir: Directory of full-body source images (`<id>.png`).
         output_dir: Directory to write `<id>.splattie` into.
         objects_dir: Optional directory of object source images (`<id>.png`).
+        quadrupeds_dir: Optional directory of quadruped-mammal source images (`<id>.png`).
 
     """
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -392,6 +400,8 @@ def regen_demo_avatars(heads_dir: Path, bodies_dir: Path, output_dir: Path, obje
     _regen(LHMMethod(), bodies_dir, output_dir, AssetType.body)
     if objects_dir is not None:
         _regen(ObjectRigMethod(), objects_dir, output_dir, AssetType.object)
+    if quadrupeds_dir is not None:
+        _regen(QuadrupedMammalMethod(), quadrupeds_dir, output_dir, AssetType.quadruped_mammal)
     produced = sorted(output_dir.glob("*.splattie"))
     logger.info(f"Done: {len(produced)} .splattie in {output_dir}")
 
