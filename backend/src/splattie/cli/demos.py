@@ -65,9 +65,11 @@ _OBJECT_FRAMING = (
 )
 _QUADRUPED_FRAMING = (
     "A single photorealistic quadruped mammal, full body, standing in a natural neutral stance, "
-    "side three-quarter view with the head turned slightly toward the camera, all four legs, the "
-    "entire head, and the tail fully visible and uncropped, the whole animal centered in frame, "
-    "no people, no hands, no text, no labels, no props. "
+    "the whole animal oriented toward the camera at a slight three-quarter angle (chest and face "
+    "toward the viewer, NOT a full side profile), the head and body aligned and both facing forward, "
+    "looking straight at the camera with the nose toward the viewer and both eyes equally visible, "
+    "all four legs, the entire head, and the tail fully visible and uncropped, the whole animal "
+    "centered in frame, no people, no hands, no text, no labels, no props. "
 )
 
 
