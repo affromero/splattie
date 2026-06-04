@@ -11,7 +11,10 @@ import os
 import threading
 from pathlib import Path
 
+from splattie.methods.object.runtime import VENDOR_TRELLIS
+
 VENDOR_ROOT = Path(__file__).resolve().parents[4] / "vendor"
+__all__ = ["DLC_PYTHON", "SMAL_PKL", "VENDOR_TRELLIS", "inference_lock", "require_quadruped_runtime"]
 _DEFAULT_SMAL_PKL = VENDOR_ROOT / "SMAL" / "smal_online_V1.0" / "smal_CVPR2017.pkl"
 _DEFAULT_DLC_PYTHON = Path("/home/ubuntu/dlc-venv/bin/python")
 

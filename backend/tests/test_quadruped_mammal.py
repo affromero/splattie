@@ -78,6 +78,18 @@ def test_quadruped_widget_config_enables_head_follow() -> None:
     assert config.states.idle.tracking.head > 0
 
 
+def test_require_quadruped_runtime_executes() -> None:
+    """Exercise the runtime check body so call-time NameErrors are caught by CI."""
+    assets_present = (
+        runtime.SMAL_PKL.exists() and runtime.DLC_PYTHON.exists() and (runtime.VENDOR_TRELLIS / "trellis").exists()
+    )
+    if assets_present:
+        runtime.require_quadruped_runtime()  # must not raise when everything is present
+    else:
+        with pytest.raises(FileNotFoundError):
+            runtime.require_quadruped_runtime()
+
+
 @pytest.mark.skipif(not runtime.SMAL_PKL.exists(), reason="SMAL weights not present")
 def test_smal_forward_neutral_matches_template() -> None:
     import torch
