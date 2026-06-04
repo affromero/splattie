@@ -62,6 +62,12 @@ _OBJECT_FRAMING = (
     "no cropping, no text, no labels, no hands, no people, no extra props. Choose a clean "
     "object silhouette with distinct movable or articulated parts suitable for rigging. "
 )
+_QUADRUPED_FRAMING = (
+    "A single photorealistic quadruped mammal, full body, standing in a natural neutral stance, "
+    "side three-quarter view with the head turned slightly toward the camera, all four legs, the "
+    "entire head, and the tail fully visible and uncropped, the whole animal centered in frame, "
+    "no people, no hands, no text, no labels, no props. "
+)
 
 
 @dataclass(config=ConfigDict(frozen=True), kw_only=True)
@@ -207,6 +213,8 @@ def demo_prompt(asset_type: AssetType, subject: str) -> str:
     """Build the Gemini prompt for one demo source image."""
     if asset_type is AssetType.object:
         return f"{_OBJECT_BASE} {_OBJECT_FRAMING}Subject: {subject}."
+    if asset_type is AssetType.quadruped_mammal:
+        return f"{_OBJECT_BASE} {_QUADRUPED_FRAMING}Subject: {subject}."
     framing = _HEAD_FRAMING if asset_type is AssetType.head else _BODY_FRAMING
     return f"{_BASE} {framing}Subject: {subject}."
 
@@ -224,6 +232,8 @@ def _demo_folder(asset_type: AssetType) -> str:
         return "heads"
     if asset_type is AssetType.body:
         return "bodies"
+    if asset_type is AssetType.quadruped_mammal:
+        return "quadruped_mammals"
     return "objects"
 
 

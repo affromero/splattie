@@ -72,7 +72,9 @@ def _animation_manifest(names: set[str], asset_type: AssetType) -> Mapping[str, 
             animation["weights"] = {"file": "lbs_weights.json"}
         return animation
 
-    if asset_type is AssetType.object:
+    if asset_type in (AssetType.object, AssetType.quadruped_mammal):
+        # quadruped bundles are object-format (LBS skeleton.json + lbs_weights.bin), built
+        # via build_object_splattie; the animation manifest is identical to objects.
         animation = {"type": "lbs", "expression": None}
         if "skeleton.json" in names:
             animation["skeleton"] = {"file": "skeleton.json", "rig": "puppeteer-object"}
@@ -90,7 +92,7 @@ def _animation_manifest(names: set[str], asset_type: AssetType) -> Mapping[str, 
 def _topology(asset_type: AssetType) -> str:
     if asset_type is AssetType.body:
         return "smplx-voxel"
-    if asset_type is AssetType.object:
+    if asset_type in (AssetType.object, AssetType.quadruped_mammal):
         return "object-auto"
     return "flame-20k"
 
@@ -100,6 +102,8 @@ def _generator_method(asset_type: AssetType) -> str:
         return "lhm"
     if asset_type is AssetType.object:
         return "trellis-puppeteer"
+    if asset_type is AssetType.quadruped_mammal:
+        return "trellis-smal-quadruped"
     return "lam"
 
 

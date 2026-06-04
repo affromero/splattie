@@ -17,7 +17,7 @@ export interface GenerationResult {
   methodId: string;
 }
 
-export type AssetType = 'head' | 'body' | 'object';
+export type AssetType = 'head' | 'body' | 'object' | 'quadruped_mammal';
 
 export interface MethodInfo {
   id: string;

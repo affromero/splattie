@@ -31,6 +31,7 @@ class AssetType(StrEnum):
     head = "head"
     body = "body"
     object = "object"
+    quadruped_mammal = "quadruped_mammal"
 
 
 class SplatFormat(StrEnum):

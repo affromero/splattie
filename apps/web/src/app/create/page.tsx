@@ -20,6 +20,7 @@ const GENERATING_COPY: Record<AssetType, string> = {
   head: 'Reconstructing head model...',
   body: 'Reconstructing body model...',
   object: 'Reconstructing and rigging object...',
+  quadruped_mammal: 'Reconstructing and rigging quadruped...',
 };
 
 export default function CreatePage() {

@@ -6,7 +6,7 @@ import styles from './page.module.css';
 
 const SELF_HOST = process.env.NEXT_PUBLIC_SELF_HOST === 'true';
 
-type Category = 'head' | 'body' | 'object';
+type Category = 'head' | 'body' | 'object' | 'quadruped_mammal';
 
 interface Demo {
   id: string;
@@ -20,6 +20,7 @@ const ASSET_VERSION = '8';
 const folder = (c: Category): string => {
   if (c === 'head') return 'heads';
   if (c === 'body') return 'bodies';
+  if (c === 'quadruped_mammal') return 'quadruped_mammals';
   return 'objects';
 };
 const demoThumb = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.jpg`;
