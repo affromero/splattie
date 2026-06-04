@@ -334,7 +334,6 @@ def test_quadruped_generate_propagates_load_failure(monkeypatch: pytest.MonkeyPa
         raise FileNotFoundError(msg)
 
     monkeypatch.setattr(quadruped_method.runtime, "require_quadruped_runtime", _boom)
-    monkeypatch.setattr(quadruped_method, "require_object_runtime", lambda: None)
     with pytest.raises(FileNotFoundError, match="SMAL"):
         QuadrupedMammalMethod().generate(
             np.zeros((4, 4, 3), dtype=np.uint8),

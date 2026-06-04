@@ -16,7 +16,6 @@ from beartype import beartype
 from jaxtyping import Bool, UInt8, jaxtyped
 from klogr import get_logger
 
-from splattie.methods.object.runtime import require_object_runtime
 from splattie.methods.quadruped_mammal import runtime
 from splattie.methods.quadruped_mammal.bind import bind_and_bundle
 from splattie.methods.quadruped_mammal.fit import fit_smal
@@ -63,7 +62,6 @@ class QuadrupedMammalMethod:
 
     def load(self) -> None:
         # No fallback: missing TRELLIS / SMAL / DeepLabCut raises instead of degrading.
-        require_object_runtime()
         runtime.require_quadruped_runtime()
 
     @jaxtyped(typechecker=beartype)

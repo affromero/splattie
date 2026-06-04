@@ -30,13 +30,18 @@ inference_lock = threading.Lock()
 
 
 def require_quadruped_runtime() -> None:
-    """Fail early when the SMAL model or the DeepLabCut interpreter is missing."""
-    missing = [str(path) for path in (SMAL_PKL, DLC_PYTHON) if not path.exists()]
+    """Fail early when SMAL, the DeepLabCut interpreter, or TRELLIS is missing.
+
+    TRELLIS supplies the gaussian splat; Puppeteer is NOT required (the quadruped rig comes
+    from SMAL), so this deliberately does not call the object method's Puppeteer-inclusive check.
+    """
+    required = (SMAL_PKL, DLC_PYTHON, VENDOR_TRELLIS / "trellis")
+    missing = [str(path) for path in required if not path.exists()]
     if missing:
         formatted = "\n".join(f"  - {item}" for item in missing)
         msg = (
             "Quadruped generation runtime is incomplete. Run `bash backend/scripts/setup-gpu.sh` "
-            "(SMAL weights + DeepLabCut venv), or set SPLATTIE_SMAL_PKL / SPLATTIE_DLC_PYTHON. "
+            "(SMAL weights + DeepLabCut venv + TRELLIS), or set SPLATTIE_SMAL_PKL / SPLATTIE_DLC_PYTHON. "
             f"Missing:\n{formatted}"
         )
         raise FileNotFoundError(msg)
