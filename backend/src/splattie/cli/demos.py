@@ -64,12 +64,12 @@ _OBJECT_FRAMING = (
     "object silhouette with distinct movable or articulated parts suitable for rigging. "
 )
 _QUADRUPED_FRAMING = (
-    "A single photorealistic quadruped mammal, full body, standing in a natural neutral stance, "
-    "the whole animal oriented toward the camera at a slight three-quarter angle (chest and face "
-    "toward the viewer, NOT a full side profile), the head and body aligned and both facing forward, "
-    "looking straight at the camera with the nose toward the viewer and both eyes equally visible, "
-    "all four legs, the entire head, and the tail fully visible and uncropped, the whole animal "
-    "centered in frame, no people, no hands, no text, no labels, no props. "
+    "A single photorealistic quadruped mammal, full body, standing in a natural neutral stance shown "
+    "in a clear three-quarter view: one full side/flank of the body visible (NOT a head-on/frontal "
+    "view that hides the body, and NOT a flat 90-degree side profile), with the head turned only "
+    "partway toward the camera (about 30 degrees) so both eyes are visible while the muzzle still "
+    "points partly to the side. All four legs, the entire head, and the tail fully visible and "
+    "uncropped, the whole animal centered in frame, no people, no hands, no text, no labels, no props. "
 )
 
 
