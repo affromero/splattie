@@ -56,11 +56,21 @@ const DEMOS: Demo[] = [
   { id: 'o6', category: 'object' },
   { id: 'o7', category: 'object' },
   { id: 'o8', category: 'object' },
+
+  { id: 'q1', category: 'quadruped_mammal' },
+  { id: 'q2', category: 'quadruped_mammal' },
+  { id: 'q3', category: 'quadruped_mammal' },
+  { id: 'q4', category: 'quadruped_mammal' },
+  { id: 'q5', category: 'quadruped_mammal' },
+  { id: 'q6', category: 'quadruped_mammal' },
+  { id: 'q7', category: 'quadruped_mammal' },
+  { id: 'q8', category: 'quadruped_mammal' },
 ];
 
 const HEADS = DEMOS.filter((d) => d.category === 'head');
 const BODIES = DEMOS.filter((d) => d.category === 'body');
 const OBJECTS = DEMOS.filter((d) => d.category === 'object');
+const QUADRUPEDS = DEMOS.filter((d) => d.category === 'quadruped_mammal');
 
 function Carousel({
   category,
@@ -195,6 +205,9 @@ export default function Home() {
 
         <div className={styles.categoryLabel}>Objects<span className={styles.categoryHint}>rigged from a single image</span></div>
         <Carousel category="object" demos={OBJECTS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
+
+        <div className={styles.categoryLabel}>Animals<span className={styles.categoryHint}>head follows your cursor</span></div>
+        <Carousel category="quadruped_mammal" demos={QUADRUPEDS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
 
         {activeDemo && (
           <div className={styles.editorSection} ref={editorRef}>
