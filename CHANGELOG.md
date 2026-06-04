@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Quadruped-mammal asset category** (`asset_type=quadruped_mammal`): single image → rigged 3D Gaussian-splat animal with a SMAL skeleton and cursor head-follow. Pipeline = TRELLIS gaussian splat → 16 internal views (up-axis from a chamfer SMAL fit) → SuperAnimal-Quadruped (DeepLabCut, isolated venv) keypoints → multi-view triangulation → keypoint-anchored SMAL fit → LBS bind → gaze-enabled `.splattie`.
+- `methods/quadruped_mammal/` package (SMAL forward, keypoints, fit, bind, runtime) registered as `trellis-smal-quadruped`; "Animal" create-page option; 8 demo subjects.
+- `scripts/download_smal.py` (MPI session-login SMAL download) + a setup-gpu step provisioning SMAL and the isolated DeepLabCut/SuperAnimal venv.
+
+### Notes
+- Detection-gated, no fallback: non-mammals (no SuperAnimal detection) raise `NotAQuadrupedMammalError`. Validated on cat/dog/horse/cow/deer (clean rigs); out-of-family megafauna (e.g. elephant) are in-scope-but-degraded — `|betas|` does not separate them, so there is no shape gate. The bundle's widget `assetType` stays `object` (renderer selector); quadruped identity rides on `generatorMethod` + `metadata.category`.
+
 ## [0.3.0] - 2026-05-31
 
 ### Added
