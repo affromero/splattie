@@ -63,17 +63,27 @@ def _chamfer_up_axis(smal: SMAL, points: torch.Tensor) -> np.ndarray:
             dist = chamfer_distance(verts[None], points[None])[0].item()
         if dist < best[0]:
             best = (dist, pose[0].clone(), trans.clone())
+    betas = torch.zeros(smal.B, device=DEVICE, requires_grad=True)
     pose = torch.zeros(smal.K, 3, device=DEVICE)
     pose[0] = best[1]
     pose = pose.detach().requires_grad_()
     scale = torch.tensor(scale0, device=DEVICE, requires_grad=True)
     trans = best[2].detach().requires_grad_()
-    optimizer = torch.optim.Adam([scale, trans, pose], lr=0.02)
+    # Stage 1 locks the global orientation; stage 2 (shape + articulated pose) is what actually
+    # settles the up-axis — skipping it leaves the render tilted and SuperAnimal detects nothing.
+    global_opt = torch.optim.Adam([scale, trans, pose], lr=0.02)
     for _ in range(250):
-        optimizer.zero_grad()
-        verts, _ = smal(torch.zeros(smal.B, device=DEVICE), pose, trans=trans, scale=scale)
+        global_opt.zero_grad()
+        verts, _ = smal(betas, pose, trans=trans, scale=scale)
         chamfer_distance(verts[None], points[None])[0].backward()
-        optimizer.step()
+        global_opt.step()
+    full_opt = torch.optim.Adam([betas, pose, scale, trans], lr=0.02)
+    for _ in range(350):
+        full_opt.zero_grad()
+        verts, _ = smal(betas, pose, trans=trans, scale=scale)
+        loss = chamfer_distance(verts[None], points[None])[0] + 1e-3 * (pose[1:] ** 2).sum() + 5e-3 * (betas**2).sum()
+        loss.backward()
+        full_opt.step()
     up = (rodrigues(pose.detach()[0:1])[0] @ torch.tensor([0.0, 0.0, 1.0], device=DEVICE)).cpu().numpy()
     return up / np.linalg.norm(up)
 
@@ -183,11 +193,15 @@ def _triangulate(views_dir: Path) -> Keypoints3D:
                     best_count, best_point = len(inliers), refined
         if best_point is not None:
             positions[part], support[part] = best_point, best_count
+    # Average only over actual detections — SuperAnimal writes -1 for undetected views/keypoints,
+    # so a raw mean is dominated by the placeholders and not a meaningful detection-quality signal.
+    confidences = kp2d[..., 2]
+    detected = confidences[confidences > 0]
     return Keypoints3D(
         bodyparts=[str(b) for b in bodyparts],
         positions=positions,
         support=support,
-        mean_confidence=float(np.nanmean(kp2d[..., 2])),
+        mean_confidence=float(detected.mean()) if detected.size else 0.0,
     )
 
 

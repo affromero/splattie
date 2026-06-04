@@ -31,9 +31,10 @@ logger = get_logger()
 
 STORAGE_DIR = Path("data/generations")
 METHOD_ID = "trellis-smal-quadruped"
-# |betas| above which SMAL is extrapolating beyond its mammal families (e.g. elephant). Logged
-# as a quality warning; the hard megafauna reject is enabled after Phase-5 calibration.
-_SHAPE_WARN_NORM = 12.0
+# Gate is detection-only: the fit raises NotAQuadrupedMammalError when SuperAnimal can't find
+# a quadruped (non-mammals). Calibration showed |betas| does NOT separate out-of-family
+# megafauna (deer 1.00 vs elephant 1.04), so there is no reliable shape gate — such inputs are
+# in-scope-but-degraded. shape_norm is still recorded in diagnostics for observability.
 
 
 @registry.register
@@ -103,11 +104,6 @@ class QuadrupedMammalMethod:
             keypoints = detect_keypoints_3d(smal, splat, pipeline_dir / "keypoints")
             fit = fit_smal(smal, splat, keypoints)  # raises NotAQuadrupedMammalError for non-mammals
             logger.info(f"Quadruped SMAL fit {model_id}: {fit.diagnostics.model_dump(by_alias=True)}")
-            if fit.diagnostics.shape_norm > _SHAPE_WARN_NORM:
-                logger.warning(
-                    f"Quadruped {model_id}: |betas|={fit.diagnostics.shape_norm:.1f} — SMAL is extrapolating "
-                    "beyond its mammal families; rig quality may be degraded."
-                )
             bundle_path, num_gaussians = bind_and_bundle(
                 smal,
                 splat,
