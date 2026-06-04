@@ -159,6 +159,7 @@ def fit_smal(smal: SMAL, splat: GaussianSplat, keypoints: Keypoints3D) -> Quadru
         n_anchors=len(joints),
         triangulated_count=len(lookup),
         mean_keypoint_confidence=keypoints.mean_confidence,
+        shape_norm=float(betas.detach().norm().item()),
     )
     return QuadrupedFit(
         betas=betas.detach(),

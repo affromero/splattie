@@ -28,7 +28,8 @@ def _method_for(asset_type: AssetType) -> AssetGenerationMethod:
         return ObjectRigMethod()
     if asset_type is AssetType.head:
         return LAMMethod()
-    # quadruped_mammal is wired once its method is registered (no silent fallback to head).
+    if asset_type is AssetType.quadruped_mammal:
+        return QuadrupedMammalMethod()
     msg = f"no batch method wired for asset type {asset_type.value!r}"
     raise NotImplementedError(msg)
 

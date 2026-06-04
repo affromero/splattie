@@ -15,6 +15,8 @@ from splattie.methods.object.bundle import RigSkeleton, SparseLbsWeights
 from splattie.methods.object.method import ObjectRigMethod
 from splattie.methods.object.puppeteer import PuppeteerRiggingOutput
 from splattie.methods.object.reconstruct import ObjectReconstruction
+from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
+from splattie.methods.quadruped_mammal.schemas import FitDiagnostics
 from splattie.methods.registry import registry
 from splattie.types import AssetType
 from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
@@ -109,6 +111,7 @@ def test_registry_for_asset_type() -> None:
     assert registry.for_asset_type(AssetType.head).info.id == "lam"
     assert registry.for_asset_type(AssetType.body).info.id == "lhm"
     assert registry.for_asset_type(AssetType.object).info.id == "trellis-puppeteer"
+    assert registry.for_asset_type(AssetType.quadruped_mammal).info.id == "trellis-smal-quadruped"
 
 
 def test_lhm_implements_protocol() -> None:
@@ -305,4 +308,94 @@ def test_object_generate_binds_against_puppeteer_input_mesh(
 
     assert observed_meshes == [puppeteer_mesh]
     assert result.method_id == "trellis-puppeteer"
+    assert result.splattie_url == f"/storage/{model_id}/{model_id}.splattie"
+
+
+def test_quadruped_implements_protocol() -> None:
+    assert isinstance(QuadrupedMammalMethod(), AssetGenerationMethod)
+
+
+def test_quadruped_is_a_quadruped_method() -> None:
+    info = QuadrupedMammalMethod().info
+    assert info.id == "trellis-smal-quadruped"
+    assert info.asset_type is AssetType.quadruped_mammal
+    assert info.asset_type == "quadruped_mammal"
+
+
+def test_quadruped_registered() -> None:
+    assert registry.get("trellis-smal-quadruped").info.id == "trellis-smal-quadruped"
+
+
+def test_quadruped_generate_propagates_load_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    import splattie.methods.quadruped_mammal.method as quadruped_method
+
+    def _boom() -> None:
+        msg = "simulated SMAL weights-missing failure"
+        raise FileNotFoundError(msg)
+
+    monkeypatch.setattr(quadruped_method.runtime, "require_quadruped_runtime", _boom)
+    monkeypatch.setattr(quadruped_method, "require_object_runtime", lambda: None)
+    with pytest.raises(FileNotFoundError, match="SMAL"):
+        QuadrupedMammalMethod().generate(
+            np.zeros((4, 4, 3), dtype=np.uint8),
+            np.ones((4, 4), dtype=np.bool_),
+        )
+
+
+def test_quadruped_generate_produces_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """End-to-end orchestration (reconstruct -> keypoints -> fit -> bind), GPU stages mocked."""
+    import splattie.methods.quadruped_mammal.method as quadruped_method
+
+    model_id = "critter00001"
+    gaussian_ply = tmp_path / "gaussian.ply"
+    diagnostics = FitDiagnostics(
+        chamfer=0.004,
+        anchor_rms=0.05,
+        lr_residual=0.09,
+        lr_swap=False,
+        n_anchors=16,
+        triangulated_count=39,
+        mean_keypoint_confidence=0.53,
+        shape_norm=3.2,
+    )
+
+    def _fake_reconstruct(*, image_path: Path, output_dir: Path, model_id: str) -> Path:
+        assert image_path.exists()
+        assert output_dir.name == "trellis"
+        assert model_id == "critter00001"
+        return gaussian_ply
+
+    def _fake_bind_and_bundle(
+        _smal: object,
+        _splat: object,
+        _fit: object,
+        *,
+        ply_path: Path,
+        output_dir: Path,
+        model_id: str,
+        source_image_path: Path,
+    ) -> tuple[Path, int]:
+        assert ply_path == gaussian_ply
+        assert source_image_path.exists()
+        bundle = output_dir / f"{model_id}.splattie"
+        bundle.write_bytes(b"bundle")
+        return bundle, 169120
+
+    monkeypatch.setattr(quadruped_method, "reconstruct_gaussian_splat", _fake_reconstruct)
+    monkeypatch.setattr(quadruped_method, "GaussianSplat", lambda *_a, **_k: SimpleNamespace())
+    monkeypatch.setattr(quadruped_method, "SMAL", lambda *_a, **_k: SimpleNamespace())
+    monkeypatch.setattr(quadruped_method, "detect_keypoints_3d", lambda *_a, **_k: SimpleNamespace())
+    monkeypatch.setattr(quadruped_method, "fit_smal", lambda *_a, **_k: SimpleNamespace(diagnostics=diagnostics))
+    monkeypatch.setattr(quadruped_method, "bind_and_bundle", _fake_bind_and_bundle)
+    monkeypatch.setattr(quadruped_method, "STORAGE_DIR", tmp_path)
+    monkeypatch.setattr(QuadrupedMammalMethod, "load", lambda *_a, **_k: None)
+    monkeypatch.setattr(quadruped_method.uuid, "uuid4", lambda: SimpleNamespace(hex=model_id))
+
+    result = QuadrupedMammalMethod().generate(
+        np.zeros((4, 4, 3), dtype=np.uint8),
+        np.ones((4, 4), dtype=np.bool_),
+    )
+
+    assert result.method_id == "trellis-smal-quadruped"
+    assert result.num_gaussians == 169120
     assert result.splattie_url == f"/storage/{model_id}/{model_id}.splattie"

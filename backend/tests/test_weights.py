@@ -24,6 +24,7 @@ from splattie.methods.object.runtime import (
     VENDOR_PUPPETEER,
     VENDOR_TRELLIS,
 )
+from splattie.methods.quadruped_mammal.runtime import DLC_PYTHON, SMAL_PKL
 from splattie.methods.registry import registry
 from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
 
@@ -52,6 +53,9 @@ _PIPELINE_WEIGHTS: list[tuple[str, str, Path, str]] = [
     ("trellis-puppeteer", "michelangelo-skeleton", PUPPETEER_MICHELANGELO, "file"),
     ("trellis-puppeteer", "michelangelo-skinning", PUPPETEER_SKINNING_MICHELANGELO, "file"),
     ("trellis-puppeteer", "partfield", PUPPETEER_PARTFIELD, "file"),
+    ("trellis-smal-quadruped", "trellis-package", VENDOR_TRELLIS / "trellis", "dir"),
+    ("trellis-smal-quadruped", "smal-model", SMAL_PKL, "file"),
+    ("trellis-smal-quadruped", "deeplabcut-python", DLC_PYTHON, "file"),
 ]
 
 

@@ -52,6 +52,7 @@ class FitDiagnostics(CamelModel):
     n_anchors: int
     triangulated_count: int
     mean_keypoint_confidence: float
+    shape_norm: float  # |betas| — extreme for out-of-family shapes (e.g. elephant); see method gate
 
 
 @dataclass(config=_ARRAY_CONFIG, kw_only=True)
