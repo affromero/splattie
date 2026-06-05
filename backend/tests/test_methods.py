@@ -16,7 +16,6 @@ from splattie.methods.object.method import ObjectRigMethod
 from splattie.methods.object.puppeteer import PuppeteerRiggingOutput
 from splattie.methods.object.reconstruct import ObjectReconstruction
 from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
-from splattie.methods.quadruped_mammal.schemas import FitDiagnostics
 from splattie.methods.registry import registry
 from splattie.types import AssetType, ReconstructBackend
 from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
@@ -350,7 +349,9 @@ def test_quadruped_generate_produces_bundle(
     Parametrized over the backend so the per-request choice (default TripoSplat, or TRELLIS) is
     proven to reach reconstruction.
     """
+    pytest.importorskip("torch")  # the mocked pipeline imports the torch-carrying schema + GPU submodules
     import splattie.methods.quadruped_mammal.method as quadruped_method
+    from splattie.methods.quadruped_mammal.schemas import FitDiagnostics
 
     expected_backend = backend_choice or ReconstructBackend.triposplat
     model_id = "critter00001"
@@ -389,12 +390,18 @@ def test_quadruped_generate_produces_bundle(
         bundle.write_bytes(b"bundle")
         return bundle, 169120
 
+    # reconstruct + GaussianSplat stay module-level in method.py; the rest are imported lazily inside
+    # _generate (so the method imports on CPU without torch), so patch those at their source module.
     monkeypatch.setattr(quadruped_method, "reconstruct_gaussian_splat", _fake_reconstruct)
     monkeypatch.setattr(quadruped_method, "GaussianSplat", lambda *_a, **_k: SimpleNamespace())
-    monkeypatch.setattr(quadruped_method, "SMAL", lambda *_a, **_k: SimpleNamespace())
-    monkeypatch.setattr(quadruped_method, "detect_keypoints_3d", lambda *_a, **_k: SimpleNamespace())
-    monkeypatch.setattr(quadruped_method, "fit_smal", lambda *_a, **_k: SimpleNamespace(diagnostics=diagnostics))
-    monkeypatch.setattr(quadruped_method, "bind_and_bundle", _fake_bind_and_bundle)
+    monkeypatch.setattr("splattie.methods.quadruped_mammal.smal.SMAL", lambda *_a, **_k: SimpleNamespace())
+    monkeypatch.setattr(
+        "splattie.methods.quadruped_mammal.keypoints.detect_keypoints_3d", lambda *_a, **_k: SimpleNamespace()
+    )
+    monkeypatch.setattr(
+        "splattie.methods.quadruped_mammal.fit.fit_smal", lambda *_a, **_k: SimpleNamespace(diagnostics=diagnostics)
+    )
+    monkeypatch.setattr("splattie.methods.quadruped_mammal.bind.bind_and_bundle", _fake_bind_and_bundle)
     monkeypatch.setattr(quadruped_method, "STORAGE_DIR", tmp_path)
     monkeypatch.setattr(QuadrupedMammalMethod, "load", lambda *_a, **_k: None)
     monkeypatch.setattr(quadruped_method.uuid, "uuid4", lambda: SimpleNamespace(hex=model_id))

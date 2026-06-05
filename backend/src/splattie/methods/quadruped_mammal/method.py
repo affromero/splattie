@@ -20,12 +20,8 @@ from jaxtyping import Bool, UInt8, jaxtyped
 from klogr import get_logger
 
 from splattie.methods.quadruped_mammal import runtime
-from splattie.methods.quadruped_mammal.bind import bind_and_bundle
-from splattie.methods.quadruped_mammal.fit import fit_smal
 from splattie.methods.quadruped_mammal.gaussians import GaussianSplat
-from splattie.methods.quadruped_mammal.keypoints import DEVICE, detect_keypoints_3d
 from splattie.methods.quadruped_mammal.reconstruct import reconstruct_gaussian_splat
-from splattie.methods.quadruped_mammal.smal import SMAL
 from splattie.methods.registry import registry
 from splattie.types import AssetType, GenerationResult, MethodCapabilities, MethodInfo, ReconstructBackend
 
@@ -98,6 +94,14 @@ class QuadrupedMammalMethod:
         output_dir: Path,
     ) -> GenerationResult:
         from PIL import Image as PILImage
+
+        # Heavy GPU deps (torch / pytorch3d / gsplat) are imported lazily so the FastAPI server and
+        # the method registry import on CPU-only installs (`uv sync --extra cpu`) without them —
+        # matching the numpy-only LAM/LHM/object methods. The actual quadruped pipeline needs a GPU.
+        from splattie.methods.quadruped_mammal.bind import bind_and_bundle
+        from splattie.methods.quadruped_mammal.fit import fit_smal
+        from splattie.methods.quadruped_mammal.keypoints import DEVICE, detect_keypoints_3d
+        from splattie.methods.quadruped_mammal.smal import SMAL
 
         img_path = output_dir / f"{model_id}.png"
         PILImage.fromarray(_mask_to_white_background(image, mask)).save(str(img_path))

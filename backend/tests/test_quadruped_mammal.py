@@ -1,4 +1,8 @@
-"""CPU tests for the quadruped_mammal pipeline stages (no GPU / reconstruction needed)."""
+"""CPU-logic tests for the quadruped_mammal pipeline stages (no GPU / reconstruction needed).
+
+The stage modules import torch/pytorch3d/gsplat at module level, so the whole file is skipped on a
+CPU-only install (`uv sync --extra cpu`) that has none of them; it runs on any GPU-provisioned host.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +17,8 @@ from jaxtyping import Float, jaxtyped
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+pytest.importorskip("torch")  # the imported stage modules need torch/pytorch3d/gsplat
 
 from splattie.methods.quadruped_mammal import runtime
 from splattie.methods.quadruped_mammal.bind import (
