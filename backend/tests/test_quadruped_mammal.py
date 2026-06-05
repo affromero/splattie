@@ -97,7 +97,7 @@ def test_require_quadruped_runtime_executes() -> None:
     The default backend is TripoSplat, so readiness needs SMAL + DeepLabCut + TripoSplat
     (vendored code + flow-model ckpt) — not TRELLIS.
     """
-    from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend
+    from splattie.types import ReconstructBackend
 
     triposplat_ready = (
         runtime.SMAL_PKL.exists()
@@ -199,10 +199,10 @@ def test_canonical_transform_uprights_body_and_centers_head(head_yaw: float) -> 
 def test_reconstruct_backend_selector(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """The quadruped reconstruct dispatches to TripoSplat by default, TRELLIS on request.
 
-    Plain strings coerce to the enum so the SPLATTIE_QUADRUPED_BACKEND env var (a string) selects it.
+    Plain strings coerce to the enum (so an API query param string selects the backend).
     """
     from splattie.methods.quadruped_mammal import reconstruct as recon
-    from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend
+    from splattie.types import ReconstructBackend
 
     trellis_ply, tripo_ply = tmp_path / "trellis.ply", tmp_path / "tripo.ply"
     monkeypatch.setattr(
@@ -214,20 +214,4 @@ def test_reconstruct_backend_selector(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert recon.reconstruct_gaussian_splat(**common) == tripo_ply  # default = triposplat
     assert recon.reconstruct_gaussian_splat(**common, backend=ReconstructBackend.triposplat) == tripo_ply
     assert recon.reconstruct_gaussian_splat(**common, backend=ReconstructBackend.trellis) == trellis_ply
-    assert recon.reconstruct_gaussian_splat(**common, backend="trellis") == trellis_ply  # env-string coerces
-
-
-def test_resolve_backend_env_selects_and_validates(monkeypatch: pytest.MonkeyPatch) -> None:
-    """SPLATTIE_QUADRUPED_BACKEND picks the backend; an invalid value fails fast with a clear error."""
-    from splattie.methods.quadruped_mammal.method import _resolve_backend
-    from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend
-
-    monkeypatch.delenv("SPLATTIE_QUADRUPED_BACKEND", raising=False)
-    assert _resolve_backend() is ReconstructBackend.triposplat  # default when unset
-
-    monkeypatch.setenv("SPLATTIE_QUADRUPED_BACKEND", "trellis")
-    assert _resolve_backend() is ReconstructBackend.trellis
-
-    monkeypatch.setenv("SPLATTIE_QUADRUPED_BACKEND", "bogus")
-    with pytest.raises(ValueError, match="SPLATTIE_QUADRUPED_BACKEND"):
-        _resolve_backend()
+    assert recon.reconstruct_gaussian_splat(**common, backend="trellis") == trellis_ply  # query-string coerces

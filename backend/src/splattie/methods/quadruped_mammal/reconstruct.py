@@ -8,7 +8,6 @@ than TRELLIS (which melts flat/foreshortened animal faces); TRELLIS stays availa
 
 from __future__ import annotations
 
-from enum import StrEnum
 from pathlib import Path
 
 from splattie.methods.object.reconstruct import reconstruct_object_with_trellis
@@ -18,17 +17,7 @@ from splattie.methods.object.runtime import (
     run_command,
     vendor_python_env,
 )
-
-
-class ReconstructBackend(StrEnum):
-    """Image->3D-gaussian reconstruction backend.
-
-    `str`-valued so it serializes to its plain value and compares equal to that string, while staying a
-    single typed source of truth (matching `AssetType`/`SplatFormat`).
-    """
-
-    trellis = "trellis"
-    triposplat = "triposplat"
+from splattie.types import ReconstructBackend
 
 
 def reconstruct_gaussian_splat(

@@ -16,10 +16,9 @@ from splattie.methods.object.method import ObjectRigMethod
 from splattie.methods.object.puppeteer import PuppeteerRiggingOutput
 from splattie.methods.object.reconstruct import ObjectReconstruction
 from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
-from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend
 from splattie.methods.quadruped_mammal.schemas import FitDiagnostics
 from splattie.methods.registry import registry
-from splattie.types import AssetType
+from splattie.types import AssetType, ReconstructBackend
 from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
 
 _DEMOS = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos"
@@ -342,10 +341,18 @@ def test_quadruped_generate_propagates_load_failure(monkeypatch: pytest.MonkeyPa
         )
 
 
-def test_quadruped_generate_produces_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """End-to-end orchestration (reconstruct -> keypoints -> fit -> bind), GPU stages mocked."""
+@pytest.mark.parametrize("backend_choice", [None, ReconstructBackend.trellis])
+def test_quadruped_generate_produces_bundle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, backend_choice: ReconstructBackend | None
+) -> None:
+    """End-to-end orchestration (reconstruct -> keypoints -> fit -> bind), GPU stages mocked.
+
+    Parametrized over the backend so the per-request choice (default TripoSplat, or TRELLIS) is
+    proven to reach reconstruction.
+    """
     import splattie.methods.quadruped_mammal.method as quadruped_method
 
+    expected_backend = backend_choice or ReconstructBackend.triposplat
     model_id = "critter00001"
     gaussian_ply = tmp_path / "gaussian.ply"
     diagnostics = FitDiagnostics(
@@ -363,7 +370,7 @@ def test_quadruped_generate_produces_bundle(tmp_path: Path, monkeypatch: pytest.
         assert image_path.exists()
         assert output_dir.name == "reconstruct"
         assert model_id == "critter00001"
-        assert backend == ReconstructBackend.triposplat  # default backend selected by the method
+        assert backend == expected_backend  # the method threads its per-request backend to reconstruction
         return gaussian_ply
 
     def _fake_bind_and_bundle(
@@ -392,7 +399,8 @@ def test_quadruped_generate_produces_bundle(tmp_path: Path, monkeypatch: pytest.
     monkeypatch.setattr(QuadrupedMammalMethod, "load", lambda *_a, **_k: None)
     monkeypatch.setattr(quadruped_method.uuid, "uuid4", lambda: SimpleNamespace(hex=model_id))
 
-    result = QuadrupedMammalMethod().generate(
+    method = QuadrupedMammalMethod(backend=backend_choice) if backend_choice else QuadrupedMammalMethod()
+    result = method.generate(
         np.zeros((4, 4, 3), dtype=np.uint8),
         np.ones((4, 4), dtype=np.bool_),
     )

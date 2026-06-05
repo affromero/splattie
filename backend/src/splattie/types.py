@@ -41,6 +41,18 @@ class SplatFormat(StrEnum):
     SPZ = "spz"
 
 
+class ReconstructBackend(StrEnum):
+    """Image->3D-gaussian reconstruction backend, selectable per request.
+
+    Shared across every method that reconstructs from one of these (today the quadruped pipeline;
+    objects can opt in later). `str`-valued so it serializes to its plain value and compares equal
+    to that string, matching `AssetType`/`SplatFormat`.
+    """
+
+    trellis = "trellis"
+    triposplat = "triposplat"
+
+
 class MethodInfo(CamelModel):
     """Metadata about an asset generation method."""
 

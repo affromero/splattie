@@ -132,6 +132,14 @@ repos:
             files: ^backend/(src|tests)/.*\.py$
             exclude: ^backend/src/splattie/methods/base\.py$
 
+          - id: check-dunder-all-location
+            name: check-dunder-all-location
+            description: A module-level __all__ is only allowed in __init__.py; remove it from regular modules.
+            entry: scripts/hooks/check_dunder_all_location.sh
+            language: system
+            types: [python]
+            files: ^backend/.*\.py$
+
           # Frontend: lint + type-check the whole workspace (mirrors `npm run ci`
           # minus test/build). Project-level, so no per-file passing.
           - id: eslint

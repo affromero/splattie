@@ -10,7 +10,6 @@ The reconstruction backend defaults to TripoSplat (cleaner animal faces) and is 
 
 from __future__ import annotations
 
-import os
 import uuid
 from pathlib import Path
 
@@ -25,30 +24,15 @@ from splattie.methods.quadruped_mammal.bind import bind_and_bundle
 from splattie.methods.quadruped_mammal.fit import fit_smal
 from splattie.methods.quadruped_mammal.gaussians import GaussianSplat
 from splattie.methods.quadruped_mammal.keypoints import DEVICE, detect_keypoints_3d
-from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend, reconstruct_gaussian_splat
+from splattie.methods.quadruped_mammal.reconstruct import reconstruct_gaussian_splat
 from splattie.methods.quadruped_mammal.smal import SMAL
 from splattie.methods.registry import registry
-from splattie.types import AssetType, GenerationResult, MethodCapabilities, MethodInfo
+from splattie.types import AssetType, GenerationResult, MethodCapabilities, MethodInfo, ReconstructBackend
 
 logger = get_logger()
 
 STORAGE_DIR = Path("data/generations")
 METHOD_ID = "trellis-smal-quadruped"
-# Reconstruction backend default; override per-deploy with SPLATTIE_QUADRUPED_BACKEND=trellis.
-_BACKEND_ENV = "SPLATTIE_QUADRUPED_BACKEND"
-
-
-def _resolve_backend() -> ReconstructBackend:
-    raw = os.environ.get(_BACKEND_ENV, ReconstructBackend.triposplat)
-    try:
-        return ReconstructBackend(raw)
-    except ValueError as exc:
-        allowed = ", ".join(b.value for b in ReconstructBackend)
-        msg = f"{_BACKEND_ENV}={raw!r} is not a valid reconstruction backend; allowed: {allowed}"
-        raise ValueError(msg) from exc
-
-
-RECONSTRUCT_BACKEND = _resolve_backend()
 # Gate is detection-only: the fit raises NotAQuadrupedMammalError when SuperAnimal can't find
 # a quadruped (non-mammals). Calibration showed |betas| does NOT separate out-of-family
 # megafauna (deer 1.00 vs elephant 1.04), so there is no reliable shape gate — such inputs are
@@ -58,6 +42,11 @@ RECONSTRUCT_BACKEND = _resolve_backend()
 @registry.register
 class QuadrupedMammalMethod:
     """Single image to a rigged quadruped-mammal gaussian splat with a SMAL skeleton."""
+
+    def __init__(self, *, backend: ReconstructBackend = ReconstructBackend.triposplat) -> None:
+        # Reconstruction backend is a per-request choice (default TripoSplat — cleaner animal faces).
+        # The API / CLI / create page select it per request; TRELLIS is the alternative.
+        self._backend = backend
 
     @property
     def info(self) -> MethodInfo:
@@ -81,7 +70,7 @@ class QuadrupedMammalMethod:
 
     def load(self) -> None:
         # No fallback: missing SMAL / DeepLabCut / the selected reconstruction backend raises.
-        runtime.require_quadruped_runtime(RECONSTRUCT_BACKEND)
+        runtime.require_quadruped_runtime(self._backend)
 
     @jaxtyped(typechecker=beartype)
     def generate(
@@ -115,7 +104,7 @@ class QuadrupedMammalMethod:
                 image_path=img_path,
                 output_dir=pipeline_dir / "reconstruct",
                 model_id=model_id,
-                backend=RECONSTRUCT_BACKEND,
+                backend=self._backend,
             )
             splat = GaussianSplat(gaussian_ply)
             smal = SMAL(str(runtime.SMAL_PKL), device=DEVICE)
