@@ -20,7 +20,7 @@ from splattie.methods.registry import registry
 from splattie.types import AssetType, ReconstructBackend
 from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
 
-_DEMOS = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos"
+_DEMOS = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "demos"
 # A committed demo portrait — LAM's FLAME tracking needs a real face.
 _FACE_IMAGE = _DEMOS / "heads" / "h1.jpg"
 # A committed full-body demo — LHM segments the person (rembg) and requires a portrait
