@@ -9,10 +9,22 @@ from splattie.cli import demos
 from splattie.types import AssetType
 
 
-def test_object_demo_sources_are_defined() -> None:
-    assert len(demos.OBJECTS) == 8
-    assert [demo.asset_id for demo in demos.OBJECTS] == [f"o{idx}" for idx in range(1, 9)]
-    assert len({demo.subject for demo in demos.OBJECTS}) == 8
+@pytest.mark.parametrize(
+    ("subjects", "prefix"),
+    [
+        (demos.HEADS, "h"),
+        (demos.BODIES, "b"),
+        (demos.OBJECTS, "o"),
+        (demos.QUADRUPED_MAMMALS, "q"),
+    ],
+)
+def test_demo_category_has_twelve_sequential_unique_subjects(
+    subjects: tuple[demos.DemoSubject, ...], prefix: str
+) -> None:
+    """Each carousel category ships exactly 12 sequential, unique demo subjects."""
+    assert len(subjects) == 12
+    assert [demo.asset_id for demo in subjects] == [f"{prefix}{idx}" for idx in range(1, 13)]
+    assert len({demo.subject for demo in subjects}) == 12
 
 
 def test_object_demo_prompt_is_isolated_for_reconstruction() -> None:
@@ -40,8 +52,8 @@ def test_install_demos_can_target_one_asset_type(tmp_path: Path, monkeypatch: py
 
     demos.install_demos(avatars_dir=avatars_dir, sources_dir=sources_dir, asset_type=AssetType.object)
 
-    assert sorted(path.name for path in (web_demos_dir / "objects").glob("*.splattie")) == [
-        f"o{idx}.splattie" for idx in range(1, 9)
-    ]
+    assert sorted(path.name for path in (web_demos_dir / "objects").glob("*.splattie")) == sorted(
+        f"o{idx}.splattie" for idx in range(1, 13)
+    )
     assert not (web_demos_dir / "heads").exists()
     assert not (web_demos_dir / "bodies").exists()

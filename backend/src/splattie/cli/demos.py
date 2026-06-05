@@ -54,9 +54,9 @@ _OBJECT_BASE = (
 )
 _HEAD_FRAMING = "Head-and-shoulders framing, face centered, both eyes clearly visible, no occlusion. "
 _BODY_FRAMING = (
-    "Full body head-to-feet in frame, standing upright facing the camera, weight even, "
-    "arms relaxed and slightly away from the torso (not crossed, not behind the back), "
-    "casual everyday clothing, shoes visible. "
+    "Full body head-to-feet in frame, standing in the described stance with the FACE looking toward "
+    "the camera, weight even, arms relaxed and slightly away from the torso (not crossed, not behind "
+    "the back), casual everyday clothing, shoes visible. "
 )
 _OBJECT_FRAMING = (
     "A single isolated object centered in frame, front three-quarter view, entire object visible, "
@@ -123,6 +123,26 @@ HEADS: tuple[DemoSubject, ...] = (
         asset_type=AssetType.head,
         subject="a Southeast Asian woman in her 30s with long straight hair and hoop earrings, blazer",
     ),
+    DemoSubject(
+        asset_id="h9",
+        asset_type=AssetType.head,
+        subject="a mixed-race boy around 8 years old with curly hair, brown skin, and a gap-toothed smile, striped t-shirt",
+    ),
+    DemoSubject(
+        asset_id="h10",
+        asset_type=AssetType.head,
+        subject="an elderly White man in his 80s with a bushy white beard, a mostly bald head, and round glasses, cardigan",
+    ),
+    DemoSubject(
+        asset_id="h11",
+        asset_type=AssetType.head,
+        subject="a young woman in her 20s wearing a brightly patterned hijab, warm brown eyes, denim jacket",
+    ),
+    DemoSubject(
+        asset_id="h12",
+        asset_type=AssetType.head,
+        subject="a man in his 30s with vitiligo (dark skin with lighter patches), a shaved head and short beard, henley shirt",
+    ),
 )
 BODIES: tuple[DemoSubject, ...] = (
     DemoSubject(
@@ -158,6 +178,26 @@ BODIES: tuple[DemoSubject, ...] = (
         asset_id="b8",
         asset_type=AssetType.body,
         subject="an East Asian man in his 60s, cardigan over a shirt, slacks, loafers",
+    ),
+    DemoSubject(
+        asset_id="b9",
+        asset_type=AssetType.body,
+        subject="a young woman in her 20s with red hair and freckles, mustard cardigan and jeans, standing turned at a relaxed three-quarter angle with one hand in a pocket",
+    ),
+    DemoSubject(
+        asset_id="b10",
+        asset_type=AssetType.body,
+        subject="an elderly Black man in his 70s, flat cap, knit vest, and trousers, standing upright facing the camera",
+    ),
+    DemoSubject(
+        asset_id="b11",
+        asset_type=AssetType.body,
+        subject="a teenage boy in a hoodie and ripped jeans, standing at a casual three-quarter stance with hands in his pockets",
+    ),
+    DemoSubject(
+        asset_id="b12",
+        asset_type=AssetType.body,
+        subject="a plus-size woman in her 30s, floral wrap dress and ankle boots, standing facing the camera",
     ),
 )
 OBJECTS: tuple[DemoSubject, ...] = (
@@ -200,6 +240,26 @@ OBJECTS: tuple[DemoSubject, ...] = (
         asset_id="o8",
         asset_type=AssetType.object,
         subject="a small construction crane toy with rotating base, lattice arm, cable, and hook",
+    ),
+    DemoSubject(
+        asset_id="o9",
+        asset_type=AssetType.object,
+        subject="a green poseable toy tyrannosaurus with an openable jaw, short arms, sturdy legs, and a long tail",
+    ),
+    DemoSubject(
+        asset_id="o10",
+        asset_type=AssetType.object,
+        subject="a retro teal desk fan with a round wire cage, three blades, a tilting head, and an oval weighted base",
+    ),
+    DemoSubject(
+        asset_id="o11",
+        asset_type=AssetType.object,
+        subject="a white quadcopter drone with four arms, propellers, a central camera gimbal, and landing legs",
+    ),
+    DemoSubject(
+        asset_id="o12",
+        asset_type=AssetType.object,
+        subject="a wooden artist mannequin of a horse on a small stand, with visible segmented leg and neck joints",
     ),
 )
 QUADRUPED_MAMMALS: tuple[DemoSubject, ...] = (

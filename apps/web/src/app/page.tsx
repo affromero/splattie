@@ -16,7 +16,7 @@ interface Demo {
 // Demos live in category subfolders: /demos/{heads,bodies,objects}/<id>.{jpg,splattie}.
 // ASSET_VERSION cache-busts the .splattie when its contents change (the browser
 // otherwise serves the cached copy, surviving a hard-refresh). Bump on demo changes.
-const ASSET_VERSION = '13';
+const ASSET_VERSION = '14';
 const folder = (c: Category): string => {
   if (c === 'head') return 'heads';
   if (c === 'body') return 'bodies';
@@ -38,6 +38,10 @@ const DEMOS: Demo[] = [
   { id: 'h6', category: 'head' },
   { id: 'h7', category: 'head' },
   { id: 'h8', category: 'head' },
+  { id: 'h9', category: 'head' },
+  { id: 'h10', category: 'head' },
+  { id: 'h11', category: 'head' },
+  { id: 'h12', category: 'head' },
   // Bodies (LHM)
   { id: 'b1', category: 'body' },
   { id: 'b2', category: 'body' },
@@ -47,6 +51,10 @@ const DEMOS: Demo[] = [
   { id: 'b6', category: 'body' },
   { id: 'b7', category: 'body' },
   { id: 'b8', category: 'body' },
+  { id: 'b9', category: 'body' },
+  { id: 'b10', category: 'body' },
+  { id: 'b11', category: 'body' },
+  { id: 'b12', category: 'body' },
   // Objects (TRELLIS + Puppeteer)
   { id: 'o1', category: 'object' },
   { id: 'o2', category: 'object' },
@@ -56,6 +64,10 @@ const DEMOS: Demo[] = [
   { id: 'o6', category: 'object' },
   { id: 'o7', category: 'object' },
   { id: 'o8', category: 'object' },
+  { id: 'o9', category: 'object' },
+  { id: 'o10', category: 'object' },
+  { id: 'o11', category: 'object' },
+  { id: 'o12', category: 'object' },
 
   { id: 'q1', category: 'quadruped_mammal' },
   { id: 'q2', category: 'quadruped_mammal' },
