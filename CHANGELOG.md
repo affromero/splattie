@@ -13,6 +13,7 @@
 - All project versions align on **`0.3.1`**: root package, web app, backend package, widget package, and `.splattie` `formatVersion`.
 - The quadruped reconstruction backend is a per-request `ReconstructBackend` enum (no env var); `require_quadruped_runtime` is backend-aware.
 - The quadruped pipeline's array/tensor signatures use jaxtyping + `@jaxtyped(typechecker=beartype)` for runtime shape-checking.
+- Object and quadruped demo bundles now use rig-aware PlayCanvas compressed PLY: the gaussian PLY is compressed and the per-splat LBSW payload is re-permuted to the compressed splat order. Heads and bodies remain uncompressed for this pass.
 
 ### Fixed
 - **Cursor head-follow on rigged objects + quadrupeds** (widget v0.3.1): bones now rotate about their joint pivot (not the splat origin) and drive a split neck/head gaze chain, so heads visibly turn toward the cursor without tearing. The head also sits centered at rest so tracking is symmetric, and capped gaze weights stop short-necked animals (e.g. capybara) tearing.

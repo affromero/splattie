@@ -16,17 +16,10 @@ from klogr import get_logger
 logger = get_logger()
 
 
-def compress_ply(ply_path: Path, out_path: Path) -> Path:
-    """Compress a PLY to PlayCanvas compressed PLY via splat-transform.
-
-    `out_path` must end in `.compressed.ply` (splat-transform picks the format from
-    the extension). Hard-fails (raises RuntimeError) if splat-transform is missing
-    or produces no output -- never returns the raw PLY, so a bundle can't silently
-    ship uncompressed.
-    """
+def _run_splat_transform(input_path: Path, out_path: Path, action: str) -> Path:
     try:
         subprocess.run(
-            ["npx", "@playcanvas/splat-transform", str(ply_path), str(out_path)],
+            ["npx", "@playcanvas/splat-transform", str(input_path), str(out_path)],
             check=True,
             capture_output=True,
             text=True,
@@ -37,12 +30,31 @@ def compress_ply(ply_path: Path, out_path: Path) -> Path:
         msg = "splat-transform not found; install @playcanvas/splat-transform (npm)"
         raise RuntimeError(msg) from exc
     except subprocess.CalledProcessError as exc:
-        msg = f"splat-transform failed for {ply_path.name}: {exc.stderr or exc.stdout}"
+        msg = f"splat-transform {action} failed for {input_path.name}: {exc.stderr or exc.stdout}"
         raise RuntimeError(msg) from exc
 
     if not out_path.exists() or out_path.stat().st_size == 0:
         msg = f"splat-transform produced no output at {out_path}"
         raise RuntimeError(msg)
 
+    return out_path
+
+
+def compress_ply(ply_path: Path, out_path: Path) -> Path:
+    """Compress a PLY to PlayCanvas compressed PLY via splat-transform.
+
+    `out_path` must end in `.compressed.ply` (splat-transform picks the format from
+    the extension). Hard-fails (raises RuntimeError) if splat-transform is missing
+    or produces no output -- never returns the raw PLY, so a bundle can't silently
+    ship uncompressed.
+    """
+    _run_splat_transform(ply_path, out_path, "compression")
     logger.info(f"Compressed {ply_path.name} -> {out_path.name} ({out_path.stat().st_size // 1024} KB)")
+    return out_path
+
+
+def decode_ply(ply_path: Path, out_path: Path) -> Path:
+    """Decode a PlayCanvas compressed PLY back to a plain binary PLY."""
+    _run_splat_transform(ply_path, out_path, "decode")
+    logger.info(f"Decoded {ply_path.name} -> {out_path.name} ({out_path.stat().st_size // 1024} KB)")
     return out_path
