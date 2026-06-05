@@ -7,6 +7,8 @@ they can be logged / surfaced. No bare ``dict``-typed fields (CLAUDE.md rule 10)
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import numpy as np
 import torch
 from pydantic import ConfigDict

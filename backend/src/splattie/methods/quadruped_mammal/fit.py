@@ -7,6 +7,8 @@ chamfer-only fit. L/R convention is resolved by lower Umeyama residual.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import numpy as np
 import torch
 from pytorch3d.loss import chamfer_distance

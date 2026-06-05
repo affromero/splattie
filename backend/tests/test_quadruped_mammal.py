@@ -108,9 +108,14 @@ def test_require_quadruped_runtime_executes() -> None:
         with pytest.raises(FileNotFoundError):
             runtime.require_quadruped_runtime()
 
-    # Backend-aware: the TRELLIS backend checks the TRELLIS package instead of TripoSplat ckpts.
+    # Backend-aware: the TRELLIS backend checks the TRELLIS package (incl. the flexicubes mesher) instead
+    # of the TripoSplat ckpts.
+    flexicubes = runtime.VENDOR_TRELLIS / "trellis" / "representations" / "mesh" / "flexicubes" / "flexicubes.py"
     trellis_ready = (
-        runtime.SMAL_PKL.exists() and runtime.DLC_PYTHON.exists() and (runtime.VENDOR_TRELLIS / "trellis").exists()
+        runtime.SMAL_PKL.exists()
+        and runtime.DLC_PYTHON.exists()
+        and (runtime.VENDOR_TRELLIS / "trellis").exists()
+        and flexicubes.exists()
     )
     if trellis_ready:
         runtime.require_quadruped_runtime(ReconstructBackend.trellis)
@@ -204,3 +209,19 @@ def test_reconstruct_backend_selector(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert recon.reconstruct_gaussian_splat(**common, backend=ReconstructBackend.triposplat) == tripo_ply
     assert recon.reconstruct_gaussian_splat(**common, backend=ReconstructBackend.trellis) == trellis_ply
     assert recon.reconstruct_gaussian_splat(**common, backend="trellis") == trellis_ply  # env-string coerces
+
+
+def test_resolve_backend_env_selects_and_validates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """SPLATTIE_QUADRUPED_BACKEND picks the backend; an invalid value fails fast with a clear error."""
+    from splattie.methods.quadruped_mammal.method import _resolve_backend
+    from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend
+
+    monkeypatch.delenv("SPLATTIE_QUADRUPED_BACKEND", raising=False)
+    assert _resolve_backend() is ReconstructBackend.triposplat  # default when unset
+
+    monkeypatch.setenv("SPLATTIE_QUADRUPED_BACKEND", "trellis")
+    assert _resolve_backend() is ReconstructBackend.trellis
+
+    monkeypatch.setenv("SPLATTIE_QUADRUPED_BACKEND", "bogus")
+    with pytest.raises(ValueError, match="SPLATTIE_QUADRUPED_BACKEND"):
+        _resolve_backend()

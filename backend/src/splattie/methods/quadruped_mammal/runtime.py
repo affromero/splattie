@@ -45,7 +45,12 @@ def require_quadruped_runtime(backend: ReconstructBackend = ReconstructBackend.t
     reconstruction = (
         (VENDOR_TRIPOSPLAT / "triposplat.py", TRIPOSPLAT_FLOW_MODEL)
         if backend is ReconstructBackend.triposplat
-        else (VENDOR_TRELLIS / "trellis",)
+        # TRELLIS meshes via flexicubes (a nested submodule), so check it like the object method does
+        # — `trellis/` can be present while flexicubes is uninitialized, which would crash mid-reconstruction.
+        else (
+            VENDOR_TRELLIS / "trellis",
+            VENDOR_TRELLIS / "trellis" / "representations" / "mesh" / "flexicubes" / "flexicubes.py",
+        )
     )
     required = (SMAL_PKL, DLC_PYTHON, *reconstruction)
     missing = [str(path) for path in required if not path.exists()]
