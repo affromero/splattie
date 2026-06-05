@@ -195,7 +195,7 @@ export default function Home() {
           <span className={styles.titleAccent}>Rigged 3D splat out.</span>
         </h1>
         <p className={styles.subtitle}>
-          Turn any portrait, full body, or object image into an interactive 3D Gaussian asset for your website.
+          Turn any portrait, full body, object, or animal image into an interactive 3D Gaussian asset for your website.
           It follows your visitors and reacts to hover. One line of HTML.
         </p>
         <div className={styles.heroBadges}>
@@ -253,13 +253,13 @@ export default function Home() {
           <div className={styles.step}>
             <div className={styles.stepNumber}>1</div>
             <h3 className={styles.stepTitle}>Upload</h3>
-            <p className={styles.stepDesc}>A portrait, full-body photo, or object image</p>
+            <p className={styles.stepDesc}>A portrait, full-body, object, or animal photo</p>
           </div>
           <div className={styles.stepDivider} />
           <div className={styles.step}>
             <div className={styles.stepNumber}>2</div>
             <h3 className={styles.stepTitle}>Generate</h3>
-            <p className={styles.stepDesc}>LAM, LHM, or TRELLIS + Puppeteer reconstructs a rigged 3D Gaussian asset</p>
+            <p className={styles.stepDesc}>LAM, LHM, TRELLIS + Puppeteer, or SMAL reconstructs a rigged 3D Gaussian asset</p>
           </div>
           <div className={styles.stepDivider} />
           <div className={styles.step}>
@@ -304,6 +304,7 @@ export default function Home() {
           + <a href="https://github.com/aigc3d/LHM" target="_blank" rel="noopener noreferrer">LHM</a>{' '}
           + <a href="https://github.com/microsoft/TRELLIS" target="_blank" rel="noopener noreferrer">TRELLIS</a>{' '}
           + <a href="https://github.com/snap-research/Puppeteer" target="_blank" rel="noopener noreferrer">Puppeteer</a>{' '}
+          + <a href="https://smal.is.tue.mpg.de/" target="_blank" rel="noopener noreferrer">SMAL</a>{' '}
           + <a href="https://sparkjs.dev" target="_blank" rel="noopener noreferrer">Spark</a>{'. '}
           Demo assets are AI-generated, not real people.
         </p>
