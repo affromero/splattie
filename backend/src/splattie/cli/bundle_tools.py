@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-import tempfile
 import zipfile
 from collections.abc import Mapping, MutableMapping
 from datetime import UTC, datetime
@@ -14,7 +13,7 @@ from pathlib import Path
 import numpy as np
 from klogr import get_logger
 
-from splattie.compression.compressed_ply import compress_ply
+from splattie.compression.bundle import compress_bundle_rigged, is_compressed_ply_bytes
 from splattie.methods.bundle_common import read_widget_version
 from splattie.types import AssetType
 
@@ -175,7 +174,7 @@ def rebundle(
         splat_entry, splat_format = find_splat_entry(zf)
         splat_bytes = zf.read(splat_entry)
         num_gaussians = count_ply_vertices_bytes(splat_bytes)
-        already_compressed = b"packed_position" in splat_bytes[:1024]
+        already_compressed = is_compressed_ply_bytes(splat_bytes)
         already_current = (
             existing is not None
             and existing.get("formatVersion") == widget_version
@@ -185,15 +184,9 @@ def rebundle(
             return f"skip (already v{widget_version}, {asset_type.value})"
         payload = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
 
-    if compress and not already_compressed:
-        with tempfile.TemporaryDirectory() as td:
-            ply_tmp = Path(td) / f"{stem}.ply"
-            comp_tmp = Path(td) / f"{stem}.compressed.ply"
-            ply_tmp.write_bytes(splat_bytes)
-            compress_ply(ply_tmp, comp_tmp)
-            comp_bytes = comp_tmp.read_bytes()
-        payload[splat_entry] = comp_bytes
-        note = f", {len(splat_bytes) // 1024}KB ply -> {len(comp_bytes) // 1024}KB compressed.ply"
+    if compress and not already_compressed and asset_type is AssetType.head:
+        msg = "--compress is disabled for head bundles because FLAME topology depends on splat order"
+        raise ValueError(msg)
 
     manifest = build_legacy_manifest(
         stem=stem,
@@ -212,6 +205,11 @@ def rebundle(
         for name, data in payload.items():
             if name != "manifest.json":
                 zf.writestr(name, data)
+
+    if compress and not already_compressed:
+        result = compress_bundle_rigged(tmp_path, tmp_path)
+        note = f", {result.size_before // 1024}KB bundle -> {result.size_after // 1024}KB rigged compressed"
+
     tmp_path.replace(splattie_path)
     return f"rebundled (v{widget_version}, {num_gaussians} gaussians, format={splat_format}{note})"
 
