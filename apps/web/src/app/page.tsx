@@ -259,7 +259,7 @@ export default function Home() {
           <div className={styles.step}>
             <div className={styles.stepNumber}>2</div>
             <h3 className={styles.stepTitle}>Generate</h3>
-            <p className={styles.stepDesc}>LAM, LHM, TRELLIS + Puppeteer, or SMAL reconstructs a rigged 3D Gaussian asset</p>
+            <p className={styles.stepDesc}>LAM, LHM, TRELLIS + Puppeteer, or TripoSplat + SMAL reconstructs a rigged 3D Gaussian asset</p>
           </div>
           <div className={styles.stepDivider} />
           <div className={styles.step}>
@@ -304,6 +304,7 @@ export default function Home() {
           + <a href="https://github.com/aigc3d/LHM" target="_blank" rel="noopener noreferrer">LHM</a>{' '}
           + <a href="https://github.com/microsoft/TRELLIS" target="_blank" rel="noopener noreferrer">TRELLIS</a>{' '}
           + <a href="https://github.com/snap-research/Puppeteer" target="_blank" rel="noopener noreferrer">Puppeteer</a>{' '}
+          + <a href="https://github.com/VAST-AI-Research/TripoSplat" target="_blank" rel="noopener noreferrer">TripoSplat</a>{' '}
           + <a href="https://smal.is.tue.mpg.de/" target="_blank" rel="noopener noreferrer">SMAL</a>{' '}
           + <a href="https://sparkjs.dev" target="_blank" rel="noopener noreferrer">Spark</a>{'. '}
           Demo assets are AI-generated, not real people.
