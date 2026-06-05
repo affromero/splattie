@@ -1,0 +1,32 @@
+---
+name: Pre-commit
+
+# Enforces the repo's full .pre-commit-config.yaml in CI so code-quality rules can't slip in
+# unreviewed (they did before this gate existed: the hooks were never installed locally and CI
+# ran only ruff + pytest). Devs should also run `pre-commit install` once for the local gate.
+
+on:
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
+
+jobs:
+    pre-commit:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: '3.11'
+
+            - uses: pre-commit/action@v3.0.1
+              env:
+                  # `CI Backend` already enforces ruff + pytest + uv dependency hygiene, and `CI`
+                  # (frontend) enforces eslint + tsc. This gate adds the code-quality hooks that
+                  # neither runs and that need no project venv: the jaxtyping array-annotation
+                  # mandate, the no-dict-typing / no-stdlib-dataclass rule, the 1000-line file cap,
+                  # the getattr/setattr ban, and the sys.path-manipulation ban — plus the standard
+                  # whitespace / YAML / JSON / TOML hygiene hooks.
+                  SKIP: uv-lock,uv-sync,uv-export,eslint,tsc
