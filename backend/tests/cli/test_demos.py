@@ -50,7 +50,7 @@ def test_install_demos_can_target_one_asset_type(tmp_path: Path, monkeypatch: py
         (avatars_dir / f"{demo.asset_id}.splattie").write_bytes(b"zip")
         Image.new("RGB", (32, 32), (220, 220, 220)).save(sources_dir / f"{demo.asset_id}.png")
 
-    demos.install_demos(avatars_dir=avatars_dir, sources_dir=sources_dir, asset_type=AssetType.object, compress=False)
+    demos.install_demos(avatars_dir=avatars_dir, sources_dir=sources_dir, asset_type=AssetType.object)
 
     assert sorted(path.name for path in (web_demos_dir / "objects").glob("*.splattie")) == sorted(
         f"o{idx}.splattie" for idx in range(1, 13)
