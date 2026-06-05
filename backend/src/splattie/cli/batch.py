@@ -14,7 +14,7 @@ from splattie.methods.lam.method import LAMMethod
 from splattie.methods.lhm.method import LHMMethod
 from splattie.methods.object.method import ObjectRigMethod
 from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
-from splattie.types import AssetType
+from splattie.types import AssetType, ReconstructBackend
 
 logger = get_logger()
 
@@ -22,7 +22,7 @@ _STORAGE = Path("data/generations")
 _IMAGE_EXTS = frozenset({".jpg", ".jpeg", ".png"})
 
 
-def _method_for(asset_type: AssetType) -> AssetGenerationMethod:
+def _method_for(asset_type: AssetType, backend: ReconstructBackend | None = None) -> AssetGenerationMethod:
     if asset_type is AssetType.body:
         return LHMMethod()
     if asset_type is AssetType.object:
@@ -30,7 +30,7 @@ def _method_for(asset_type: AssetType) -> AssetGenerationMethod:
     if asset_type is AssetType.head:
         return LAMMethod()
     if asset_type is AssetType.quadruped_mammal:
-        return QuadrupedMammalMethod()
+        return QuadrupedMammalMethod(backend=backend) if backend is not None else QuadrupedMammalMethod()
     msg = f"no batch method wired for asset type {asset_type.value!r}"
     raise NotImplementedError(msg)
 
@@ -50,13 +50,17 @@ def generate_splattie_batch(
     images_dir: Path,
     output_dir: Path,
     asset_type: AssetType = AssetType.head,
+    backend: ReconstructBackend | None = None,
 ) -> None:
     """Batch-generate `.splattie` files from a directory of source images.
 
     Args:
         images_dir: Directory of input images (.jpg/.jpeg/.png).
         output_dir: Directory to write `<image-stem>.splattie` bundles into.
-        asset_type: `head` uses LAM, `body` uses LHM, `object` uses TRELLIS + Puppeteer.
+        asset_type: `head` uses LAM, `body` uses LHM, `object` uses TRELLIS + Puppeteer,
+            `quadruped_mammal` uses TripoSplat/TRELLIS + SMAL.
+        backend: Reconstruction backend for `quadruped_mammal` (`triposplat` default, or `trellis`);
+            ignored by the other categories.
 
     """
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -65,7 +69,7 @@ def generate_splattie_batch(
         logger.info(f"No images found in {images_dir}")
         return
 
-    method = _method_for(asset_type)
+    method = _method_for(asset_type, backend)
     logger.info(f"{asset_type.value}: loading method for {len(image_files)} images")
     method.load()
     try:

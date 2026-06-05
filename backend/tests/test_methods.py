@@ -426,3 +426,17 @@ def test_batch_method_for_wires_every_asset_type() -> None:
     }
     for asset_type in AssetType:
         assert type(_method_for(asset_type)).__name__ == expected[asset_type]
+
+
+def test_method_resolution_threads_quadruped_backend() -> None:
+    """The API + CLI method resolvers pass the chosen reconstruction backend to the quadruped method."""
+    from splattie.api.routes.generate import _method_for as api_method_for
+    from splattie.cli.batch import _method_for as cli_method_for
+
+    for resolve in (api_method_for, cli_method_for):
+        chosen = resolve(AssetType.quadruped_mammal, ReconstructBackend.trellis)
+        assert isinstance(chosen, QuadrupedMammalMethod)
+        assert chosen.backend is ReconstructBackend.trellis
+        assert resolve(AssetType.quadruped_mammal, None).backend is ReconstructBackend.triposplat  # default
+        # Other categories ignore the backend (no quadruped method returned).
+        assert not isinstance(resolve(AssetType.object, ReconstructBackend.trellis), QuadrupedMammalMethod)

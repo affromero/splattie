@@ -49,6 +49,11 @@ class QuadrupedMammalMethod:
         self._backend = backend
 
     @property
+    def backend(self) -> ReconstructBackend:
+        """The reconstruction backend this instance uses (per-request choice; default TripoSplat)."""
+        return self._backend
+
+    @property
     def info(self) -> MethodInfo:
         return MethodInfo(
             id=METHOD_ID,
