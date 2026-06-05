@@ -131,7 +131,7 @@ uv run splattie generate-splattie-batch \
 
 Use `--asset-type body` for LHM/SMPL-X bodies, `--asset-type object` for TRELLIS + Puppeteer rigged objects, or `--asset-type quadruped_mammal` for SMAL-rigged animals with cursor-follow head tracking. Input images can be `.jpg`, `.jpeg`, or `.png`; outputs are named after the input stems.
 
-The quadruped pipeline reconstructs the gaussian splat with **TripoSplat** by default (VAST-AI; reconstructs animal muzzles/faces far more cleanly than TRELLIS) and fits a **SMAL** skeleton anchored to **SuperAnimal-Quadruped** keypoints. Set `SPLATTIE_QUADRUPED_BACKEND=trellis` to use TRELLIS reconstruction instead. SMAL weights are license-gated (MPI, non-commercial) and download separately — see the setup script.
+The quadruped pipeline reconstructs the gaussian splat with **TripoSplat** by default (VAST-AI; reconstructs animal muzzles/faces far more cleanly than TRELLIS) and fits a **SMAL** skeleton anchored to **SuperAnimal-Quadruped** keypoints. The reconstruction model is a per-request choice (the `ReconstructBackend` enum): pass `--backend trellis` to the CLI, `?backend=trellis` to `/generate-from-upload`, or pick it from the **Reconstruction model** toggle on [`/create`](http://localhost:4001/create) when the Animal category is selected. SMAL weights are license-gated (MPI, non-commercial) and download separately — see the setup script.
 
 If you prefer Docker on the GPU host:
 

@@ -4,8 +4,8 @@ Single image -> gaussian splat (TripoSplat by default, TRELLIS optional) -> 3D S
 keypoints -> keypoint-anchored SMAL fit -> LBS bind -> gaze-enabled `.splattie`. Non-mammals are
 rejected by the fit's detection gate (NotAQuadrupedMammalError) — there is no fallback rig.
 
-The reconstruction backend defaults to TripoSplat (cleaner animal faces) and is overridable via the
-``SPLATTIE_QUADRUPED_BACKEND`` env var (``trellis`` / ``triposplat``).
+The reconstruction backend is a per-request ``ReconstructBackend`` choice (default TripoSplat — cleaner
+animal faces) passed to the constructor by the API / CLI / create page; ``trellis`` is the alternative.
 """
 
 from __future__ import annotations
