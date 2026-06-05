@@ -1,10 +1,5 @@
 # Changelog
 
-## [Unreleased]
-
-### Changed
-- Demo bundles recompressed to compressed PLY (`splat-transform`), shrinking the public demo payload **~2.6×** (359 MB → 140 MB; worst object 21 MB → 6.8 MB) for faster per-file load on splattie.app. The manifests are untouched — `format` stays `ply` and `formatVersion` stays `0.3.1`, so the widget loads them unchanged with no version bump. `install-demos` now compresses by default (`--no-compress` to opt out).
-
 ## [0.3.1] - 2026-06-05
 
 ### Added

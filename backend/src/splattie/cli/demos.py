@@ -30,7 +30,6 @@ from PIL import Image
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from splattie.compression.bundle import compress_bundle
 from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
 from splattie.methods.lhm.method import LHMMethod
@@ -514,17 +513,13 @@ def _make_thumbnail(src_png: Path, out_jpg: Path, size: tuple[int, int] = _THUMB
     im.resize(size, Image.Resampling.LANCZOS).save(out_jpg, quality=88)
 
 
-def install_demos(
-    avatars_dir: Path, sources_dir: Path, asset_type: AssetType | None = None, *, compress: bool = True
-) -> None:
+def install_demos(avatars_dir: Path, sources_dir: Path, asset_type: AssetType | None = None) -> None:
     """Install regenerated demos into apps/web/public/demos: 3:4 `.jpg` thumbs + `.splattie`.
 
     Args:
         avatars_dir: Directory of `<id>.splattie` (from regen-demo-avatars).
         sources_dir: Directory of `<id>.png` source images (from generate-demo-images).
         asset_type: Install all demos when omitted, or only one asset category.
-        compress: Recompress each bundle's PLY to compressed PLY (~4x smaller) on install;
-            pass `--no-compress` to copy bundles through verbatim.
 
     """
     for demos in _selected_demo_groups(asset_type):
@@ -537,14 +532,7 @@ def install_demos(
             if not splat.exists() or not src.exists():
                 logger.error(f"[{asset_id}] missing splattie/source; skipping")
                 continue
-            dest = dest_dir / f"{asset_id}.splattie"
-            if compress:
-                result = compress_bundle(splat, dest)
-                saved = (result.size_before - result.size_after) // 1024
-                detail = "already compressed" if result.already_compressed else f"compressed -{saved} KB"
-            else:
-                shutil.copy(splat, dest)
-                detail = "copied verbatim"
+            shutil.copy(splat, dest_dir / f"{asset_id}.splattie")
             _make_thumbnail(src, dest_dir / f"{asset_id}.jpg")
-            logger.info(f"[{asset_id}] installed -> {dest_dir}/{asset_id}.{{jpg,splattie}} ({detail})")
+            logger.info(f"[{asset_id}] installed -> {dest_dir}/{asset_id}.{{jpg,splattie}}")
     logger.info(f"Demos installed into {_WEB_DEMOS}")
