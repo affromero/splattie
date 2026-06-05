@@ -13,6 +13,7 @@ from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
 from splattie.methods.lhm.method import LHMMethod
 from splattie.methods.object.method import ObjectRigMethod
+from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
 from splattie.types import AssetType
 
 logger = get_logger()

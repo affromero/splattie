@@ -74,7 +74,7 @@ def _umeyama(src: np.ndarray, dst: np.ndarray) -> tuple[float, np.ndarray, np.nd
 
 
 def _corresponded(
-    template: np.ndarray, lookup: dict[str, np.ndarray], *, swap: bool
+    template: np.ndarray, lookup: Mapping[str, np.ndarray], *, swap: bool
 ) -> tuple[list[int], np.ndarray, np.ndarray]:
     """Return (joint indices, template xyz, target xyz) for SMAL joints with a matched keypoint."""
     joints, src, dst = [], [], []
@@ -88,7 +88,7 @@ def _corresponded(
 
 
 def _initial_alignment(
-    template: np.ndarray, lookup: dict[str, np.ndarray]
+    template: np.ndarray, lookup: Mapping[str, np.ndarray]
 ) -> tuple[float, bool, list[int], float, np.ndarray]:
     """Pick the L/R convention with the lower Umeyama residual; return its alignment."""
     candidates = []

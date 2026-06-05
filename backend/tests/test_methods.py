@@ -16,6 +16,7 @@ from splattie.methods.object.method import ObjectRigMethod
 from splattie.methods.object.puppeteer import PuppeteerRiggingOutput
 from splattie.methods.object.reconstruct import ObjectReconstruction
 from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
+from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend
 from splattie.methods.quadruped_mammal.schemas import FitDiagnostics
 from splattie.methods.registry import registry
 from splattie.types import AssetType
@@ -329,7 +330,7 @@ def test_quadruped_registered() -> None:
 def test_quadruped_generate_propagates_load_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     import splattie.methods.quadruped_mammal.method as quadruped_method
 
-    def _boom() -> None:
+    def _boom(_backend: object = None) -> None:
         msg = "simulated SMAL weights-missing failure"
         raise FileNotFoundError(msg)
 
@@ -358,10 +359,11 @@ def test_quadruped_generate_produces_bundle(tmp_path: Path, monkeypatch: pytest.
         shape_norm=3.2,
     )
 
-    def _fake_reconstruct(*, image_path: Path, output_dir: Path, model_id: str) -> Path:
+    def _fake_reconstruct(*, image_path: Path, output_dir: Path, model_id: str, backend: ReconstructBackend) -> Path:
         assert image_path.exists()
-        assert output_dir.name == "trellis"
+        assert output_dir.name == "reconstruct"
         assert model_id == "critter00001"
+        assert backend == ReconstructBackend.triposplat  # default backend selected by the method
         return gaussian_ply
 
     def _fake_bind_and_bundle(
@@ -398,3 +400,21 @@ def test_quadruped_generate_produces_bundle(tmp_path: Path, monkeypatch: pytest.
     assert result.method_id == "trellis-smal-quadruped"
     assert result.num_gaussians == 169120
     assert result.splattie_url == f"/storage/{model_id}/{model_id}.splattie"
+
+
+def test_batch_method_for_wires_every_asset_type() -> None:
+    """Every AssetType must resolve to a batch generation method.
+
+    Guards `generate-splattie-batch` against a missing import/wiring (a NameError that only
+    surfaces at CLI call time, not at module import — ruff's F821 does not catch it).
+    """
+    from splattie.cli.batch import _method_for
+
+    expected = {
+        AssetType.head: "LAMMethod",
+        AssetType.body: "LHMMethod",
+        AssetType.object: "ObjectRigMethod",
+        AssetType.quadruped_mammal: "QuadrupedMammalMethod",
+    }
+    for asset_type in AssetType:
+        assert type(_method_for(asset_type)).__name__ == expected[asset_type]

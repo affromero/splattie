@@ -11,7 +11,8 @@ import os
 import threading
 from pathlib import Path
 
-from splattie.methods.object.runtime import VENDOR_TRELLIS
+from splattie.methods.object.runtime import TRIPOSPLAT_FLOW_MODEL, VENDOR_TRELLIS, VENDOR_TRIPOSPLAT
+from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend
 
 VENDOR_ROOT = Path(__file__).resolve().parents[4] / "vendor"
 __all__ = ["DLC_PYTHON", "SMAL_PKL", "VENDOR_TRELLIS", "inference_lock", "require_quadruped_runtime"]
@@ -32,19 +33,28 @@ DLC_PYTHON = _env_path("SPLATTIE_DLC_PYTHON", _DEFAULT_DLC_PYTHON)
 inference_lock = threading.Lock()
 
 
-def require_quadruped_runtime() -> None:
-    """Fail early when SMAL, the DeepLabCut interpreter, or TRELLIS is missing.
+def require_quadruped_runtime(backend: ReconstructBackend = ReconstructBackend.triposplat) -> None:
+    """Fail early when SMAL, the DeepLabCut interpreter, or the selected reconstruction backend is missing.
 
-    TRELLIS supplies the gaussian splat; Puppeteer is NOT required (the quadruped rig comes
+    Always needs SMAL (the rig) and the DeepLabCut interpreter (keypoints). The gaussian splat comes
+    from the selected backend, so the readiness check is backend-aware: TripoSplat (default) needs its
+    vendored code + flow-model ckpt; TRELLIS needs its package. Puppeteer is NOT required (the rig comes
     from SMAL), so this deliberately does not call the object method's Puppeteer-inclusive check.
     """
-    required = (SMAL_PKL, DLC_PYTHON, VENDOR_TRELLIS / "trellis")
+    backend = ReconstructBackend(backend)
+    reconstruction = (
+        (VENDOR_TRIPOSPLAT / "triposplat.py", TRIPOSPLAT_FLOW_MODEL)
+        if backend is ReconstructBackend.triposplat
+        else (VENDOR_TRELLIS / "trellis",)
+    )
+    required = (SMAL_PKL, DLC_PYTHON, *reconstruction)
     missing = [str(path) for path in required if not path.exists()]
     if missing:
         formatted = "\n".join(f"  - {item}" for item in missing)
         msg = (
-            "Quadruped generation runtime is incomplete. Run `bash backend/scripts/setup-gpu.sh` "
-            "(SMAL weights + DeepLabCut venv + TRELLIS), or set SPLATTIE_SMAL_PKL / SPLATTIE_DLC_PYTHON. "
+            f"Quadruped generation runtime is incomplete for the {backend.value!r} backend. Run "
+            "`bash backend/scripts/setup-gpu.sh` (SMAL weights + DeepLabCut venv + reconstruction backend), "
+            "or set SPLATTIE_SMAL_PKL / SPLATTIE_DLC_PYTHON. "
             f"Missing:\n{formatted}"
         )
         raise FileNotFoundError(msg)

@@ -21,8 +21,10 @@ from splattie.methods.object.runtime import (
     PUPPETEER_SKELETON_WEIGHTS,
     PUPPETEER_SKINNING_MICHELANGELO,
     PUPPETEER_SKINNING_WEIGHTS,
+    TRIPOSPLAT_FLOW_MODEL,
     VENDOR_PUPPETEER,
     VENDOR_TRELLIS,
+    VENDOR_TRIPOSPLAT,
 )
 from splattie.methods.quadruped_mammal.runtime import DLC_PYTHON, SMAL_PKL
 from splattie.methods.registry import registry
@@ -53,7 +55,9 @@ _PIPELINE_WEIGHTS: list[tuple[str, str, Path, str]] = [
     ("trellis-puppeteer", "michelangelo-skeleton", PUPPETEER_MICHELANGELO, "file"),
     ("trellis-puppeteer", "michelangelo-skinning", PUPPETEER_SKINNING_MICHELANGELO, "file"),
     ("trellis-puppeteer", "partfield", PUPPETEER_PARTFIELD, "file"),
-    ("trellis-smal-quadruped", "trellis-package", VENDOR_TRELLIS / "trellis", "dir"),
+    # Default backend is TripoSplat (cleaner animal faces); TRELLIS is the optional fallback.
+    ("trellis-smal-quadruped", "triposplat-code", VENDOR_TRIPOSPLAT / "triposplat.py", "file"),
+    ("trellis-smal-quadruped", "triposplat-flow-model", TRIPOSPLAT_FLOW_MODEL, "file"),
     ("trellis-smal-quadruped", "smal-model", SMAL_PKL, "file"),
     ("trellis-smal-quadruped", "deeplabcut-python", DLC_PYTHON, "file"),
 ]

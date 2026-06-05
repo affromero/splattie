@@ -33,7 +33,7 @@ class Keypoints3D:
     support: np.ndarray  # (N,) view-count per landmark
     mean_confidence: float
 
-    def lookup(self, *, min_support: int = 3) -> dict[str, np.ndarray]:
+    def lookup(self, *, min_support: int = 3) -> Mapping[str, np.ndarray]:
         """Return ``name -> xyz`` for well-triangulated landmarks (local compute helper)."""
         return {
             name: self.positions[i]

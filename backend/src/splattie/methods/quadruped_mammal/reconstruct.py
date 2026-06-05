@@ -1,14 +1,15 @@
 """Image-to-3D-gaussian reconstruction for the quadruped pipeline — gaussian PLY only.
 
 The SMAL fit registers against the gaussian splat directly, so (unlike the object method) no mesh is
-needed; this returns just the gaussian PLY path. TRELLIS is the default backend; TripoSplat is an
-optional backend (VAST-AI) that reconstructs some animal faces more cleanly — selectable per call.
+needed; this returns just the gaussian PLY path. The backend is selectable via the ``ReconstructBackend``
+enum: TripoSplat (VAST-AI) is the default because it reconstructs animal muzzles/faces far more cleanly
+than TRELLIS (which melts flat/foreshortened animal faces); TRELLIS stays available as an option.
 """
 
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
-from typing import Literal
 
 from splattie.methods.object.reconstruct import reconstruct_object_with_trellis
 from splattie.methods.object.runtime import (
@@ -18,19 +19,29 @@ from splattie.methods.object.runtime import (
     vendor_python_env,
 )
 
-ReconstructBackend = Literal["trellis", "triposplat"]
+
+class ReconstructBackend(StrEnum):
+    """Image->3D-gaussian reconstruction backend.
+
+    `str`-valued so it serializes to its plain value and compares equal to that string, while staying a
+    single typed source of truth (matching `AssetType`/`SplatFormat`).
+    """
+
+    trellis = "trellis"
+    triposplat = "triposplat"
 
 
 def reconstruct_gaussian_splat(
-    *, image_path: Path, output_dir: Path, model_id: str, backend: ReconstructBackend = "triposplat"
+    *, image_path: Path, output_dir: Path, model_id: str, backend: ReconstructBackend = ReconstructBackend.triposplat
 ) -> Path:
     """Run the chosen image->3D-gaussian backend and return the gaussian PLY path.
 
     TripoSplat is the default for animals: it reconstructs muzzles/faces far more cleanly than TRELLIS
-    (which melts flat/foreshortened animal faces). The object method keeps TRELLIS; pass backend="trellis"
-    to fall back here.
+    (which melts flat/foreshortened animal faces). The object method keeps TRELLIS; pass
+    ``backend=ReconstructBackend.trellis`` (or the string ``"trellis"``) to fall back here.
     """
-    if backend == "triposplat":
+    backend = ReconstructBackend(backend)  # coerce env-var / plain-string callers to the enum
+    if backend is ReconstructBackend.triposplat:
         return _reconstruct_with_triposplat(image_path=image_path, output_dir=output_dir, model_id=model_id)
     reconstruction = reconstruct_object_with_trellis(
         image_path=image_path,
@@ -41,7 +52,7 @@ def reconstruct_gaussian_splat(
 
 
 def _reconstruct_with_triposplat(*, image_path: Path, output_dir: Path, model_id: str) -> Path:
-    """Run TripoSplat (optional backend) in its vendored subprocess; return only the gaussian PLY.
+    """Run TripoSplat (default backend) in its vendored subprocess; return only the gaussian PLY.
 
     The object method also meshes the splat for Puppeteer; the SMAL fit skins the gaussians directly,
     so the mesh step is skipped here.

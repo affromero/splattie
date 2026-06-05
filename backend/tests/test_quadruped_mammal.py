@@ -89,15 +89,34 @@ def test_quadruped_widget_config_enables_head_follow() -> None:
 
 
 def test_require_quadruped_runtime_executes() -> None:
-    """Exercise the runtime check body so call-time NameErrors are caught by CI."""
-    assets_present = (
-        runtime.SMAL_PKL.exists() and runtime.DLC_PYTHON.exists() and (runtime.VENDOR_TRELLIS / "trellis").exists()
+    """Exercise the runtime check body so call-time NameErrors are caught by CI.
+
+    The default backend is TripoSplat, so readiness needs SMAL + DeepLabCut + TripoSplat
+    (vendored code + flow-model ckpt) — not TRELLIS.
+    """
+    from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend
+
+    triposplat_ready = (
+        runtime.SMAL_PKL.exists()
+        and runtime.DLC_PYTHON.exists()
+        and (runtime.VENDOR_TRIPOSPLAT / "triposplat.py").exists()
+        and runtime.TRIPOSPLAT_FLOW_MODEL.exists()
     )
-    if assets_present:
-        runtime.require_quadruped_runtime()  # must not raise when everything is present
+    if triposplat_ready:
+        runtime.require_quadruped_runtime()  # default backend, must not raise when everything is present
     else:
         with pytest.raises(FileNotFoundError):
             runtime.require_quadruped_runtime()
+
+    # Backend-aware: the TRELLIS backend checks the TRELLIS package instead of TripoSplat ckpts.
+    trellis_ready = (
+        runtime.SMAL_PKL.exists() and runtime.DLC_PYTHON.exists() and (runtime.VENDOR_TRELLIS / "trellis").exists()
+    )
+    if trellis_ready:
+        runtime.require_quadruped_runtime(ReconstructBackend.trellis)
+    else:
+        with pytest.raises(FileNotFoundError):
+            runtime.require_quadruped_runtime(ReconstructBackend.trellis)
 
 
 @pytest.mark.skipif(not runtime.SMAL_PKL.exists(), reason="SMAL weights not present")
@@ -167,8 +186,12 @@ def test_canonical_transform_uprights_body_and_centers_head(head_yaw: float) -> 
 
 
 def test_reconstruct_backend_selector(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """The quadruped reconstruct dispatches to TripoSplat by default, TRELLIS on request."""
+    """The quadruped reconstruct dispatches to TripoSplat by default, TRELLIS on request.
+
+    Plain strings coerce to the enum so the SPLATTIE_QUADRUPED_BACKEND env var (a string) selects it.
+    """
     from splattie.methods.quadruped_mammal import reconstruct as recon
+    from splattie.methods.quadruped_mammal.reconstruct import ReconstructBackend
 
     trellis_ply, tripo_ply = tmp_path / "trellis.ply", tmp_path / "tripo.ply"
     monkeypatch.setattr(
@@ -178,5 +201,6 @@ def test_reconstruct_backend_selector(monkeypatch: pytest.MonkeyPatch, tmp_path:
 
     common = {"image_path": tmp_path / "x.png", "output_dir": tmp_path, "model_id": "m"}
     assert recon.reconstruct_gaussian_splat(**common) == tripo_ply  # default = triposplat
-    assert recon.reconstruct_gaussian_splat(**common, backend="triposplat") == tripo_ply
-    assert recon.reconstruct_gaussian_splat(**common, backend="trellis") == trellis_ply
+    assert recon.reconstruct_gaussian_splat(**common, backend=ReconstructBackend.triposplat) == tripo_ply
+    assert recon.reconstruct_gaussian_splat(**common, backend=ReconstructBackend.trellis) == trellis_ply
+    assert recon.reconstruct_gaussian_splat(**common, backend="trellis") == trellis_ply  # env-string coerces
