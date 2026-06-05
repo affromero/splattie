@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { generateFromUpload } from '@/lib/api-client';
 import { track } from '@/lib/track';
-import type { AssetType } from '@/types/api';
+import type { AssetType, ReconstructBackend } from '@/types/api';
 import styles from './page.module.css';
 
 type Step = 'upload' | 'preview' | 'generate';
@@ -15,6 +15,12 @@ const ASSET_OPTIONS: { value: AssetType; label: string; hint: string }[] = [
   { value: 'body', label: 'Body', hint: 'full body, head to feet' },
   { value: 'object', label: 'Object', hint: 'single isolated object' },
   { value: 'quadruped_mammal', label: 'Animal', hint: 'four-legged mammal (cat, dog, horse, deer)' },
+];
+
+// Reconstruction model for the Animal category only (TripoSplat reconstructs animal faces cleaner).
+const BACKEND_OPTIONS: { value: ReconstructBackend; label: string; hint: string }[] = [
+  { value: 'triposplat', label: 'TripoSplat', hint: 'cleaner animal faces (default)' },
+  { value: 'trellis', label: 'TRELLIS', hint: 'alternative model' },
 ];
 
 const GENERATING_COPY: Record<AssetType, string> = {
@@ -28,6 +34,7 @@ export default function CreatePage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('upload');
   const [assetType, setAssetType] = useState<AssetType>('head');
+  const [backend, setBackend] = useState<ReconstructBackend>('triposplat');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +64,11 @@ export default function CreatePage() {
     setError(null);
 
     try {
-      const result = await generateFromUpload(imageFile, assetType);
+      const result = await generateFromUpload(
+        imageFile,
+        assetType,
+        assetType === 'quadruped_mammal' ? backend : undefined
+      );
       track('avatar_create', '/create', { modelId: result.modelId });
       router.push(`/view/${result.modelId}`);
     } catch (err) {
@@ -89,6 +100,26 @@ export default function CreatePage() {
           </button>
         ))}
       </div>
+
+      {assetType === 'quadruped_mammal' && (
+        <div className={styles.backendRow}>
+          <span className={styles.backendLabel}>Reconstruction model</span>
+          <div className={styles.backendToggle} role="group" aria-label="Reconstruction model">
+            {BACKEND_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={backend === option.value ? styles.assetTabActive : styles.assetTab}
+                onClick={() => setBackend(option.value)}
+                aria-pressed={backend === option.value}
+              >
+                <span>{option.label}</span>
+                <small>{option.hint}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className={styles.steps}>
         <span className={step === 'upload' ? styles.stepActive : styles.step}>upload</span>

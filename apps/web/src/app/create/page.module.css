@@ -75,6 +75,31 @@
   color: var(--color-text);
 }
 
+/* Reconstruction-model toggle (Animal category only); buttons reuse the .assetTab styles. */
+.backendRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 560px;
+}
+
+.backendLabel {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.backendToggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
 .steps {
   display: flex;
   gap: 0;
