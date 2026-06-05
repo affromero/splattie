@@ -12,7 +12,7 @@ from PIL import Image
 from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
 
 # A committed demo portrait — LAM's FLAME tracking needs a real face.
-_FACE_IMAGE = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos" / "heads" / "h1.jpg"
+_FACE_IMAGE = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "demos" / "heads" / "h1.jpg"
 
 
 def _face_png_bytes() -> io.BytesIO:
