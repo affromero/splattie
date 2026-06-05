@@ -263,7 +263,7 @@ QUADRUPED_MAMMALS: tuple[DemoSubject, ...] = (
     DemoSubject(
         asset_id="q12",
         asset_type=AssetType.quadruped_mammal,
-        subject="a river otter with sleek dark-brown fur, a rounded head, small ears, whiskers, and short legs",
+        subject="a river otter standing on all four legs (NOT sitting upright), with sleek dark-brown fur, a rounded head, small ears, whiskers, and short legs",
     ),
 )
 
