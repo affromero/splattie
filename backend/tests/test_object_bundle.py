@@ -162,3 +162,29 @@ def test_object_bundle_is_widget_loadable(tmp_path: Path) -> None:
         assert states == DEFAULT_STATES_OBJECT.jsonable()
         skeleton = json.loads(zf.read("skeleton.json"))
         assert skeleton["restPositions"] == [[0.0, -1.0, -2.0], [0.5, 1.0, 2.0]]
+
+
+def test_bundle_records_generator_identity_without_changing_asset_type(tmp_path: Path) -> None:
+    """A non-object caller tags provenance without changing the renderer selector.
+
+    The quadruped method records identity via generatorMethod + category, but the manifest
+    assetType MUST stay 'object' so the widget still applies LBS skinning + object look-at
+    head-tracking (it gates both on assetType==='object').
+    """
+    ply_path = _fixture_ply(tmp_path / "source.ply")
+    bundle_path, _ = build_object_splattie(
+        ply_path=ply_path,
+        output_dir=tmp_path / "bundle",
+        model_id="critter",
+        skeleton=_skeleton(),
+        lbs_weights=_weights(),
+        generator_method="trellis-smal-quadruped",
+        generator_method_version="quadruped-rig-v1",
+        category="quadruped_mammal",
+    )
+    with zipfile.ZipFile(bundle_path) as zf:
+        manifest = json.loads(zf.read("manifest.json"))
+    assert manifest["assetType"] == "object"  # renderer selector — never the API category
+    assert manifest["generator"]["method"] == "trellis-smal-quadruped"
+    assert manifest["generator"]["methodVersion"] == "quadruped-rig-v1"
+    assert manifest["metadata"]["category"] == "quadruped_mammal"

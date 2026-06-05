@@ -17,7 +17,10 @@ export interface GenerationResult {
   methodId: string;
 }
 
-export type AssetType = 'head' | 'body' | 'object';
+export type AssetType = 'head' | 'body' | 'object' | 'quadruped_mammal';
+
+// Image->3D-gaussian reconstruction backend (quadruped only; other categories ignore it).
+export type ReconstructBackend = 'triposplat' | 'trellis';
 
 export interface MethodInfo {
   id: string;

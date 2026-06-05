@@ -1,4 +1,11 @@
-import type { AssetType, GenerationProgress, GenerationResult, HealthResponse, SegmentResponse } from '@/types/api';
+import type {
+  AssetType,
+  GenerationProgress,
+  GenerationResult,
+  HealthResponse,
+  ReconstructBackend,
+  SegmentResponse,
+} from '@/types/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
@@ -22,14 +29,18 @@ export async function segmentImage(image: File): Promise<SegmentResponse> {
 
 export async function generateFromUpload(
   image: File,
-  assetType: AssetType = 'head'
+  assetType: AssetType = 'head',
+  backend?: ReconstructBackend
 ): Promise<GenerationResult & { inferenceSeconds: number }> {
   const formData = new FormData();
   formData.append('image', image);
 
   // Select by category, not method — the backend resolves head/body/object to
-  // the registered generation method.
-  const res = await fetch(`${API_URL}/generate-from-upload?assetType=${assetType}`, {
+  // the registered generation method. `backend` optionally picks the quadruped
+  // reconstruction model (TripoSplat/TRELLIS); other categories ignore it.
+  const params = new URLSearchParams({ assetType });
+  if (backend) params.set('backend', backend);
+  const res = await fetch(`${API_URL}/generate-from-upload?${params}`, {
     method: 'POST',
     body: formData,
   });

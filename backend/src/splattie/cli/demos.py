@@ -34,6 +34,7 @@ from splattie.methods.base import AssetGenerationMethod
 from splattie.methods.lam.method import LAMMethod
 from splattie.methods.lhm.method import LHMMethod
 from splattie.methods.object.method import ObjectRigMethod
+from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
 from splattie.types import AssetType
 
 logger = get_logger()
@@ -53,14 +54,22 @@ _OBJECT_BASE = (
 )
 _HEAD_FRAMING = "Head-and-shoulders framing, face centered, both eyes clearly visible, no occlusion. "
 _BODY_FRAMING = (
-    "Full body head-to-feet in frame, standing upright facing the camera, weight even, "
-    "arms relaxed and slightly away from the torso (not crossed, not behind the back), "
-    "casual everyday clothing, shoes visible. "
+    "Full body head-to-feet in frame, standing in the described stance with the FACE looking toward "
+    "the camera, weight even, arms relaxed and slightly away from the torso (not crossed, not behind "
+    "the back), casual everyday clothing, shoes visible. "
 )
 _OBJECT_FRAMING = (
     "A single isolated object centered in frame, front three-quarter view, entire object visible, "
     "no cropping, no text, no labels, no hands, no people, no extra props. Choose a clean "
     "object silhouette with distinct movable or articulated parts suitable for rigging. "
+)
+_QUADRUPED_FRAMING = (
+    "A single photorealistic quadruped mammal, full body, standing in a natural cute neutral stance, "
+    "the whole animal turned to FACE the camera at a gentle three-quarter angle (chest and face toward "
+    "the viewer) and looking directly at the camera, the head aligned with the body and the nose "
+    "pointing toward the viewer, both eyes equally visible and symmetric (NOT a side profile, NOT the "
+    "head cranked to one side). All four legs, the entire head, and the tail fully visible and "
+    "uncropped, the whole animal centered in frame, no people, no hands, no text, no labels, no props. "
 )
 
 
@@ -114,6 +123,26 @@ HEADS: tuple[DemoSubject, ...] = (
         asset_type=AssetType.head,
         subject="a Southeast Asian woman in her 30s with long straight hair and hoop earrings, blazer",
     ),
+    DemoSubject(
+        asset_id="h9",
+        asset_type=AssetType.head,
+        subject="a mixed-race boy around 8 years old with curly hair, brown skin, and a gap-toothed smile, striped t-shirt",
+    ),
+    DemoSubject(
+        asset_id="h10",
+        asset_type=AssetType.head,
+        subject="an elderly White man in his 80s with a bushy white beard, a mostly bald head, and round glasses, cardigan",
+    ),
+    DemoSubject(
+        asset_id="h11",
+        asset_type=AssetType.head,
+        subject="a young woman in her 20s wearing a brightly patterned hijab, warm brown eyes, denim jacket",
+    ),
+    DemoSubject(
+        asset_id="h12",
+        asset_type=AssetType.head,
+        subject="a man in his 30s with vitiligo (dark skin with lighter patches), a shaved head and short beard, henley shirt",
+    ),
 )
 BODIES: tuple[DemoSubject, ...] = (
     DemoSubject(
@@ -149,6 +178,26 @@ BODIES: tuple[DemoSubject, ...] = (
         asset_id="b8",
         asset_type=AssetType.body,
         subject="an East Asian man in his 60s, cardigan over a shirt, slacks, loafers",
+    ),
+    DemoSubject(
+        asset_id="b9",
+        asset_type=AssetType.body,
+        subject="a young woman in her 20s with red hair and freckles, mustard cardigan and jeans, standing turned at a relaxed three-quarter angle with one hand in a pocket",
+    ),
+    DemoSubject(
+        asset_id="b10",
+        asset_type=AssetType.body,
+        subject="an elderly Black man in his 70s, flat cap, knit vest, and trousers, standing upright facing the camera",
+    ),
+    DemoSubject(
+        asset_id="b11",
+        asset_type=AssetType.body,
+        subject="a teenage boy in a hoodie and ripped jeans, standing at a casual three-quarter stance with hands in his pockets",
+    ),
+    DemoSubject(
+        asset_id="b12",
+        asset_type=AssetType.body,
+        subject="a plus-size woman in her 30s, floral wrap dress and ankle boots, standing facing the camera",
     ),
 )
 OBJECTS: tuple[DemoSubject, ...] = (
@@ -192,9 +241,93 @@ OBJECTS: tuple[DemoSubject, ...] = (
         asset_type=AssetType.object,
         subject="a small construction crane toy with rotating base, lattice arm, cable, and hook",
     ),
+    DemoSubject(
+        asset_id="o9",
+        asset_type=AssetType.object,
+        subject="a green poseable toy tyrannosaurus with an openable jaw, short arms, sturdy legs, and a long tail",
+    ),
+    DemoSubject(
+        asset_id="o10",
+        asset_type=AssetType.object,
+        subject="a retro teal desk fan with a round wire cage, three blades, a tilting head, and an oval weighted base",
+    ),
+    DemoSubject(
+        asset_id="o11",
+        asset_type=AssetType.object,
+        subject="a white quadcopter drone with four arms, propellers, a central camera gimbal, and landing legs",
+    ),
+    DemoSubject(
+        asset_id="o12",
+        asset_type=AssetType.object,
+        subject="a wooden artist mannequin of a horse on a small stand, with visible segmented leg and neck joints",
+    ),
+)
+QUADRUPED_MAMMALS: tuple[DemoSubject, ...] = (
+    # Mostly in/near SMAL families (canid/felid/equid/bovid/cervid) for clean rigs, plus a
+    # capybara (rodent, out-of-family) as a cute experiment — verified at demo-install time.
+    DemoSubject(
+        asset_id="q1",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a German shorthaired pointer dog with a liver-and-white ticked short coat and folded ears",
+    ),
+    DemoSubject(
+        asset_id="q2",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a domestic short-haired tabby cat with brown mackerel stripes, white paws, and green eyes",
+    ),
+    DemoSubject(
+        asset_id="q3",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a red fox with a rich orange coat, white underbelly, black legs, and a bushy white-tipped tail",
+    ),
+    DemoSubject(
+        asset_id="q4",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a chestnut brown horse with a dark mane and tail and a short summer coat",
+    ),
+    DemoSubject(
+        asset_id="q5",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a black-and-white Holstein dairy cow with a pink udder and short horns",
+    ),
+    DemoSubject(
+        asset_id="q6",
+        asset_type=AssetType.quadruped_mammal,
+        subject="an adult red deer stag with a tan-brown coat, pale rump, and large branching antlers",
+    ),
+    DemoSubject(
+        asset_id="q7",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a young lamb with a fluffy cream-white woolly coat, pink ears, and slender dark legs",
+    ),
+    DemoSubject(
+        asset_id="q8",
+        asset_type=AssetType.quadruped_mammal,
+        subject="an adult capybara with coarse reddish-brown fur, a barrel-shaped body, short legs, and a blunt square snout",
+    ),
+    DemoSubject(
+        asset_id="q9",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a Pembroke Welsh corgi dog with a short orange-and-white coat, large upright ears, short legs, and a fox-like face",
+    ),
+    DemoSubject(
+        asset_id="q10",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a giant panda with thick black-and-white fur, black eye patches and ears, and a round chubby body",
+    ),
+    DemoSubject(
+        asset_id="q11",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a pink domestic piglet with a plump round body, floppy ears, short legs, and a flat snout",
+    ),
+    DemoSubject(
+        asset_id="q12",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a river otter standing on all four legs (NOT sitting upright), with sleek dark-brown fur, a rounded head, small ears, whiskers, and short legs",
+    ),
 )
 
-_DEMO_GROUPS: tuple[tuple[DemoSubject, ...], ...] = (HEADS, BODIES, OBJECTS)
+_DEMO_GROUPS: tuple[tuple[DemoSubject, ...], ...] = (HEADS, BODIES, OBJECTS, QUADRUPED_MAMMALS)
 
 
 def _selected_demo_groups(asset_type: AssetType | None) -> tuple[tuple[DemoSubject, ...], ...]:
@@ -207,6 +340,8 @@ def demo_prompt(asset_type: AssetType, subject: str) -> str:
     """Build the Gemini prompt for one demo source image."""
     if asset_type is AssetType.object:
         return f"{_OBJECT_BASE} {_OBJECT_FRAMING}Subject: {subject}."
+    if asset_type is AssetType.quadruped_mammal:
+        return f"{_OBJECT_BASE} {_QUADRUPED_FRAMING}Subject: {subject}."
     framing = _HEAD_FRAMING if asset_type is AssetType.head else _BODY_FRAMING
     return f"{_BASE} {framing}Subject: {subject}."
 
@@ -224,6 +359,8 @@ def _demo_folder(asset_type: AssetType) -> str:
         return "heads"
     if asset_type is AssetType.body:
         return "bodies"
+    if asset_type is AssetType.quadruped_mammal:
+        return "quadruped_mammals"
     return "objects"
 
 
@@ -323,14 +460,21 @@ def _regen(method: AssetGenerationMethod, images_dir: Path, output_dir: Path, as
     method.unload()
 
 
-def regen_demo_avatars(heads_dir: Path, bodies_dir: Path, output_dir: Path, objects_dir: Path | None = None) -> None:
-    """Rebuild head/body/object `.splattie` demos from source images, in-process.
+def regen_demo_avatars(
+    heads_dir: Path,
+    bodies_dir: Path,
+    output_dir: Path,
+    objects_dir: Path | None = None,
+    quadrupeds_dir: Path | None = None,
+) -> None:
+    """Rebuild head/body/object/quadruped `.splattie` demos from source images, in-process.
 
     Args:
         heads_dir: Directory of head source images (`<id>.png`).
         bodies_dir: Directory of full-body source images (`<id>.png`).
         output_dir: Directory to write `<id>.splattie` into.
         objects_dir: Optional directory of object source images (`<id>.png`).
+        quadrupeds_dir: Optional directory of quadruped-mammal source images (`<id>.png`).
 
     """
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -338,6 +482,8 @@ def regen_demo_avatars(heads_dir: Path, bodies_dir: Path, output_dir: Path, obje
     _regen(LHMMethod(), bodies_dir, output_dir, AssetType.body)
     if objects_dir is not None:
         _regen(ObjectRigMethod(), objects_dir, output_dir, AssetType.object)
+    if quadrupeds_dir is not None:
+        _regen(QuadrupedMammalMethod(), quadrupeds_dir, output_dir, AssetType.quadruped_mammal)
     produced = sorted(output_dir.glob("*.splattie"))
     logger.info(f"Done: {len(produced)} .splattie in {output_dir}")
 

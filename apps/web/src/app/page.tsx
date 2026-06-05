@@ -6,7 +6,7 @@ import styles from './page.module.css';
 
 const SELF_HOST = process.env.NEXT_PUBLIC_SELF_HOST === 'true';
 
-type Category = 'head' | 'body' | 'object';
+type Category = 'head' | 'body' | 'object' | 'quadruped_mammal';
 
 interface Demo {
   id: string;
@@ -16,10 +16,11 @@ interface Demo {
 // Demos live in category subfolders: /demos/{heads,bodies,objects}/<id>.{jpg,splattie}.
 // ASSET_VERSION cache-busts the .splattie when its contents change (the browser
 // otherwise serves the cached copy, surviving a hard-refresh). Bump on demo changes.
-const ASSET_VERSION = '8';
+const ASSET_VERSION = '14';
 const folder = (c: Category): string => {
   if (c === 'head') return 'heads';
   if (c === 'body') return 'bodies';
+  if (c === 'quadruped_mammal') return 'quadruped_mammals';
   return 'objects';
 };
 const demoThumb = (d: Demo): string => `/demos/${folder(d.category)}/${d.id}.jpg`;
@@ -37,6 +38,10 @@ const DEMOS: Demo[] = [
   { id: 'h6', category: 'head' },
   { id: 'h7', category: 'head' },
   { id: 'h8', category: 'head' },
+  { id: 'h9', category: 'head' },
+  { id: 'h10', category: 'head' },
+  { id: 'h11', category: 'head' },
+  { id: 'h12', category: 'head' },
   // Bodies (LHM)
   { id: 'b1', category: 'body' },
   { id: 'b2', category: 'body' },
@@ -46,6 +51,10 @@ const DEMOS: Demo[] = [
   { id: 'b6', category: 'body' },
   { id: 'b7', category: 'body' },
   { id: 'b8', category: 'body' },
+  { id: 'b9', category: 'body' },
+  { id: 'b10', category: 'body' },
+  { id: 'b11', category: 'body' },
+  { id: 'b12', category: 'body' },
   // Objects (TRELLIS + Puppeteer)
   { id: 'o1', category: 'object' },
   { id: 'o2', category: 'object' },
@@ -55,11 +64,29 @@ const DEMOS: Demo[] = [
   { id: 'o6', category: 'object' },
   { id: 'o7', category: 'object' },
   { id: 'o8', category: 'object' },
+  { id: 'o9', category: 'object' },
+  { id: 'o10', category: 'object' },
+  { id: 'o11', category: 'object' },
+  { id: 'o12', category: 'object' },
+
+  { id: 'q1', category: 'quadruped_mammal' },
+  { id: 'q2', category: 'quadruped_mammal' },
+  { id: 'q3', category: 'quadruped_mammal' },
+  { id: 'q4', category: 'quadruped_mammal' },
+  { id: 'q5', category: 'quadruped_mammal' },
+  { id: 'q6', category: 'quadruped_mammal' },
+  { id: 'q7', category: 'quadruped_mammal' },
+  { id: 'q8', category: 'quadruped_mammal' },
+  { id: 'q9', category: 'quadruped_mammal' },
+  { id: 'q10', category: 'quadruped_mammal' },
+  { id: 'q11', category: 'quadruped_mammal' },
+  { id: 'q12', category: 'quadruped_mammal' },
 ];
 
 const HEADS = DEMOS.filter((d) => d.category === 'head');
 const BODIES = DEMOS.filter((d) => d.category === 'body');
 const OBJECTS = DEMOS.filter((d) => d.category === 'object');
+const QUADRUPEDS = DEMOS.filter((d) => d.category === 'quadruped_mammal');
 
 function Carousel({
   category,
@@ -194,6 +221,9 @@ export default function Home() {
 
         <div className={styles.categoryLabel}>Objects<span className={styles.categoryHint}>rigged from a single image</span></div>
         <Carousel category="object" demos={OBJECTS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
+
+        <div className={styles.categoryLabel}>Animals<span className={styles.categoryHint}>head follows your cursor</span></div>
+        <Carousel category="quadruped_mammal" demos={QUADRUPEDS} activeId={activeDemo?.id ?? null} paused={paused} onSelect={handleSelect} />
 
         {activeDemo && (
           <div className={styles.editorSection} ref={editorRef}>

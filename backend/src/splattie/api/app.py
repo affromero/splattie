@@ -12,9 +12,10 @@ from splattie.api.routes import generate, health, models, segment, stats
 from splattie.methods.lam.method import LAMMethod
 from splattie.methods.lhm.method import LHMMethod
 from splattie.methods.object.method import ObjectRigMethod
+from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
 
 # Keep explicit references so method modules are imported and registry decorators run.
-_REGISTERED_METHOD_CLASSES = (LAMMethod, LHMMethod, ObjectRigMethod)
+_REGISTERED_METHOD_CLASSES = (LAMMethod, LHMMethod, ObjectRigMethod, QuadrupedMammalMethod)
 
 
 def create_app() -> FastAPI:

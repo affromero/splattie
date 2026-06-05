@@ -52,6 +52,7 @@ class ObjectTransformName(StrEnum):
 
     IDENTITY = "identity"
     VIEWER_UPRIGHT_180X = "viewer-upright-180x"
+    FIT_CANONICAL = "fit-canonical"
 
 
 class QuaternionAxis(StrEnum):
@@ -650,8 +651,19 @@ def build_object_splattie(
     lbs_weights: SparseLbsWeights,
     source_image_path: Path | None = None,
     transform: ObjectViewerTransform = OBJECT_VIEWER_TRANSFORM,
+    widget_config: ObjectWidgetConfig | None = None,
+    generator_method: str = "trellis-puppeteer",
+    generator_method_version: str = "object-rig-v1",
+    category: str | None = None,
 ) -> tuple[Path, int]:
-    """Write a widget-loadable object `.splattie` from a rigged gaussian PLY."""
+    """Write a widget-loadable object `.splattie` from a rigged gaussian PLY.
+
+    The bundle's manifest ``assetType`` stays ``object`` regardless of caller: it is the
+    widget's renderer selector (only ``object``/``body`` bundles get LBS skinning + the
+    object look-at head-tracking), and a rigged quadruped splat is rendered by that same
+    object path. Caller identity (e.g. the quadruped method) is recorded via
+    ``generator_method`` + an optional ``category`` metadata tag, not by changing assetType.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
     sorted_skeleton, sorted_weights = skeleton.topologically_sorted(lbs_weights)
     transformed_skeleton = sorted_skeleton.transformed(transform)
@@ -676,8 +688,8 @@ def build_object_splattie(
         widget_version=read_widget_version(),
         asset_type=AssetType.object,
         rig=OBJECT_RIG,
-        generator_method="trellis-puppeteer",
-        generator_method_version="object-rig-v1",
+        generator_method=generator_method,
+        generator_method_version=generator_method_version,
         generator_tool="splattie-backend",
         source_image_path=source_image_path,
     )
@@ -686,13 +698,15 @@ def build_object_splattie(
         animation["weights"]["format"] = "lbsw-v1"
     manifest.setdefault("metadata", {})
     manifest["metadata"]["viewerTransform"] = transform.name.value
+    if category is not None:
+        manifest["metadata"]["category"] = category
 
     bundle_path = output_dir / f"{model_id}.splattie"
     bundle_splattie(
         output_path=bundle_path,
         splat_path=transformed_ply_path,
         manifest=manifest,
-        states=DEFAULT_STATES_OBJECT.jsonable(),
+        states=(widget_config or DEFAULT_STATES_OBJECT).jsonable(),
         rig_files={
             OBJECT_RIG.skeleton_file: skeleton_path,
             OBJECT_RIG.weights_file: weights_path,

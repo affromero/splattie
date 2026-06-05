@@ -9,7 +9,7 @@
 | Frontend | Next.js 15 App Router, TypeScript strict, CSS Modules |
 | 3D Rendering | LAM_WebRender (gaussian-splat-renderer-for-lam), WebGL |
 | Backend (GPU) | Python 3.11, FastAPI, uv + pyproject.toml |
-| Asset Generation | LAM (SIGGRAPH 2025) heads, LHM/SMPL-X bodies, and TRELLIS + Puppeteer objects — swappable via AssetGenerationMethod protocol (`asset_type`: head/body/object) |
+| Asset Generation | LAM (SIGGRAPH 2025) heads, LHM/SMPL-X bodies, TRELLIS + Puppeteer objects, and TRELLIS + SuperAnimal-anchored SMAL quadruped-mammals — swappable via AssetGenerationMethod protocol (`asset_type`: head/body/object/quadruped_mammal) |
 | Animation | ARKit blendshapes via FLAME mesh (client-side, 60fps) |
 | Face Detection | readPixels after WebGL render (pixel-perfect) |
 | Compression | @playcanvas/splat-transform (PLY → SPZ) |
@@ -24,6 +24,8 @@
 - `backend/vendor/LHM/` — LHM body-generation submodule
 - `backend/vendor/TRELLIS/` — TRELLIS image-to-3D reconstruction submodule
 - `backend/vendor/Puppeteer/` — Puppeteer skeleton + skinning submodule
+- `backend/vendor/SMAL/` — SMAL parametric quadruped model (gitignored MPI weights; downloaded by setup-gpu)
+- SuperAnimal-Quadruped (DeepLabCut) runs in a separate `dlc-venv` (numpy conflict), invoked as a subprocess
 
 ## Commands
 
@@ -75,7 +77,7 @@ docker compose -f deploy/docker-compose.gpu.yml up -d --build  # self-host GPU s
 2. **TypeScript strict** — no `any`
 3. **Server Components by default** — `'use client'` only for interactive
 4. **Python: uv only** — pip is FORBIDDEN
-5. **Swappable methods** — all asset generation goes through the `AssetGenerationMethod` protocol with an `asset_type` discriminator (head/body/object)
+5. **Swappable methods** — all asset generation goes through the `AssetGenerationMethod` protocol with an `asset_type` discriminator (head/body/object/quadruped_mammal). The quadruped path is detection-gated: non-mammals (no SuperAnimal detection) raise `NotAQuadrupedMammalError` — no fallback rig
 6. **Client-side animation** — ARKit blendshapes run in browser, no server roundtrip
 7. **Port 4001** — frontend dev and production
 8. **Port 8000** — backend API

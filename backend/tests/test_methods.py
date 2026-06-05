@@ -15,8 +15,10 @@ from splattie.methods.object.bundle import RigSkeleton, SparseLbsWeights
 from splattie.methods.object.method import ObjectRigMethod
 from splattie.methods.object.puppeteer import PuppeteerRiggingOutput
 from splattie.methods.object.reconstruct import ObjectReconstruction
+from splattie.methods.quadruped_mammal.method import QuadrupedMammalMethod
+from splattie.methods.quadruped_mammal.schemas import FitDiagnostics
 from splattie.methods.registry import registry
-from splattie.types import AssetType
+from splattie.types import AssetType, ReconstructBackend
 from tests.gpu import GPU_TEST_SKIP_REASON, gpu_tests_enabled
 
 _DEMOS = Path(__file__).resolve().parents[2] / "apps" / "web" / "public" / "demos"
@@ -109,6 +111,7 @@ def test_registry_for_asset_type() -> None:
     assert registry.for_asset_type(AssetType.head).info.id == "lam"
     assert registry.for_asset_type(AssetType.body).info.id == "lhm"
     assert registry.for_asset_type(AssetType.object).info.id == "trellis-puppeteer"
+    assert registry.for_asset_type(AssetType.quadruped_mammal).info.id == "trellis-smal-quadruped"
 
 
 def test_lhm_implements_protocol() -> None:
@@ -306,3 +309,134 @@ def test_object_generate_binds_against_puppeteer_input_mesh(
     assert observed_meshes == [puppeteer_mesh]
     assert result.method_id == "trellis-puppeteer"
     assert result.splattie_url == f"/storage/{model_id}/{model_id}.splattie"
+
+
+def test_quadruped_implements_protocol() -> None:
+    assert isinstance(QuadrupedMammalMethod(), AssetGenerationMethod)
+
+
+def test_quadruped_is_a_quadruped_method() -> None:
+    info = QuadrupedMammalMethod().info
+    assert info.id == "trellis-smal-quadruped"
+    assert info.asset_type is AssetType.quadruped_mammal
+    assert info.asset_type == "quadruped_mammal"
+
+
+def test_quadruped_registered() -> None:
+    assert registry.get("trellis-smal-quadruped").info.id == "trellis-smal-quadruped"
+
+
+def test_quadruped_generate_propagates_load_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    import splattie.methods.quadruped_mammal.method as quadruped_method
+
+    def _boom(_backend: object = None) -> None:
+        msg = "simulated SMAL weights-missing failure"
+        raise FileNotFoundError(msg)
+
+    monkeypatch.setattr(quadruped_method.runtime, "require_quadruped_runtime", _boom)
+    with pytest.raises(FileNotFoundError, match="SMAL"):
+        QuadrupedMammalMethod().generate(
+            np.zeros((4, 4, 3), dtype=np.uint8),
+            np.ones((4, 4), dtype=np.bool_),
+        )
+
+
+@pytest.mark.parametrize("backend_choice", [None, ReconstructBackend.trellis])
+def test_quadruped_generate_produces_bundle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, backend_choice: ReconstructBackend | None
+) -> None:
+    """End-to-end orchestration (reconstruct -> keypoints -> fit -> bind), GPU stages mocked.
+
+    Parametrized over the backend so the per-request choice (default TripoSplat, or TRELLIS) is
+    proven to reach reconstruction.
+    """
+    import splattie.methods.quadruped_mammal.method as quadruped_method
+
+    expected_backend = backend_choice or ReconstructBackend.triposplat
+    model_id = "critter00001"
+    gaussian_ply = tmp_path / "gaussian.ply"
+    diagnostics = FitDiagnostics(
+        chamfer=0.004,
+        anchor_rms=0.05,
+        lr_residual=0.09,
+        lr_swap=False,
+        n_anchors=16,
+        triangulated_count=39,
+        mean_keypoint_confidence=0.53,
+        shape_norm=3.2,
+    )
+
+    def _fake_reconstruct(*, image_path: Path, output_dir: Path, model_id: str, backend: ReconstructBackend) -> Path:
+        assert image_path.exists()
+        assert output_dir.name == "reconstruct"
+        assert model_id == "critter00001"
+        assert backend == expected_backend  # the method threads its per-request backend to reconstruction
+        return gaussian_ply
+
+    def _fake_bind_and_bundle(
+        _smal: object,
+        _splat: object,
+        _fit: object,
+        *,
+        ply_path: Path,
+        output_dir: Path,
+        model_id: str,
+        source_image_path: Path,
+    ) -> tuple[Path, int]:
+        assert ply_path == gaussian_ply
+        assert source_image_path.exists()
+        bundle = output_dir / f"{model_id}.splattie"
+        bundle.write_bytes(b"bundle")
+        return bundle, 169120
+
+    monkeypatch.setattr(quadruped_method, "reconstruct_gaussian_splat", _fake_reconstruct)
+    monkeypatch.setattr(quadruped_method, "GaussianSplat", lambda *_a, **_k: SimpleNamespace())
+    monkeypatch.setattr(quadruped_method, "SMAL", lambda *_a, **_k: SimpleNamespace())
+    monkeypatch.setattr(quadruped_method, "detect_keypoints_3d", lambda *_a, **_k: SimpleNamespace())
+    monkeypatch.setattr(quadruped_method, "fit_smal", lambda *_a, **_k: SimpleNamespace(diagnostics=diagnostics))
+    monkeypatch.setattr(quadruped_method, "bind_and_bundle", _fake_bind_and_bundle)
+    monkeypatch.setattr(quadruped_method, "STORAGE_DIR", tmp_path)
+    monkeypatch.setattr(QuadrupedMammalMethod, "load", lambda *_a, **_k: None)
+    monkeypatch.setattr(quadruped_method.uuid, "uuid4", lambda: SimpleNamespace(hex=model_id))
+
+    method = QuadrupedMammalMethod(backend=backend_choice) if backend_choice else QuadrupedMammalMethod()
+    result = method.generate(
+        np.zeros((4, 4, 3), dtype=np.uint8),
+        np.ones((4, 4), dtype=np.bool_),
+    )
+
+    assert result.method_id == "trellis-smal-quadruped"
+    assert result.num_gaussians == 169120
+    assert result.splattie_url == f"/storage/{model_id}/{model_id}.splattie"
+
+
+def test_batch_method_for_wires_every_asset_type() -> None:
+    """Every AssetType must resolve to a batch generation method.
+
+    Guards `generate-splattie-batch` against a missing import/wiring (a NameError that only
+    surfaces at CLI call time, not at module import — ruff's F821 does not catch it).
+    """
+    from splattie.cli.batch import _method_for
+
+    expected = {
+        AssetType.head: "LAMMethod",
+        AssetType.body: "LHMMethod",
+        AssetType.object: "ObjectRigMethod",
+        AssetType.quadruped_mammal: "QuadrupedMammalMethod",
+    }
+    for asset_type in AssetType:
+        assert type(_method_for(asset_type)).__name__ == expected[asset_type]
+
+
+def test_method_resolution_threads_quadruped_backend() -> None:
+    """The API + CLI method resolvers pass the chosen reconstruction backend to the quadruped method."""
+    from splattie.api.routes.generate import _method_for as api_method_for
+    from splattie.cli.batch import _method_for as cli_method_for
+
+    for resolve in (api_method_for, cli_method_for):
+        chosen = resolve(AssetType.quadruped_mammal, ReconstructBackend.trellis)
+        assert isinstance(chosen, QuadrupedMammalMethod)
+        assert chosen.backend is ReconstructBackend.trellis
+        assert resolve(AssetType.quadruped_mammal, None).backend is ReconstructBackend.triposplat  # default
+        # Other categories ignore the backend (no quadruped method returned).
+        assert not isinstance(resolve(AssetType.object, ReconstructBackend.trellis), QuadrupedMammalMethod)

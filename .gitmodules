@@ -2,6 +2,7 @@
 	path = backend/vendor/LAM
 	url = https://github.com/affromero/LAM.git
 	branch = splattie-patches
+	ignore = untracked
 [submodule "packages/splattie-widget"]
 	path = packages/splattie-widget
 	url = https://github.com/affromero/splattie-widget.git
@@ -9,11 +10,19 @@
 	path = backend/vendor/LHM
 	url = https://github.com/affromero/LHM.git
 	branch = splattie
+	ignore = untracked
 [submodule "backend/vendor/TRELLIS"]
 	path = backend/vendor/TRELLIS
 	url = https://github.com/affromero/TRELLIS.git
 	branch = splattie
+	ignore = untracked
 [submodule "backend/vendor/Puppeteer"]
 	path = backend/vendor/Puppeteer
 	url = https://github.com/affromero/Puppeteer.git
 	branch = splattie
+	ignore = untracked
+[submodule "backend/vendor/TripoSplat"]
+	path = backend/vendor/TripoSplat
+	url = https://github.com/affromero/TripoSplat.git
+	branch = splattie
+	ignore = untracked
