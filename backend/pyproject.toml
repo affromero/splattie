@@ -29,7 +29,7 @@ dependencies = [
 ]
 name = "splattie"
 requires-python = ">=3.11"
-version = "0.3.0"
+version = "0.3.1"
 
 [project.optional-dependencies]
 # CPU-only: enough to run the FastAPI server (GPU routes return 503).

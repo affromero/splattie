@@ -28,8 +28,8 @@ exclude: |
       .*/node_modules/.*|
       .*/\.next/.*|
       .*/dist/.*|
-      uv\.lock|
-      package-lock\.json
+      (.*/)?uv\.lock|
+      (.*/)?package-lock\.json
     )$
 
 repos:

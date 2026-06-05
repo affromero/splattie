@@ -1,14 +1,24 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.1] - 2026-06-05
 
 ### Added
-- **Quadruped-mammal asset category** (`asset_type=quadruped_mammal`): single image → rigged 3D Gaussian-splat animal with a SMAL skeleton and cursor head-follow. Pipeline = TRELLIS gaussian splat → 16 internal views (up-axis from a chamfer SMAL fit) → SuperAnimal-Quadruped (DeepLabCut, isolated venv) keypoints → multi-view triangulation → keypoint-anchored SMAL fit → LBS bind → gaze-enabled `.splattie`.
-- `methods/quadruped_mammal/` package (SMAL forward, keypoints, fit, bind, runtime) registered as `trellis-smal-quadruped`; "Animal" create-page option; 8 demo subjects.
-- `scripts/download_smal.py` (MPI session-login SMAL download) + a setup-gpu step provisioning SMAL and the isolated DeepLabCut/SuperAnimal venv.
+- **Quadruped-mammal asset category** (`asset_type=quadruped_mammal`): single image → rigged 3D Gaussian-splat animal with a SMAL skeleton and cursor head-follow. Pipeline = image → gaussian splat → 16 internal views (up-axis from a chamfer SMAL fit) → SuperAnimal-Quadruped (DeepLabCut, isolated venv) keypoints → multi-view triangulation → keypoint-anchored SMAL fit → LBS bind → gaze-enabled `.splattie`. Registered as `trellis-smal-quadruped`; "Animal" create-page option.
+- **TripoSplat reconstruction backend** (VAST-AI), the default for animals — reconstructs muzzles/faces far more cleanly than TRELLIS. Selectable per request via the `ReconstructBackend` enum: the **Reconstruction model** toggle on `/create`, the `?backend=triposplat|trellis` API param, and the `--backend` CLI flag.
+- **12 demos per category** (heads, bodies, objects, quadruped mammals = 48 total) with more diverse subjects and a mix of frontal/three-quarter people poses.
+- `scripts/download_smal.py` (MPI session-login SMAL download) + a setup-gpu step provisioning SMAL, TripoSplat weights, and the isolated DeepLabCut/SuperAnimal venv.
+- CI now enforces the full pre-commit hook suite (jaxtyping array annotations, no-`dict`-typing, 1000-line file cap, getattr/`sys.path` bans, and a new `__all__`-only-in-`__init__.py` hook).
+
+### Changed
+- All project versions align on **`0.3.1`**: root package, web app, backend package, widget package, and `.splattie` `formatVersion`.
+- The quadruped reconstruction backend is a per-request `ReconstructBackend` enum (no env var); `require_quadruped_runtime` is backend-aware.
+- The quadruped pipeline's array/tensor signatures use jaxtyping + `@jaxtyped(typechecker=beartype)` for runtime shape-checking.
+
+### Fixed
+- **Cursor head-follow on rigged objects + quadrupeds** (widget v0.3.1): bones now rotate about their joint pivot (not the splat origin) and drive a split neck/head gaze chain, so heads visibly turn toward the cursor without tearing. The head also sits centered at rest so tracking is symmetric, and capped gaze weights stop short-necked animals (e.g. capybara) tearing.
 
 ### Notes
-- Detection-gated, no fallback: non-mammals (no SuperAnimal detection) raise `NotAQuadrupedMammalError`. Validated on cat/dog/horse/cow/deer (clean rigs); out-of-family megafauna (e.g. elephant) are in-scope-but-degraded — `|betas|` does not separate them, so there is no shape gate. The bundle's widget `assetType` stays `object` (renderer selector); quadruped identity rides on `generatorMethod` + `metadata.category`.
+- Detection-gated, no fallback: non-mammals raise `NotAQuadrupedMammalError`. Validated on cat/dog/horse/cow/deer and the 12 demo animals; out-of-family megafauna (e.g. elephant) are in-scope-but-degraded (`|betas|` does not separate them, so there is no shape gate). The bundle's widget `assetType` stays `object` (renderer selector); quadruped identity rides on `generatorMethod` + `metadata.category`.
 
 ## [0.3.0] - 2026-05-31
 
