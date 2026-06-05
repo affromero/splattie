@@ -16,7 +16,7 @@ interface Demo {
 // Demos live in category subfolders: /demos/{heads,bodies,objects}/<id>.{jpg,splattie}.
 // ASSET_VERSION cache-busts the .splattie when its contents change (the browser
 // otherwise serves the cached copy, surviving a hard-refresh). Bump on demo changes.
-const ASSET_VERSION = '11';
+const ASSET_VERSION = '12';
 const folder = (c: Category): string => {
   if (c === 'head') return 'heads';
   if (c === 'body') return 'bodies';
@@ -65,6 +65,10 @@ const DEMOS: Demo[] = [
   { id: 'q6', category: 'quadruped_mammal' },
   { id: 'q7', category: 'quadruped_mammal' },
   { id: 'q8', category: 'quadruped_mammal' },
+  { id: 'q9', category: 'quadruped_mammal' },
+  { id: 'q10', category: 'quadruped_mammal' },
+  { id: 'q11', category: 'quadruped_mammal' },
+  { id: 'q12', category: 'quadruped_mammal' },
 ];
 
 const HEADS = DEMOS.filter((d) => d.category === 'head');

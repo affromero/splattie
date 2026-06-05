@@ -64,11 +64,11 @@ _OBJECT_FRAMING = (
     "object silhouette with distinct movable or articulated parts suitable for rigging. "
 )
 _QUADRUPED_FRAMING = (
-    "A single photorealistic quadruped mammal, full body, standing in a natural neutral stance shown "
-    "in a clear three-quarter view: one full side/flank of the body visible (NOT a head-on/frontal "
-    "view that hides the body, and NOT a flat 90-degree side profile), with the head turned only "
-    "partway toward the camera (about 30 degrees) so both eyes are visible while the muzzle still "
-    "points partly to the side. All four legs, the entire head, and the tail fully visible and "
+    "A single photorealistic quadruped mammal, full body, standing in a natural cute neutral stance, "
+    "the whole animal turned to FACE the camera at a gentle three-quarter angle (chest and face toward "
+    "the viewer) and looking directly at the camera, the head aligned with the body and the nose "
+    "pointing toward the viewer, both eyes equally visible and symmetric (NOT a side profile, NOT the "
+    "head cranked to one side). All four legs, the entire head, and the tail fully visible and "
     "uncropped, the whole animal centered in frame, no people, no hands, no text, no labels, no props. "
 )
 
@@ -244,6 +244,26 @@ QUADRUPED_MAMMALS: tuple[DemoSubject, ...] = (
         asset_id="q8",
         asset_type=AssetType.quadruped_mammal,
         subject="an adult capybara with coarse reddish-brown fur, a barrel-shaped body, short legs, and a blunt square snout",
+    ),
+    DemoSubject(
+        asset_id="q9",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a Pembroke Welsh corgi dog with a short orange-and-white coat, large upright ears, short legs, and a fox-like face",
+    ),
+    DemoSubject(
+        asset_id="q10",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a giant panda with thick black-and-white fur, black eye patches and ears, and a round chubby body",
+    ),
+    DemoSubject(
+        asset_id="q11",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a pink domestic piglet with a plump round body, floppy ears, short legs, and a flat snout",
+    ),
+    DemoSubject(
+        asset_id="q12",
+        asset_type=AssetType.quadruped_mammal,
+        subject="a river otter with sleek dark-brown fur, a rounded head, small ears, whiskers, and short legs",
     ),
 )
 

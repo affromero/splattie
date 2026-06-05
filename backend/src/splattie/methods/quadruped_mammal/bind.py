@@ -146,6 +146,15 @@ def _head_aware_weights(
     head_weight = (head_weight * near_head).astype(np.float32)
     base = base * (1.0 - head_weight)[:, None]
     base[:, HEAD_JOINT] += head_weight
+    # Cap the gaze-following region to the head + immediate neck. On short-necked animals (capybara)
+    # SMAL's neck-joint weights bleed deep into the body, so the whole upper body would swing with the
+    # head and tear off. Taper the gaze-bone weights to zero past ~2.4x the head-neck length from the
+    # head joint, re-assigning the body-ward part to the shoulder (static during gaze, so it stays put).
+    follow = 1.0 - _smoothstep((np.linalg.norm(splat.xyz - head, axis=1) - 1.2 * axis_len) / (1.2 * axis_len))
+    for gaze_joint in (NECK_JOINT, HEAD_JOINT, NOSE_JOINT):
+        excess = base[:, gaze_joint] * (1.0 - follow)
+        base[:, gaze_joint] = base[:, gaze_joint] * follow
+        base[:, _SHOULDER_JOINT] += excess
     return _to_sparse(base, len(splat))
 
 
@@ -165,6 +174,7 @@ _TARGET_VIEWER_FRAME = np.column_stack(
 # joint: the SMAL head pose is poorly constrained, and using the nose as "anterior" swings the whole
 # body broadside when the head is mis-posed. The head's own facing is measured separately (gaussians).
 _TAIL_BASE = 25
+_SHOULDER_JOINT = 6  # SMAL neck's parent; static during gaze, anchors the capped body-ward neck weight
 _PAWS = (10, 14, 20, 24)
 _SPINE = (0, 6)
 # Cap how far the head-centering may tilt the body. Heads turned up to this much center fully; beyond
