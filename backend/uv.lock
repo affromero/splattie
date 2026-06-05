@@ -5127,6 +5127,7 @@ dependencies = [
 cpu = [
     { name = "fast-simplification" },
     { name = "plyfile" },
+    { name = "scipy" },
     { name = "trimesh" },
 ]
 cuda = [
@@ -5273,6 +5274,7 @@ requires-dist = [
     { name = "safetensors", marker = "extra == 'gpu'" },
     { name = "scikit-image", marker = "extra == 'gpu'", specifier = "==0.20.0" },
     { name = "scikit-learn", marker = "extra == 'gpu'" },
+    { name = "scipy", marker = "extra == 'cpu'", specifier = ">=1.11,<1.12" },
     { name = "scipy", marker = "extra == 'gpu'", specifier = ">=1.11,<1.12" },
     { name = "simple-knn", marker = "extra == 'cuda'", git = "https://github.com/camenduru/simple-knn" },
     { name = "smplx", marker = "extra == 'gpu'" },

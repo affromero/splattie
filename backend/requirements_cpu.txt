@@ -74,6 +74,7 @@ numpy==1.26.4
     # via
     #   fast-simplification
     #   plyfile
+    #   scipy
     #   splattie
     #   trimesh
 packaging==26.2
@@ -121,6 +122,8 @@ pyyaml==6.0.3
 rich==14.3.4
     # via klogr
 ruff==0.15.15
+scipy==1.11.4
+    # via splattie
 sha256sum==2022.6.11
     # via klogr
 starlette==1.2.0

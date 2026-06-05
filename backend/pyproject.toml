@@ -37,6 +37,7 @@ version = "0.3.1"
 cpu = [
   "fast-simplification",
   "plyfile",
+  "scipy>=1.11,<1.12",
   "trimesh>=4.0"
 ]
 # Full GPU pipeline: head-generation with LAM + FLAME. Requires CUDA 12.x.
