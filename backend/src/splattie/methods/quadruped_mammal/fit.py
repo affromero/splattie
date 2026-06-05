@@ -10,7 +10,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 import numpy as np
+import numpy.typing as npt
 import torch
+from beartype import beartype
+from jaxtyping import Float, jaxtyped
 from pytorch3d.loss import chamfer_distance
 from pytorch3d.transforms import matrix_to_axis_angle
 
@@ -58,8 +61,14 @@ def _swap_lr(name: str) -> str:
     return name
 
 
-def _umeyama(src: np.ndarray, dst: np.ndarray) -> tuple[float, np.ndarray, np.ndarray, float]:
-    """Similarity (scale, R, t) with ``dst ~= s R src + t`` (Kabsch + scale) + rms residual."""
+@jaxtyped(typechecker=beartype)
+def _umeyama(
+    src: Float[npt.NDArray[np.float32], "n 3"], dst: Float[npt.NDArray[np.float32], "n 3"]
+) -> tuple[float, Float[np.ndarray, "3 3"], Float[np.ndarray, "3"], float]:
+    """Similarity (scale, R, t) with ``dst ~= s R src + t`` (Kabsch + scale) + rms residual.
+
+    ``np.eye(3)`` promotes the rotation/translation to float64, so those are dtype-agnostic.
+    """
     mu_src, mu_dst = src.mean(0), dst.mean(0)
     x_src, x_dst = src - mu_src, dst - mu_dst
     covariance = x_dst.T @ x_src / len(src)
@@ -75,9 +84,13 @@ def _umeyama(src: np.ndarray, dst: np.ndarray) -> tuple[float, np.ndarray, np.nd
     return scale, rotation, translation, residual
 
 
+@jaxtyped(typechecker=beartype)
 def _corresponded(
-    template: np.ndarray, lookup: Mapping[str, np.ndarray], *, swap: bool
-) -> tuple[list[int], np.ndarray, np.ndarray]:
+    template: Float[npt.NDArray[np.float32], "k 3"],
+    lookup: Mapping[str, Float[npt.NDArray[np.float32], "3"]],
+    *,
+    swap: bool,
+) -> tuple[list[int], Float[npt.NDArray[np.float32], "anchors 3"], Float[npt.NDArray[np.float32], "anchors 3"]]:
     """Return (joint indices, template xyz, target xyz) for SMAL joints with a matched keypoint."""
     joints, src, dst = [], [], []
     for joint, name in _CORRESPONDENCE.items():
@@ -86,12 +99,14 @@ def _corresponded(
             joints.append(joint)
             src.append(template[joint])
             dst.append(lookup[key])
-    return joints, np.array(src, np.float32), np.array(dst, np.float32)
+    # reshape(-1, 3) keeps the no-match case (0, 3) rather than (0,), so the shape annotation holds.
+    return joints, np.array(src, np.float32).reshape(-1, 3), np.array(dst, np.float32).reshape(-1, 3)
 
 
+@jaxtyped(typechecker=beartype)
 def _initial_alignment(
-    template: np.ndarray, lookup: Mapping[str, np.ndarray]
-) -> tuple[float, bool, list[int], float, np.ndarray]:
+    template: Float[npt.NDArray[np.float32], "k 3"], lookup: Mapping[str, Float[npt.NDArray[np.float32], "3"]]
+) -> tuple[float, bool, list[int], float, Float[np.ndarray, "3 3"]]:
     """Pick the L/R convention with the lower Umeyama residual; return its alignment."""
     candidates = []
     for swap in (False, True):

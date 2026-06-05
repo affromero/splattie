@@ -6,7 +6,10 @@ import math
 from typing import TYPE_CHECKING
 
 import numpy as np
+import numpy.typing as npt
 import pytest
+from beartype import beartype
+from jaxtyping import Float, jaxtyped
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -137,7 +140,10 @@ def test_smal_forward_neutral_matches_template() -> None:
     assert float((vertices - smal.v_template).abs().max()) < 1e-5  # neutral == shaped template
 
 
-def _synthetic_quadruped(head_yaw_deg: float, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
+@jaxtyped(typechecker=beartype)
+def _synthetic_quadruped(
+    head_yaw_deg: float, rng: np.random.Generator
+) -> tuple[Float[npt.NDArray[np.float32], "joints 3"], Float[npt.NDArray[np.float32], "points 3"]]:
     """SMAL-indexed joints + head gaussians in a canonical frame (body forward +Z, up +Y).
 
     The head gaussians (muzzle + asymmetric forward-leaning ears + skull) are turned about +Y by

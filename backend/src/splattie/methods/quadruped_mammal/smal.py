@@ -17,6 +17,7 @@ from pathlib import Path
 if not hasattr(inspect, "getargspec"):
     inspect.getargspec = inspect.getfullargspec  # type: ignore[attr-defined]
 import numpy as np
+import numpy.typing as npt
 
 for _name, _type in [
     ("bool", bool),
@@ -32,13 +33,17 @@ for _name, _type in [
         setattr(np, _name, _type)
 import chumpy  # noqa: E402, F401  (must import after the shim, before unpickling the pkl)
 import torch  # noqa: E402
+from beartype import beartype  # noqa: E402
+from jaxtyping import Float, jaxtyped  # noqa: E402
 
 
-def _arr(value: object) -> np.ndarray:
+@jaxtyped(typechecker=beartype)
+def _arr(value: object) -> Float[npt.NDArray[np.float32], "..."]:
     return np.asarray(value.r if hasattr(value, "r") else value, dtype=np.float32)
 
 
-def rodrigues(axis_angle: torch.Tensor) -> torch.Tensor:
+@jaxtyped(typechecker=beartype)
+def rodrigues(axis_angle: Float[torch.Tensor, "k 3"]) -> Float[torch.Tensor, "k 3 3"]:
     """Convert ``(K, 3)`` axis-angle vectors to ``(K, 3, 3)`` rotation matrices."""
     theta = torch.norm(axis_angle + 1e-12, dim=1, keepdim=True)
     r = (axis_angle / theta).unsqueeze(-1)
@@ -60,7 +65,8 @@ class SMAL:
             model = pickle.load(handle, encoding="latin1")  # noqa: S301  (trusted vendored SMAL model)
         self.device = device
 
-        def tensor(value: object) -> torch.Tensor:
+        @jaxtyped(typechecker=beartype)
+        def tensor(value: object) -> Float[torch.Tensor, "..."]:
             return torch.tensor(_arr(value), device=device)
 
         self.v_template = tensor(model["v_template"])
@@ -79,15 +85,16 @@ class SMAL:
         self.V = int(self.v_template.shape[0])
         self.B = int(self.shapedirs.shape[2])
 
+    @jaxtyped(typechecker=beartype)
     def __call__(
         self,
-        betas: torch.Tensor,
-        pose: torch.Tensor,
-        trans: torch.Tensor | None = None,
-        scale: torch.Tensor | float | None = None,
+        betas: Float[torch.Tensor, "b"],
+        pose: Float[torch.Tensor, "k 3"],
+        trans: Float[torch.Tensor, "3"] | None = None,
+        scale: Float[torch.Tensor, ""] | float | None = None,
         *,
         return_world: bool = False,
-    ) -> tuple[torch.Tensor, ...]:
+    ) -> tuple[Float[torch.Tensor, "..."], ...]:
         device = self.device
         v_shaped = self.v_template + torch.einsum("vck,k->vc", self.shapedirs, betas)
         joints_rest = torch.einsum("kv,vc->kc", self.J_regressor, v_shaped)
@@ -96,7 +103,10 @@ class SMAL:
         pose_feature = (rotations[1:] - eye).reshape(-1)
         v_posed = v_shaped + torch.einsum("vck,k->vc", self.posedirs, pose_feature)
 
-        def rigid(rotation: torch.Tensor, translation: torch.Tensor) -> torch.Tensor:
+        @jaxtyped(typechecker=beartype)
+        def rigid(
+            rotation: Float[torch.Tensor, "3 3"], translation: Float[torch.Tensor, "3"]
+        ) -> Float[torch.Tensor, "4 4"]:
             bottom = torch.eye(4, device=device)[3:4]
             return torch.cat([torch.cat([rotation, translation.view(3, 1)], 1), bottom], 0)
 

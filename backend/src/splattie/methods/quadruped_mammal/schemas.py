@@ -10,7 +10,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 import numpy as np
+import numpy.typing as npt
 import torch
+from beartype import beartype
+from jaxtyping import Float, jaxtyped
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
@@ -35,7 +38,8 @@ class Keypoints3D:
     support: np.ndarray  # (N,) view-count per landmark
     mean_confidence: float
 
-    def lookup(self, *, min_support: int = 3) -> Mapping[str, np.ndarray]:
+    @jaxtyped(typechecker=beartype)
+    def lookup(self, *, min_support: int = 3) -> Mapping[str, Float[npt.NDArray[np.float32], "3"]]:
         """Return ``name -> xyz`` for well-triangulated landmarks (local compute helper)."""
         return {
             name: self.positions[i]

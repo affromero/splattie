@@ -11,8 +11,11 @@ import math
 from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
 import torch
+from beartype import beartype
 from gsplat import rasterization
+from jaxtyping import Float, jaxtyped
 from PIL import Image
 from pytorch3d.loss import chamfer_distance
 from pytorch3d.transforms import matrix_to_axis_angle
@@ -32,8 +35,12 @@ _CONF_FLOOR = 0.30
 _REPROJ_PX = 8.0
 _RUNNER = Path(__file__).with_name("superanimal_runner.py")
 
+# A 3x4 camera projection matrix (intrinsics @ [R|t]); rows are SVD/reprojection inputs.
+_Proj = Float[npt.NDArray[np.float32], "3 4"]
 
-def sample_points(splat: GaussianSplat, count: int = 8000) -> torch.Tensor:
+
+@jaxtyped(typechecker=beartype)
+def sample_points(splat: GaussianSplat, count: int = 8000) -> Float[torch.Tensor, "m 3"]:
     """Sample up to ``count`` opaque splat points (device tensor) for chamfer terms."""
     keep = splat.opacity > 0.2
     xyz = splat.xyz[keep] if keep.any() else splat.xyz
@@ -43,7 +50,8 @@ def sample_points(splat: GaussianSplat, count: int = 8000) -> torch.Tensor:
     return torch.tensor(xyz, device=DEVICE)
 
 
-def _chamfer_up_axis(smal: SMAL, points: torch.Tensor) -> np.ndarray:
+@jaxtyped(typechecker=beartype)
+def _chamfer_up_axis(smal: SMAL, points: Float[torch.Tensor, "n 3"]) -> Float[npt.NDArray[np.float32], "3"]:
     """Coarse chamfer SMAL fit; return the world up-axis so renders come out upright."""
     centroid = points.mean(0)
     extent = points.max(0).values - points.min(0).values
@@ -104,7 +112,8 @@ def render_views(smal: SMAL, splat: GaussianSplat, views_dir: Path) -> None:
     focal = 0.5 * _VIEW_PX / math.tan(math.radians(_FOV_DEG) / 2.0)
     intrinsics = np.array([[focal, 0, _VIEW_PX / 2], [0, focal, _VIEW_PX / 2], [0, 0, 1]], np.float32)
 
-    def to_t(array: np.ndarray) -> torch.Tensor:
+    @jaxtyped(typechecker=beartype)
+    def to_t(array: Float[npt.NDArray[np.float32], "..."]) -> Float[torch.Tensor, "..."]:
         return torch.tensor(array, device=DEVICE)
 
     means, quats = to_t(splat.xyz), to_t(splat.quat)
@@ -146,7 +155,8 @@ def render_views(smal: SMAL, splat: GaussianSplat, views_dir: Path) -> None:
     )
 
 
-def _triangulate_one(rows: list[tuple[np.ndarray, float, float, float]]) -> np.ndarray:
+@jaxtyped(typechecker=beartype)
+def _triangulate_one(rows: list[tuple[_Proj, float, float, float]]) -> Float[npt.NDArray[np.float32], "3"]:
     matrix = []
     for proj, x, y, weight in rows:
         matrix.append(weight * (x * proj[2] - proj[0]))
@@ -156,7 +166,8 @@ def _triangulate_one(rows: list[tuple[np.ndarray, float, float, float]]) -> np.n
     return point[:3] / point[3]
 
 
-def _reproj_error(point: np.ndarray, proj: np.ndarray, x: float, y: float) -> float:
+@jaxtyped(typechecker=beartype)
+def _reproj_error(point: Float[npt.NDArray[np.float32], "3"], proj: _Proj, x: float, y: float) -> float:
     projected = proj @ np.append(point, 1.0)
     return float(np.hypot(projected[0] / projected[2] - x, projected[1] / projected[2] - y))
 

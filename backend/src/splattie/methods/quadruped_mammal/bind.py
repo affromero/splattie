@@ -11,7 +11,10 @@ import math
 from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
 import torch
+from beartype import beartype
+from jaxtyping import Float, jaxtyped
 from scipy.spatial import cKDTree
 from scipy.spatial.transform import Rotation
 
@@ -45,6 +48,14 @@ GENERATOR_VERSION = "quadruped-rig-v1"
 CATEGORY = "quadruped_mammal"
 RIG_NAME = "smal-quadruped"
 _LBS_K = 4
+
+# Float32 shape aliases. "joints" = SMAL joint count K (smal_weights' second axis matches the joints array).
+_Joints = Float[npt.NDArray[np.float32], "joints 3"]
+_GaussianXYZ = Float[npt.NDArray[np.float32], "gaussians 3"]
+_SmalVerts = Float[npt.NDArray[np.float32], "vertices 3"]
+_SmalWeights = Float[npt.NDArray[np.float32], "vertices joints"]
+_DenseWeights = Float[npt.NDArray[np.float32], "gaussians joints"]
+_Mat3 = Float[npt.NDArray[np.float32], "3 3"]
 
 
 def quadruped_widget_config() -> ObjectWidgetConfig:
@@ -92,7 +103,8 @@ def quadruped_widget_config() -> ObjectWidgetConfig:
 _LBS_NEIGHBORS = 12  # SMAL vertices blended per gaussian
 
 
-def _blend_weights(splat: GaussianSplat, smal_vertices: np.ndarray, smal_weights: np.ndarray) -> np.ndarray:
+@jaxtyped(typechecker=beartype)
+def _blend_weights(splat: GaussianSplat, smal_vertices: _SmalVerts, smal_weights: _SmalWeights) -> _DenseWeights:
     """Dense per-gaussian joint weights from a distance-weighted blend of nearby SMAL vertices."""
     distances, neighbors = cKDTree(smal_vertices).query(splat.xyz, k=_LBS_NEIGHBORS)
     sigma = float(np.median(distances[:, 0])) * 2.0 + 1e-8
@@ -104,7 +116,8 @@ def _blend_weights(splat: GaussianSplat, smal_vertices: np.ndarray, smal_weights
     return blended
 
 
-def _to_sparse(weights: np.ndarray, num_gaussians: int) -> SparseLbsWeights:
+@jaxtyped(typechecker=beartype)
+def _to_sparse(weights: _DenseWeights, num_gaussians: int) -> SparseLbsWeights:
     """Keep the top-4 joints per gaussian (renormalised) in the widget's sparse LBS format."""
     top = np.argpartition(-weights, _LBS_K - 1, axis=1)[:, :_LBS_K]
     values = np.take_along_axis(weights, top, axis=1)
@@ -121,13 +134,15 @@ def _to_sparse(weights: np.ndarray, num_gaussians: int) -> SparseLbsWeights:
     )
 
 
-def _smoothstep(x: np.ndarray) -> np.ndarray:
+@jaxtyped(typechecker=beartype)
+def _smoothstep(x: Float[npt.NDArray[np.float32], "n"]) -> Float[npt.NDArray[np.float32], "n"]:
     x = np.clip(x, 0.0, 1.0)
     return x * x * (3.0 - 2.0 * x)
 
 
+@jaxtyped(typechecker=beartype)
 def _head_aware_weights(
-    splat: GaussianSplat, smal_vertices: np.ndarray, smal_weights: np.ndarray, joints: np.ndarray
+    splat: GaussianSplat, smal_vertices: _SmalVerts, smal_weights: _SmalWeights, joints: _Joints
 ) -> SparseLbsWeights:
     """Bind the head as a RIGID unit (on the head joint) with a smooth neck falloff.
 
@@ -182,7 +197,8 @@ _SPINE = (0, 6)
 _MAX_CENTER_YAW = math.radians(22.0)
 
 
-def _muzzle_yaw(joints: np.ndarray, splat_xyz: np.ndarray, body_rot: np.ndarray) -> float:
+@jaxtyped(typechecker=beartype)
+def _muzzle_yaw(joints: _Joints, splat_xyz: _GaussianXYZ, body_rot: _Mat3) -> float:
     """Yaw (about viewer-up) of the head's forward axis, measured from the gaussian MUZZLE.
 
     The reconstructed head is often turned at rest (the photo was not head-on), which makes the gaze
@@ -205,7 +221,8 @@ def _muzzle_yaw(joints: np.ndarray, splat_xyz: np.ndarray, body_rot: np.ndarray)
     return float(np.arctan2(float(forward[0]), float(forward[2])))  # angle from +Z toward +X
 
 
-def _canonical_transform(joints: np.ndarray, splat_xyz: np.ndarray) -> ObjectViewerTransform:
+@jaxtyped(typechecker=beartype)
+def _canonical_transform(joints: _Joints, splat_xyz: _GaussianXYZ) -> ObjectViewerTransform:
     """Rotate the world so the animal stands upright, faces the camera, and its HEAD is centered.
 
     Up = paws->spine; body forward = tail-base->neck-base (stable torso anchors, NOT the nose joint),

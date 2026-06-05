@@ -7,10 +7,16 @@ import math
 from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
+from beartype import beartype
+from jaxtyping import Float, jaxtyped
 
 from splattie.methods.object.bundle import read_binary_ply
 
 SH_C0 = 0.28209479177387814
+
+_Vec3 = Float[npt.NDArray[np.float32], "3"]
+_Mat3 = Float[npt.NDArray[np.float32], "3 3"]
 
 
 class GaussianSplat:
@@ -32,7 +38,8 @@ class GaussianSplat:
         return len(self.xyz)
 
 
-def viewmat(eye: np.ndarray, center: np.ndarray, up: np.ndarray) -> np.ndarray:
+@jaxtyped(typechecker=beartype)
+def viewmat(eye: _Vec3, center: _Vec3, up: _Vec3) -> Float[npt.NDArray[np.float32], "4 4"]:
     """OpenCV-style world->camera view matrix that keeps ``up`` pointing up in the image."""
     forward = center - eye
     forward = forward / np.linalg.norm(forward)
@@ -46,7 +53,8 @@ def viewmat(eye: np.ndarray, center: np.ndarray, up: np.ndarray) -> np.ndarray:
     return view.astype(np.float32)
 
 
-def rotation_about(axis: np.ndarray, theta: float) -> np.ndarray:
+@jaxtyped(typechecker=beartype)
+def rotation_about(axis: _Vec3, theta: float) -> _Mat3:
     """Rodrigues rotation matrix about ``axis`` (need not be unit) by ``theta`` radians."""
     unit = axis / np.linalg.norm(axis)
     x, y, z = unit
@@ -61,14 +69,18 @@ def rotation_about(axis: np.ndarray, theta: float) -> np.ndarray:
     )
 
 
-def quat_from_axis(axis: np.ndarray, theta: float) -> np.ndarray:
+@jaxtyped(typechecker=beartype)
+def quat_from_axis(axis: _Vec3, theta: float) -> Float[npt.NDArray[np.float32], "4"]:
     """Return the unit quaternion (w, x, y, z) for a rotation about ``axis`` by ``theta``."""
     unit = axis / np.linalg.norm(axis)
     s = math.sin(theta / 2.0)
     return np.array([math.cos(theta / 2.0), unit[0] * s, unit[1] * s, unit[2] * s], np.float32)
 
 
-def quat_multiply(left: np.ndarray, right: np.ndarray) -> np.ndarray:
+@jaxtyped(typechecker=beartype)
+def quat_multiply(
+    left: Float[npt.NDArray[np.float32], "4"], right: Float[npt.NDArray[np.float32], "n 4"]
+) -> Float[npt.NDArray[np.float32], "n 4"]:
     """Hamilton product ``left * right`` for wxyz quats (``left`` a single quat, ``right`` (N,4))."""
     lw, lx, ly, lz = left
     rw, rx, ry, rz = right[:, 0], right[:, 1], right[:, 2], right[:, 3]
@@ -83,9 +95,10 @@ def quat_multiply(left: np.ndarray, right: np.ndarray) -> np.ndarray:
     ).astype(np.float32)
 
 
-def cube_rotations() -> list[np.ndarray]:
+@jaxtyped(typechecker=beartype)
+def cube_rotations() -> list[_Mat3]:
     """Return the 24 proper (det=+1) axis-permutation rotation matrices, for orientation search."""
-    out: list[np.ndarray] = []
+    out: list[_Mat3] = []
     for perm in itertools.permutations(range(3)):
         for signs in itertools.product([1, -1], repeat=3):
             mat = np.zeros((3, 3), np.float32)
