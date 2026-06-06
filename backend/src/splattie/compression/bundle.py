@@ -1,8 +1,9 @@
 """Rig-aware `.splattie` bundle recompression.
 
-PlayCanvas compressed PLY reorders gaussians into spatial chunks. Rigged bundles
-store LBS weights in splat-index order, so recompression must recover the new
-file order and re-permute the per-splat payload before repacking the archive.
+PlayCanvas compressed PLY reorders gaussians into recursive Morton order before
+chunking. Rigged bundles store LBS weights in splat-index order, so
+recompression must mirror that exact order and re-permute the per-splat payload
+before repacking the archive.
 """
 
 from __future__ import annotations
@@ -16,11 +17,11 @@ from pathlib import Path
 import numpy as np
 import numpy.typing as npt
 from beartype import beartype
-from jaxtyping import Float, Int, jaxtyped
+from jaxtyping import Float, Int, UInt32, jaxtyped
 from klogr import get_logger
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
-from splattie.compression.compressed_ply import compress_ply, decode_ply
+from splattie.compression.compressed_ply import compress_ply
 from splattie.methods.object.bundle import (
     SparseLbsWeights,
     read_binary_ply,
@@ -32,10 +33,9 @@ logger = get_logger()
 
 FloatPositions = Float[npt.NDArray[np.float32], "splats 3"]
 IntPermutation = Int[npt.NDArray[np.integer], "splats"]
+UIntMorton = UInt32[npt.NDArray[np.uint32], "splats"]
 
 _COMPRESSED_MARKER = b"packed_position"
-_MAX_REPAIR_COUNT = 2048
-_MAX_REPAIR_RATIO = 0.005
 _SPARSE_WEIGHTS_ADAPTER = TypeAdapter(SparseLbsWeights)
 
 
@@ -69,27 +69,19 @@ def read_ply_positions(path: Path) -> FloatPositions:
 
 
 @jaxtyped(typechecker=beartype)
-def recover_permutation(original_positions: FloatPositions, new_positions: FloatPositions) -> IntPermutation:
-    """Return original indices for each splat in the new compressed-file order."""
-    if original_positions.shape != new_positions.shape:
-        msg = f"position arrays must have the same shape, got {original_positions.shape} and {new_positions.shape}"
-        raise ValueError(msg)
+def compressed_ply_permutation(original_positions: FloatPositions) -> IntPermutation:
+    """Return original indices in PlayCanvas compressed-PLY vertex order."""
     if original_positions.shape[0] == 0:
-        msg = "cannot recover permutation for an empty PLY"
+        msg = "cannot compute compressed-PLY permutation for an empty PLY"
+        raise ValueError(msg)
+    if not np.all(np.isfinite(original_positions)):
+        msg = "cannot compute compressed-PLY permutation for non-finite gaussian centers"
         raise ValueError(msg)
 
-    try:
-        from scipy.spatial import cKDTree
-    except ImportError as exc:
-        msg = "scipy is required to recover compressed-Ply splat permutations"
-        raise RuntimeError(msg) from exc
-
-    distances, nearest = cKDTree(original_positions).query(new_positions)
-    permutation = np.asarray(nearest, dtype=np.int64)
-    distances = np.asarray(distances, dtype=np.float32)
-    repaired = _repair_duplicate_matches(original_positions, new_positions, permutation, distances)
-    _assert_permutation(repaired, original_positions.shape[0])
-    return repaired
+    order = np.arange(original_positions.shape[0], dtype=np.int64)
+    _sort_morton_order(original_positions, order, 0, len(order))
+    _assert_permutation(order, original_positions.shape[0])
+    return order
 
 
 @jaxtyped(typechecker=beartype)
@@ -143,14 +135,11 @@ def compress_bundle_rigged(src: Path, dst: Path) -> CompressBundleResult:
         work = Path(td)
         ply_path = work / "splat.ply"
         compressed_path = work / "splat.compressed.ply"
-        decoded_path = work / "splat.decoded.ply"
         ply_path.write_bytes(payload[splat_entry])
 
         original_positions = read_ply_positions(ply_path)
+        permutation = compressed_ply_permutation(original_positions)
         compress_ply(ply_path, compressed_path)
-        decode_ply(compressed_path, decoded_path)
-        new_positions = read_ply_positions(decoded_path)
-        permutation = recover_permutation(original_positions, new_positions)
 
         weights = _read_sparse_weights_bytes(work, weights_entry, payload[weights_entry])
         if weights.num_gaussians != len(permutation):
@@ -174,57 +163,67 @@ def compress_bundle_rigged(src: Path, dst: Path) -> CompressBundleResult:
 
 
 @jaxtyped(typechecker=beartype)
-def _repair_duplicate_matches(
-    original_positions: FloatPositions,
-    new_positions: FloatPositions,
-    permutation: IntPermutation,
-    distances: Float[npt.NDArray[np.float32], "splats"],
-) -> IntPermutation:
-    counts = np.bincount(permutation, minlength=original_positions.shape[0])
-    duplicate_slots = np.flatnonzero(counts > 1)
-    if len(duplicate_slots) == 0:
-        return permutation
+def _sort_morton_order(positions: FloatPositions, order: IntPermutation, start: int, end: int) -> None:
+    """Mirror @playcanvas/splat-transform sortMortonOrder in-place.
 
-    repaired = np.asarray(permutation, dtype=np.int64).copy()
-    missing = np.flatnonzero(counts == 0).astype(np.int64)
-    displaced: list[int] = []
-    for original_idx in duplicate_slots:
-        new_indices = np.flatnonzero(repaired == original_idx)
-        keep_offset = int(np.argmin(distances[new_indices]))
-        displaced.extend(int(new_idx) for new_idx in np.delete(new_indices, keep_offset))
+    PlayCanvas sorts equal Morton-code buckets recursively only when the bucket
+    is larger than one compressed-PLY chunk (256 splats). Stable ordering inside
+    smaller equal-code buckets is part of the emitted vertex order.
+    """
+    if end - start == 0:
+        return
 
-    if len(displaced) != len(missing):
-        msg = f"cannot repair permutation: {len(displaced)} duplicates but {len(missing)} missing originals"
+    subset = order[start:end]
+    points = positions[subset]
+    mins = points.min(axis=0)
+    maxs = points.max(axis=0)
+    lengths = maxs - mins
+    if not np.all(np.isfinite(lengths)):
+        msg = "invalid gaussian center extents for compressed-PLY Morton sort"
         raise ValueError(msg)
+    if np.all(lengths == 0):
+        return
 
-    repair_limit = min(_MAX_REPAIR_COUNT, max(1, int(original_positions.shape[0] * _MAX_REPAIR_RATIO)))
-    if len(displaced) > repair_limit:
-        msg = f"compressed PLY produced {len(displaced)} duplicate nearest-neighbor matches; refusing to guess"
-        raise ValueError(msg)
-
-    distance_matrix = np.linalg.norm(
-        new_positions[np.asarray(displaced, dtype=np.int64), None, :] - original_positions[missing][None, :, :],
-        axis=2,
+    multipliers = np.divide(
+        1024.0,
+        lengths,
+        out=np.zeros(3, dtype=np.float32),
+        where=lengths != 0,
     )
-    assigned_rows: set[int] = set()
-    assigned_cols: set[int] = set()
-    while len(assigned_rows) < len(displaced):
-        masked = distance_matrix.copy()
-        if assigned_rows:
-            masked[list(assigned_rows), :] = np.inf
-        if assigned_cols:
-            masked[:, list(assigned_cols)] = np.inf
-        flat_idx = int(np.argmin(masked))
-        row, col = np.unravel_index(flat_idx, masked.shape)
-        if not np.isfinite(masked[row, col]):
-            msg = "could not complete duplicate nearest-neighbor repair"
-            raise ValueError(msg)
-        repaired[displaced[row]] = int(missing[col])
-        assigned_rows.add(int(row))
-        assigned_cols.add(int(col))
+    coords = np.minimum(1023, (points - mins) * multipliers).astype(np.uint32, copy=False)
+    morton = _encode_morton3(coords[:, 0], coords[:, 1], coords[:, 2])
+    stable = np.argsort(morton, kind="stable")
+    order[start:end] = subset[stable]
+    sorted_morton = morton[stable]
 
-    logger.info(f"Repaired {len(displaced)} duplicate compressed-PLY nearest-neighbor matches")
-    return repaired
+    bucket_start = start
+    local_start = 0
+    while local_start < len(sorted_morton):
+        local_end = local_start + 1
+        while local_end < len(sorted_morton) and sorted_morton[local_end] == sorted_morton[local_start]:
+            local_end += 1
+        if local_end - local_start > 256:
+            _sort_morton_order(positions, order, bucket_start, bucket_start + local_end - local_start)
+        bucket_start += local_end - local_start
+        local_start = local_end
+
+
+@jaxtyped(typechecker=beartype)
+def _part_1_by_2(values: UIntMorton) -> UIntMorton:
+    out = values & np.uint32(0x000003FF)
+    out = (out ^ (out << np.uint32(16))) & np.uint32(0xFF0000FF)
+    out = (out ^ (out << np.uint32(8))) & np.uint32(0x0300F00F)
+    out = (out ^ (out << np.uint32(4))) & np.uint32(0x030C30C3)
+    return (out ^ (out << np.uint32(2))) & np.uint32(0x09249249)
+
+
+@jaxtyped(typechecker=beartype)
+def _encode_morton3(
+    x: UIntMorton,
+    y: UIntMorton,
+    z: UIntMorton,
+) -> UIntMorton:
+    return (_part_1_by_2(z) << np.uint32(2)) + (_part_1_by_2(y) << np.uint32(1)) + _part_1_by_2(x)
 
 
 @jaxtyped(typechecker=beartype)

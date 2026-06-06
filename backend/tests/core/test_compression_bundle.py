@@ -13,7 +13,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
 from splattie.compression import bundle as compression_bundle
-from splattie.compression.bundle import compress_bundle_rigged, recover_permutation, reorder_sparse_weights
+from splattie.compression.bundle import compress_bundle_rigged, compressed_ply_permutation, reorder_sparse_weights
 from splattie.methods.object.bundle import (
     BinaryPly,
     SparseLbsWeights,
@@ -29,10 +29,10 @@ FloatPoints = Float[npt.NDArray[np.float32], "points 3"]
 def _points() -> FloatPoints:
     return np.asarray(
         [
+            [3.0, 0.0, 0.0],
             [0.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0],
         ],
         dtype=np.float32,
     )
@@ -85,27 +85,29 @@ def _bundle(path: Path, *, topology: str = "object-auto") -> Path:
     return path
 
 
-def test_recover_permutation_matches_reordered_centers() -> None:
-    original = _points()
-    order = np.asarray([2, 0, 3, 1], dtype=np.int64)
-    recovered = recover_permutation(original, original[order])
+def test_compressed_ply_permutation_matches_playcanvas_morton_order() -> None:
+    recovered = compressed_ply_permutation(_points())
 
-    assert recovered.tolist() == [2, 0, 3, 1]
+    assert recovered.tolist() == [1, 3, 2, 0]
 
 
-def test_recover_permutation_repairs_tiny_quantization_collision() -> None:
-    original = np.asarray([[0.0, 0.0, 0.0], [0.0001, 0.0, 0.0], [2.0, 0.0, 0.0]], dtype=np.float32)
-    decoded = np.asarray([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [2.0, 0.0, 0.0]], dtype=np.float32)
-    recovered = recover_permutation(original, decoded)
+def test_compressed_ply_permutation_recurses_large_equal_morton_buckets() -> None:
+    near_origin = np.linspace(0.0003, 0.0, 300, dtype=np.float32)
+    points = np.zeros((301, 3), dtype=np.float32)
+    points[:300, 0] = near_origin
+    points[300, 0] = 1.0
 
-    assert recovered.tolist() == [0, 1, 2]
+    recovered = compressed_ply_permutation(points)
+
+    assert recovered[:300].tolist() == list(range(299, -1, -1))
+    assert recovered[300] == 300
 
 
 def test_reorder_sparse_weights_applies_gaussian_major_permutation() -> None:
-    reordered = reorder_sparse_weights(_weights(), np.asarray([2, 0, 3, 1], dtype=np.int64))
+    reordered = reorder_sparse_weights(_weights(), np.asarray([1, 3, 2, 0], dtype=np.int64))
 
-    assert reordered.indices == [4, 5, 0, 1, 6, 7, 2, 3]
-    assert np.allclose(reordered.weights, [0.3, 0.7, 0.1, 0.9, 0.4, 0.6, 0.2, 0.8])
+    assert reordered.indices == [2, 3, 6, 7, 4, 5, 0, 1]
+    assert np.allclose(reordered.weights, [0.2, 0.8, 0.4, 0.6, 0.3, 0.7, 0.1, 0.9])
 
 
 def test_compress_bundle_rigged_reorders_lbsw_and_preserves_archive_entries(
@@ -114,18 +116,12 @@ def test_compress_bundle_rigged_reorders_lbsw_and_preserves_archive_entries(
 ) -> None:
     src = _bundle(tmp_path / "toy.splattie")
     dst = tmp_path / "toy.compressed.splattie"
-    order = np.asarray([2, 0, 3, 1], dtype=np.int64)
 
     def fake_compress(_ply_path: Path, out_path: Path) -> Path:
         out_path.write_bytes(b"ply\ncomment packed_position\nend_header\ncompressed")
         return out_path
 
-    def fake_decode(_ply_path: Path, out_path: Path) -> Path:
-        _write_positions_ply(out_path, _points()[order])
-        return out_path
-
     monkeypatch.setattr(compression_bundle, "compress_ply", fake_compress)
-    monkeypatch.setattr(compression_bundle, "decode_ply", fake_decode)
 
     result = compress_bundle_rigged(src, dst)
 
@@ -142,8 +138,8 @@ def test_compress_bundle_rigged_reorders_lbsw_and_preserves_archive_entries(
         weights_path.write_bytes(compressed.read("lbs_weights.bin"))
 
     weights = read_lbs_weights_binary(weights_path)
-    assert weights.indices == [4, 5, 0, 1, 6, 7, 2, 3]
-    assert np.allclose(weights.weights, [0.3, 0.7, 0.1, 0.9, 0.4, 0.6, 0.2, 0.8], atol=5e-4)
+    assert weights.indices == [2, 3, 6, 7, 4, 5, 0, 1]
+    assert np.allclose(weights.weights, [0.2, 0.8, 0.4, 0.6, 0.3, 0.7, 0.1, 0.9], atol=5e-4)
 
 
 def test_compress_bundle_rigged_refuses_flame_topology(tmp_path: Path) -> None:
