@@ -152,16 +152,16 @@ docker run --rm --gpus all --shm-size 16g \
 
 ### GPU runtime and memory
 
-Measured on an NVIDIA H100 80GB HBM3 from the uv-managed `backend/.venv`, using one demo image and the cold CLI command above after weights were already downloaded (head/body/object on June 1, 2026; quadruped on June 5, 2026). Peak GPU memory is the highest `nvidia-smi` sample during the run; it includes framework allocator reservations and should not be read as a hard minimum.
+Measured on an NVIDIA H100 80GB HBM3 from the uv-managed `backend/.venv`, using one demo image and the cold CLI command above after weights were already downloaded (head/body/object on June 1, 2026; quadruped on June 5, 2026). Peak GPU memory is the highest `nvidia-smi` sample during the run; it includes framework allocator reservations and should not be read as a hard minimum. Bundle sizes are the current checked-in demo files for the listed input. The splat count is `manifest.avatar.splat.numGaussians`, which is the main reason object and animal files stay heavier.
 
-| Asset type | Pipeline | Input | Cold CLI time | Peak GPU memory | Output bundle |
-|------------|----------|-------|---------------|-----------------|---------------|
-| Head | LAM-20K + FLAME tracking | `h1.jpg` | 98 s | 12.0 GiB (12,240 MiB) | 1.7 MiB |
-| Body | LHM-500M + Multi-HMR | `b1.jpg` | 100 s | 15.1 GiB (15,430 MiB) | 2.4 MiB |
-| Object | TRELLIS-image-large + Puppeteer | `o1.jpg` | 118 s | 70.6 GiB (72,324 MiB) | 16.6 MiB |
-| Quadruped mammal | TripoSplat + SuperAnimal-anchored SMAL | `q1.jpg` | 115 s | 7.5 GiB (7,677 MiB) | 11.6 MiB |
+| Asset type | Pipeline | Input | Splats | Cold CLI time | Peak GPU memory | Demo bundle |
+|------------|----------|-------|--------|---------------|-----------------|-------------|
+| Head | LAM-20K + FLAME tracking | `h1.jpg` | 20,018 | 98 s | 12.0 GiB (12,240 MiB) | 1.7 MiB, raw PLY |
+| Body | LHM-500M + Multi-HMR | `b1.jpg` | 40,000 | 100 s | 15.1 GiB (15,430 MiB) | 2.4 MiB, raw PLY |
+| Object | TRELLIS-image-large + Puppeteer | `o1.jpg` | 336,736 | 118 s | 70.6 GiB (72,324 MiB) | 5.1 MiB, rig-aware compressed PLY |
+| Quadruped mammal | TripoSplat + SuperAnimal-anchored SMAL | `q1.jpg` | 262,144 | 115 s | 7.5 GiB (7,677 MiB) | 5.2 MiB, rig-aware compressed PLY |
 
-The API server and batch CLI load each method once and reuse it for multiple images, so multi-image batches amortize model startup. Different GPUs, drivers, PyTorch allocator behavior, input complexity, and TRELLIS output density can move both time and peak memory.
+The API server and batch CLI load each method once and reuse it for multiple images, so multi-image batches amortize model startup. Different GPUs, drivers, PyTorch allocator behavior, input complexity, and TRELLIS output density can move both time and peak memory. Raw generated object/quadruped bundles are larger until post-processed with rig-aware PlayCanvas compressed PLY; that compression preserves rigging by permuting the per-splat LBS weights to the compressed splat order.
 
 ### Widget development
 
