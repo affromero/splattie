@@ -29,7 +29,7 @@ Splattie's own FLAME / SMPL-X / SMAL baselines (and LHM's released weights) are 
 | [VOODOO XP](https://github.com/mbzuai-metaverse/voodooxp-official) · SIGGRAPH Asia '24 | 1 image | yes | tri-plane NeRF | none | **No** — tri-plane reenactment to 2D, not a splat |
 | [HeadGAP](https://headgap.github.io/) · 3DV '25 | few images | no | FLAME 3DGS | none | **No code** — ~5 min/identity fitting |
 | [CAP4D](https://github.com/felixtaubner/cap4d) · CVPR '25 (Oral) | few images | no | FLAME-mesh 3DGS | CC BY-NC | **No** — per-subject diffusion + training; non-commercial |
-| [FaceCraft4D](https://github.com/fei-aiart/FaceCraft4D) · WACV '26 | 1 image | no | FLAME-mesh 3DGS | none | **No code** — per-subject; no weights |
+| [FaceCraft4D](https://arxiv.org/abs/2504.15179) · WACV '26 | 1 image | no | FLAME-mesh 3DGS | none | **No code** — per-subject; no weights |
 | [HRAvatar](https://github.com/Pixel-Talk/HRAvatar) · CVPR '25 | mono video | no | relightable 3DGS | Apache 2.0* | **No** — per-subject video training; FLAME dep |
 | [3D Gaussian Blendshapes](https://github.com/zjumsj/GaussianBlendshapes) · SIGGRAPH '24 | mono video | no | 3DGS blendshapes | GPL-3.0 | **No** — per-subject video; GPL + FLAME (NC) |
 | [FlashAvatar](https://github.com/USTC3DV/FlashAvatar-code) · CVPR '24 | mono video | no | FLAME-UV 3DGS | MIT* | **No** — per-subject video training |
@@ -51,11 +51,11 @@ Splattie's own FLAME / SMPL-X / SMAL baselines (and LHM's released weights) are 
 | [Human3Diffusion](https://github.com/YuxuanSnow/Human3Diffusion) · NeurIPS '24 | 1 image | yes | unrigged 3DGS | MIT | **No** — template-free, no rig — the body can't be animated |
 | [HGM](https://github.com/jinnan-chen/HGM) · ICLR '25 | 1 image | yes | 3DGS + mesh | none | **No** — no license; needs an SMPL fit to animate |
 | [Human Gaussian Model (HGM-Graph)](https://arxiv.org/abs/2507.18758) · ICCV '25 | 1 image | yes | SMPL-graph 3DGS | unverified | **No** — feed-forward GS, but rig/license unverified |
-| [GST](https://github.com/abdullahamdi/GST) · CVPR '25 | 1 image | yes | SMPL 3DGS | BSD-3* | **No** — SMPL pose-conditioned GS; SMPL dep (NC) |
+| [GST](https://github.com/prosperolo/GST) · CVPR '25 | 1 image | yes | SMPL 3DGS | BSD-3* | **No** — SMPL pose-conditioned GS; SMPL dep (NC) |
 | [GUAVA](https://github.com/Pixel-Talk/GUAVA) · ICCV '25 | 1 image | yes | upper-body 3DGS | Apache 2.0* | **No** — code Apache, but built on SMPL-X/FLAME (NC) |
 | [HumanNOVA](https://humannova.github.io/) · CVPR '26 | 1 image | yes | tri-plane | unlicensed | **No** — neural field, not splat; no license |
 | [NoPo-Avatar](https://github.com/wenj/NoPo-Avatar) · NeurIPS '25 | few images | yes | SMPL-X 3DGS | Apache 2.0* | **No** — pose-free feed-forward GS, but SMPL-X dep (NC) |
-| [GHG](https://github.com/yj2280/Generalizable-Human-Gaussians) · ECCV '24 | multi-view | yes | SMPL-X 3DGS | none | **No** — needs 3 calibrated views; no license |
+| [GHG](https://humansensinglab.github.io/Generalizable-Human-Gaussians/) · ECCV '24 | multi-view | yes | SMPL-X 3DGS | none | **No** — needs 3 calibrated views; no license |
 | [LIFe-GoM](https://github.com/wenj/LIFe-GoM) · ICLR '25 | few images | yes | Gaussians-on-mesh | MIT* | **No** — needs sparse multi-view; SMPL-X dep (NC) |
 | [SHERT](https://github.com/ZhanxyR/SHERT) · CVPR '24 (Oral) | 1 image | yes | textured mesh | MIT* | **No** — mesh not splat; SMPL-X (NC) |
 | [SiTH](https://github.com/SiTH-Diffusion/SiTH) · CVPR '24 | 1 image | yes | textured mesh | MIT* | **No** — mesh not splat; SMPL-X (NC) |
@@ -65,7 +65,7 @@ Splattie's own FLAME / SMPL-X / SMAL baselines (and LHM's released weights) are 
 | [SinGS](https://github.com/EavianWoo/SinGS) · CVPR '25 | 1 image | no | SMPL-X 3DGS | none | **No** — per-subject optimization; no license |
 | [SVAD](https://github.com/yc4ny/SVAD) · CVPR-W '25 | 1 image | no | SMPL-X 3DGS | Apache 2.0* | **No** — per-subject (~5–6 h); SMPL-X (NC) |
 | [HumanDreamer-X](https://github.com/GigaAI-research/HumanDreamer-X) · arXiv '25 | 1 image | no | SMPL 3DGS | none | **No code** — per-subject; "code coming" |
-| [One Shot, One Talk](https://github.com/USTC3DV/OneShotOneTalk) · CVPR '25 | 1 image | no | 3DGS-mesh hybrid | none | **No code** — per-subject; no repo |
+| [One Shot, One Talk](https://ustc3dv.github.io/OneShotOneTalk/) · CVPR '25 | 1 image | no | 3DGS-mesh hybrid | none | **No code** — per-subject; no repo |
 | [TeCH](https://github.com/huangyangyi/TeCH) · 3DV '24 | 1 image | no | DMTet hybrid | MIT* | **No** — per-subject (~3 h) optimization; SMPL-X (NC) |
 | [En3D](https://github.com/menyifang/En3D) · CVPR '24 | text / seed | no | mesh + auto-rig (FBX) | Apache 2.0 | **No** — generator, not reconstruction; mesh not splat |
 | [TaoAvatar](https://github.com/PixelAI-Team/TaoAvatar) · CVPR '25 | multi-view | no | SMPL-X mesh-bound 3DGS | unreleased | **No code** — on-device ARKit GS, but multi-view + no license |
