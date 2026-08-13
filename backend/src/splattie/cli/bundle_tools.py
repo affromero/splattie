@@ -80,7 +80,8 @@ def _animation_manifest(names: set[str], asset_type: AssetType) -> Mapping[str, 
         if "lbs_weights.bin" in names:
             animation["weights"] = {"file": "lbs_weights.bin", "format": "lbsw-v1"}
     else:
-        animation = {"type": "lbs", "expression": {"system": "flame-pca", "basis": None}}
+        expression_basis = "expression_basis.bin" if "expression_basis.bin" in names else None
+        animation = {"type": "lbs", "expression": {"system": "flame-pca", "basis": expression_basis}}
         if "bone_tree.json" in names:
             animation["skeleton"] = {"file": "bone_tree.json", "rig": "flame"}
         if "lbs_weight_20k.json" in names:
@@ -175,10 +176,18 @@ def rebundle(
         splat_bytes = zf.read(splat_entry)
         num_gaussians = count_ply_vertices_bytes(splat_bytes)
         already_compressed = is_compressed_ply_bytes(splat_bytes)
+        expression_basis_current = True
+        if existing is not None and asset_type is AssetType.head and "expression_basis.bin" in names:
+            animation = existing.get("animation")
+            expression = animation.get("expression") if isinstance(animation, Mapping) else None
+            expression_basis_current = (
+                isinstance(expression, Mapping) and expression.get("basis") == "expression_basis.bin"
+            )
         already_current = (
             existing is not None
             and existing.get("formatVersion") == widget_version
             and existing.get("assetType") == asset_type.value
+            and expression_basis_current
         )
         if already_current and not (compress and not already_compressed):
             return f"skip (already v{widget_version}, {asset_type.value})"
