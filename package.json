@@ -15,5 +15,5 @@
     "build:renderer": "bash scripts/build-renderer.sh",
     "build:widget": "npm run build -w packages/splattie-widget && cp packages/splattie-widget/dist/splattie-widget.cdn.js apps/web/public/splattie-widget.cdn.js"
   },
-  "version": "0.3.2"
+  "version": "0.3.3"
 }
