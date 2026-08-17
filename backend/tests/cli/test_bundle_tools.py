@@ -75,16 +75,25 @@ def _make_head_bundle(path: Path, num_gaussians: int, *, basis_magic: bytes = b"
     """Write a synthetic head .splattie with consistent PLY/LBS/basis rows."""
     import numpy as np
 
-    props = [("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("opacity", "<f4")]
+    props = [
+        ("x", "<f4"),
+        ("y", "<f4"),
+        ("z", "<f4"),
+        ("opacity", "<f4"),
+        ("scale_0", "<f4"),
+        ("scale_1", "<f4"),
+        ("scale_2", "<f4"),
+    ]
     vertices = np.zeros(num_gaussians, dtype=np.dtype(props))
     vertices["x"] = np.arange(num_gaussians, dtype=np.float32)
-    ply = (
+    vertices["opacity"] = 2.0  # equal importance unless a test overrides
+    header = (
         b"ply\nformat binary_little_endian 1.0\n"
         + f"element vertex {num_gaussians}\n".encode()
-        + b"property float x\nproperty float y\nproperty float z\nproperty float opacity\n"
+        + b"".join(f"property float {name}\n".encode() for name, _ in props)
         + b"end_header\n"
-        + vertices.tobytes()
     )
+    ply = header + vertices.tobytes()
     weights = [[float(i), 0.0, 0.0, 0.0, 0.0] for i in range(num_gaussians)]
     num_expr = 2
     basis_dtype = "<f2" if basis_magic == b"EXPH" else "<f4"
@@ -140,7 +149,8 @@ def test_downsample_subsets_ply_and_weights_and_drops_basis(tmp_path: Path) -> N
     # PLY vertex ids (x property) must line up with the LBS weight rows.
     header_end = ply.index(b"end_header\n") + len(b"end_header\n")
     verts = np.frombuffer(
-        ply[header_end:], dtype=np.dtype([("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("opacity", "<f4")])
+        ply[header_end:],
+        dtype=np.dtype([(n, "<f4") for n in ("x", "y", "z", "opacity", "scale_0", "scale_1", "scale_2")]),
     )
     assert len(verts) == kept
     assert [row[0] for row in weights] == verts["x"].tolist()
@@ -171,7 +181,8 @@ def test_downsample_keeps_and_subsets_expression_basis(tmp_path: Path) -> None:
     # Basis rows must correspond to the surviving vertex ids.
     header_end = ply.index(b"end_header\n") + len(b"end_header\n")
     verts = np.frombuffer(
-        ply[header_end:], dtype=np.dtype([("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("opacity", "<f4")])
+        ply[header_end:],
+        dtype=np.dtype([(n, "<f4") for n in ("x", "y", "z", "opacity", "scale_0", "scale_1", "scale_2")]),
     )
     basis = np.frombuffer(data, dtype="<f2", offset=12).reshape(num_verts, num_expr, 3)
     expected_first_component = verts["x"] * num_expr * 3
@@ -288,3 +299,52 @@ def test_downsample_handles_null_expression_and_missing_weights(tmp_path: Path) 
                 zf.writestr(name, data)
     with pytest.raises(ValueError, match="weights"):
         downsample(src, tmp_path / "out2.splattie", max_gaussians=4)
+
+
+def test_downsample_keeps_high_importance_gaussians(tmp_path: Path) -> None:
+    import numpy as np
+
+    from splattie.cli.bundle_tools import downsample
+
+    src = tmp_path / "head.splattie"
+    out = tmp_path / "out.splattie"
+    _make_head_bundle(src, 10)
+
+    # Rewrite the PLY so splats 3 and 7 are near-invisible (tiny opacity+scale).
+    with zipfile.ZipFile(src) as zf:
+        payload = {n: zf.read(n) for n in zf.namelist()}
+    header_end = payload["head.ply"].index(b"end_header\n") + len(b"end_header\n")
+    dtype = np.dtype([(n, "<f4") for n in ("x", "y", "z", "opacity", "scale_0", "scale_1", "scale_2")])
+    verts = np.frombuffer(payload["head.ply"][header_end:], dtype=dtype).copy()
+    for low in (3, 7):
+        verts["opacity"][low] = -10.0
+        verts[["scale_0", "scale_1", "scale_2"]][low] = (-10.0, -10.0, -10.0)
+    with zipfile.ZipFile(src, "w") as zf:
+        for name, data in payload.items():
+            zf.writestr(name, data if name != "head.ply" else payload["head.ply"][:header_end] + verts.tobytes())
+
+    downsample(src, out, max_gaussians=8)
+
+    with zipfile.ZipFile(out) as zf:
+        ply = zf.read("head.ply")
+    kept = np.frombuffer(ply[ply.index(b"end_header\n") + len(b"end_header\n") :], dtype=dtype)
+    assert sorted(kept["x"].tolist()) == [0.0, 1.0, 2.0, 4.0, 5.0, 6.0, 8.0, 9.0]
+
+
+def test_downsample_scale_compensation_grows_survivors(tmp_path: Path) -> None:
+    import numpy as np
+
+    from splattie.cli.bundle_tools import downsample
+
+    src = tmp_path / "head.splattie"
+    out = tmp_path / "out.splattie"
+    _make_head_bundle(src, 10)
+
+    downsample(src, out, max_gaussians=10, scale_compensation=2.0)
+
+    with zipfile.ZipFile(out) as zf:
+        ply = zf.read("head.ply")
+    dtype = np.dtype([(n, "<f4") for n in ("x", "y", "z", "opacity", "scale_0", "scale_1", "scale_2")])
+    kept = np.frombuffer(ply[ply.index(b"end_header\n") + len(b"end_header\n") :], dtype=dtype)
+    # Log-scales: a 2x linear factor is an additive ln(2) shift from the 0.0 baseline.
+    assert np.allclose(kept["scale_0"], np.log(2.0), atol=1e-6)
