@@ -194,3 +194,97 @@ def test_downsample_noop_when_under_target_still_drops_basis(tmp_path: Path) -> 
     assert manifest["avatar"]["splat"]["numGaussians"] == 8
     assert len(weights) == 8
     assert manifest["animation"]["expression"]["basis"] is None
+
+
+def test_downsample_rejects_non_head_bundle(tmp_path: Path) -> None:
+    import pytest
+
+    from splattie.cli.bundle_tools import downsample
+
+    src = tmp_path / "obj.splattie"
+    _make_head_bundle(src, 10)
+    with zipfile.ZipFile(src) as zf:
+        payload = {n: zf.read(n) for n in zf.namelist()}
+    manifest = json.loads(payload["manifest.json"])
+    manifest["assetType"] = "object"
+    with zipfile.ZipFile(src, "w") as zf:
+        zf.writestr("manifest.json", json.dumps(manifest))
+        for name, data in payload.items():
+            if name != "manifest.json":
+                zf.writestr(name, data)
+
+    with pytest.raises(ValueError, match="head bundles"):
+        downsample(src, tmp_path / "out.splattie", max_gaussians=5)
+
+
+def test_downsample_uses_manifest_declared_splat_entry(tmp_path: Path) -> None:
+    from splattie.cli.bundle_tools import downsample
+
+    src = tmp_path / "head.splattie"
+    out = tmp_path / "out.splattie"
+    _make_head_bundle(src, 20)
+    # Prepend a decoy PLY that sorts first in zip order.
+    with zipfile.ZipFile(src) as zf:
+        payload = {n: zf.read(n) for n in zf.namelist()}
+    with zipfile.ZipFile(src, "w") as zf:
+        zf.writestr("aaa-decoy.ply", _MINIMAL_PLY)
+        for name, data in payload.items():
+            zf.writestr(name, data)
+
+    downsample(src, out, max_gaussians=5)
+
+    with zipfile.ZipFile(out) as zf:
+        manifest = json.loads(zf.read("manifest.json"))
+        weights = json.loads(zf.read("lbs_weight_20k.json"))
+        decoy = zf.read("aaa-decoy.ply")
+
+    assert manifest["avatar"]["splat"]["numGaussians"] == 5
+    assert len(weights) == 5
+    assert decoy == _MINIMAL_PLY  # untouched
+
+
+def test_downsample_transcodes_expr_basis_to_exph(tmp_path: Path) -> None:
+    from splattie.cli.bundle_tools import downsample
+
+    src = tmp_path / "head.splattie"
+    out = tmp_path / "out.splattie"
+    _make_head_bundle(src, 30, basis_magic=b"EXPR")
+
+    downsample(src, out, max_gaussians=6, keep_expression_basis=True)
+
+    with zipfile.ZipFile(out) as zf:
+        data = zf.read("expression_basis.bin")
+    # The widget only loads EXPH float16, so EXPR float32 input must transcode.
+    assert data[:4] == b"EXPH"
+
+
+def test_downsample_handles_null_expression_and_missing_weights(tmp_path: Path) -> None:
+    import pytest
+
+    from splattie.cli.bundle_tools import downsample
+
+    src = tmp_path / "head.splattie"
+    _make_head_bundle(src, 10)
+    with zipfile.ZipFile(src) as zf:
+        payload = {n: zf.read(n) for n in zf.namelist()}
+    manifest = json.loads(payload["manifest.json"])
+    manifest["animation"]["expression"] = None
+    with zipfile.ZipFile(src, "w") as zf:
+        zf.writestr("manifest.json", json.dumps(manifest))
+        for name, data in payload.items():
+            if name != "manifest.json":
+                zf.writestr(name, data)
+
+    out = tmp_path / "out.splattie"
+    downsample(src, out, max_gaussians=4)
+    with zipfile.ZipFile(out) as zf:
+        assert json.loads(zf.read("manifest.json"))["avatar"]["splat"]["numGaussians"] == 4
+
+    manifest["animation"]["weights"] = None
+    with zipfile.ZipFile(src, "w") as zf:
+        zf.writestr("manifest.json", json.dumps(manifest))
+        for name, data in payload.items():
+            if name != "manifest.json":
+                zf.writestr(name, data)
+    with pytest.raises(ValueError, match="weights"):
+        downsample(src, tmp_path / "out2.splattie", max_gaussians=4)

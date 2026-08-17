@@ -307,7 +307,10 @@ def shrink_expression_basis(basis_path: Path, output: Path | None = None) -> Non
 
 
 def _subset_expression_basis(data: bytes, entry: str, idx: "np.ndarray", num_ply_verts: int) -> bytes:
-    """Subset EXPH/EXPR expression-basis rows to the given vertex indices."""
+    """Subset EXPH/EXPR expression-basis rows to the given vertex indices.
+
+    Always emits EXPH float16 — the widget's basis loader accepts nothing else.
+    """
     magic = data[:4]
     if magic not in (b"EXPH", b"EXPR"):
         msg = f"Unexpected magic {magic!r} in {entry}"
@@ -318,7 +321,29 @@ def _subset_expression_basis(data: bytes, entry: str, idx: "np.ndarray", num_ply
         msg = f"{entry}: {num_verts} basis rows but PLY has {num_ply_verts} vertices"
         raise ValueError(msg)
     basis = np.frombuffer(data, dtype=dtype, offset=12).reshape(num_verts, num_expr, 3)
-    return magic + np.asarray([len(idx), num_expr], dtype="<u4").tobytes() + basis[idx].tobytes()
+    subset = basis[idx].astype("<f2")
+    return b"EXPH" + np.asarray([len(idx), num_expr], dtype="<u4").tobytes() + subset.tobytes()
+
+
+def _load_head_bundle(input_path: Path) -> tuple[MutableMapping[str, object], MutableMapping[str, bytes], str]:
+    """Read a head `.splattie` and validate it is downsample-able."""
+    with zipfile.ZipFile(str(input_path), "r") as zf:
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+        payload = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
+
+    if manifest.get("assetType") != AssetType.head.value:
+        msg = f"downsample only supports head bundles, got assetType={manifest.get('assetType')!r}"
+        raise ValueError(msg)
+    # The manifest is authoritative for which entry is the splat — the widget
+    # loads manifest.avatar.splat.file, not the first .ply in zip order.
+    splat_entry = manifest["avatar"]["splat"]["file"]
+    if splat_entry not in payload:
+        msg = f"manifest declares splat file {splat_entry!r} but the bundle has no such entry"
+        raise ValueError(msg)
+    if is_compressed_ply_bytes(payload[splat_entry]):
+        msg = "downsample requires an uncompressed PLY (compressed chunks cannot be subset)"
+        raise ValueError(msg)
+    return manifest, payload, splat_entry
 
 
 def downsample(
@@ -334,8 +359,8 @@ def downsample(
     the PLY vertices, the dense LBS weight rows, and the expression-basis rows,
     preserving the splat-order correspondence FLAME rigging depends on. The
     expression basis is dropped by default: it is by far the largest entry and
-    only drives autoBlink and editor sliders, which a small mobile widget can
-    live without.
+    only drives FLAME expression offsets (editor sliders); autoBlink is
+    SDF-based in the widget and unaffected.
 
     Args:
         input_path: Source `.splattie` head bundle (uncompressed PLY).
@@ -353,20 +378,11 @@ def downsample(
         msg = f"max_gaussians must be >= 1, got {max_gaussians}"
         raise ValueError(msg)
 
-    with zipfile.ZipFile(str(input_path), "r") as zf:
-        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
-        splat_entry, _ = find_splat_entry(zf)
-        payload = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
-
-    if manifest.get("assetType") != AssetType.head.value:
-        msg = f"downsample only supports head bundles, got assetType={manifest.get('assetType')!r}"
-        raise ValueError(msg)
-    if is_compressed_ply_bytes(payload[splat_entry]):
-        msg = "downsample requires an uncompressed PLY (compressed chunks cannot be subset)"
-        raise ValueError(msg)
+    manifest, payload, splat_entry = _load_head_bundle(input_path)
 
     with TemporaryDirectory() as tmp:
-        ply_path = Path(tmp) / splat_entry
+        # Fixed name — the archive-controlled entry name must not touch paths.
+        ply_path = Path(tmp) / "splat.ply"
         ply_path.write_bytes(payload[splat_entry])
         ply = read_binary_ply(ply_path)
         n = len(ply.vertices)
@@ -376,14 +392,17 @@ def downsample(
         write_binary_ply(ply_path, type(ply)(vertices=subset, properties=ply.properties))
         payload[splat_entry] = ply_path.read_bytes()
 
-    weights_entry = manifest["animation"]["weights"]["file"]
+    weights_entry = (manifest.get("animation", {}).get("weights") or {}).get("file")
+    if not weights_entry or weights_entry not in payload:
+        msg = f"head bundle is missing its LBS weights entry ({weights_entry!r})"
+        raise ValueError(msg)
     weights = json.loads(payload[weights_entry].decode("utf-8"))
     if not isinstance(weights, list) or len(weights) != n:
         msg = f"{weights_entry}: expected a dense list of {n} weight rows"
         raise ValueError(msg)
     payload[weights_entry] = json.dumps([weights[i] for i in idx.tolist()]).encode("utf-8")
 
-    basis_entry = manifest["animation"].get("expression", {}).get("basis")
+    basis_entry = (manifest.get("animation", {}).get("expression") or {}).get("basis")
     if basis_entry:
         if keep_expression_basis:
             payload[basis_entry] = _subset_expression_basis(payload[basis_entry], basis_entry, idx, n)
