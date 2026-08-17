@@ -16,6 +16,7 @@ def main() -> None:
     tyro.extras.subcommand_cli_from_dict(
         {
             "add-manifest": bundle_tools.add_manifest,
+            "downsample": bundle_tools.downsample,
             "export-arkit-basis": flame_exports.export_arkit_basis,
             "export-expression-basis": flame_exports.export_expression_basis,
             "generate-demo-images": demos.generate_demo_images,
