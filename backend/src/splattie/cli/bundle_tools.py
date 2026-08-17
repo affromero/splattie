@@ -325,6 +325,49 @@ def _subset_expression_basis(data: bytes, entry: str, idx: "np.ndarray", num_ply
     return b"EXPH" + np.asarray([len(idx), num_expr], dtype="<u4").tobytes() + subset.tobytes()
 
 
+def _select_important(vertices: "np.ndarray", max_gaussians: int) -> "np.ndarray":
+    """Pick the gaussians that matter most for coverage, in original splat order.
+
+    Uniform stride sampling tears holes in the surface: it discards large,
+    opaque, load-bearing splats as readily as tiny film-grain ones, and the
+    survivors' scales are tuned for the dense cloud. Rank by rendered
+    contribution instead — opacity x volume (the LightGaussian pruning
+    heuristic) — and keep the top scorers. Scored in log space:
+    log(sigmoid(opacity_logit)) + sum of log-scales = log(alpha * volume).
+    """
+    fields = set(vertices.dtype.names or ())
+    required = {"opacity", "scale_0", "scale_1", "scale_2"}
+    missing = sorted(required - fields)
+    if missing:
+        msg = f"PLY is missing fields needed for importance pruning: {missing}"
+        raise ValueError(msg)
+    log_volume = (
+        vertices["scale_0"].astype(np.float64)
+        + vertices["scale_1"].astype(np.float64)
+        + vertices["scale_2"].astype(np.float64)
+    )
+    # log(sigmoid(o)) + log-volume: product of opacity and volume in log space.
+    importance = -np.logaddexp(0.0, -vertices["opacity"].astype(np.float64)) + log_volume
+    if not np.isfinite(importance).all():
+        msg = "PLY has non-finite opacity/scale values; refusing to rank a corrupt splat"
+        raise ValueError(msg)
+    keep = min(max_gaussians, len(vertices))
+    top = np.argpartition(-importance, keep - 1)[:keep]
+    return np.sort(top)
+
+
+def _compensate_scales(vertices: "np.ndarray", factor: float) -> "np.ndarray":
+    """Grow surviving splats so a sparser cloud still covers the surface.
+
+    Scales are stored as logs, so a linear size factor is an additive shift.
+    """
+    out = vertices.copy()
+    shift = np.float32(np.log(factor))
+    for f in ("scale_0", "scale_1", "scale_2"):
+        out[f] = out[f] + shift
+    return out
+
+
 def _load_head_bundle(input_path: Path) -> tuple[MutableMapping[str, object], MutableMapping[str, bytes], str]:
     """Read a head `.splattie` and validate it is downsample-able."""
     with zipfile.ZipFile(str(input_path), "r") as zf:
@@ -352,14 +395,16 @@ def downsample(
     max_gaussians: int = 8000,
     *,
     keep_expression_basis: bool = False,
+    scale_compensation: float = 1.0,
 ) -> None:
     """Create a reduced-gaussian head `.splattie` for low-bandwidth targets.
 
-    Subsets gaussians with even spacing and applies the same index subset to
-    the PLY vertices, the dense LBS weight rows, and the expression-basis rows,
-    preserving the splat-order correspondence FLAME rigging depends on. The
-    expression basis is dropped by default: it is by far the largest entry and
-    only drives FLAME expression offsets (editor sliders); autoBlink is
+    Keeps the highest-contribution gaussians (opacity x volume) and applies the
+    same index subset to the PLY vertices, the dense LBS weight rows, and the
+    expression-basis rows, preserving the splat-order correspondence FLAME
+    rigging depends on. The expression basis is dropped by default: it is by
+    far the largest entry
+    and only drives FLAME expression offsets (editor sliders); autoBlink is
     SDF-based in the widget and unaffected.
 
     Args:
@@ -368,6 +413,10 @@ def downsample(
         max_gaussians: Target gaussian count.
         keep_expression_basis: Keep (and subset) `expression_basis.bin` instead
             of dropping it.
+        scale_compensation: Linear size factor applied to surviving splats.
+            Importance pruning keeps surfaces closed at moderate ratios, so
+            this defaults to 1.0 (off); raise it (e.g. (n/kept)^(1/3)) only if
+            an extreme ratio tears holes.
 
     """
     from tempfile import TemporaryDirectory
@@ -376,6 +425,9 @@ def downsample(
 
     if max_gaussians < 1:
         msg = f"max_gaussians must be >= 1, got {max_gaussians}"
+        raise ValueError(msg)
+    if not (np.isfinite(scale_compensation) and scale_compensation > 0):
+        msg = f"scale_compensation must be a finite positive factor, got {scale_compensation}"
         raise ValueError(msg)
 
     manifest, payload, splat_entry = _load_head_bundle(input_path)
@@ -386,9 +438,11 @@ def downsample(
         ply_path.write_bytes(payload[splat_entry])
         ply = read_binary_ply(ply_path)
         n = len(ply.vertices)
-        idx = np.unique(np.round(np.linspace(0, n - 1, min(max_gaussians, n))).astype(np.int64))
+        idx = _select_important(ply.vertices, max_gaussians)
 
         subset = ply.vertices[idx]
+        if scale_compensation != 1.0:
+            subset = _compensate_scales(subset, scale_compensation)
         write_binary_ply(ply_path, type(ply)(vertices=subset, properties=ply.properties))
         payload[splat_entry] = ply_path.read_bytes()
 
@@ -400,7 +454,8 @@ def downsample(
     if not isinstance(weights, list) or len(weights) != n:
         msg = f"{weights_entry}: expected a dense list of {n} weight rows"
         raise ValueError(msg)
-    payload[weights_entry] = json.dumps([weights[i] for i in idx.tolist()]).encode("utf-8")
+    rounded = [[round(w, 5) for w in weights[i]] for i in idx.tolist()]
+    payload[weights_entry] = json.dumps(rounded).encode("utf-8")
 
     basis_entry = (manifest.get("animation", {}).get("expression") or {}).get("basis")
     if basis_entry:
