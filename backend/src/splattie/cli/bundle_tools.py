@@ -304,3 +304,104 @@ def shrink_expression_basis(basis_path: Path, output: Path | None = None) -> Non
         meta["format"] = "float16_le, shape (num_vertices, num_expressions, 3)"
         out.with_suffix(".json").write_text(json.dumps(meta, indent=2))
         logger.info(f"Updated sidecar: {out.with_suffix('.json').name}")
+
+
+def _subset_expression_basis(data: bytes, entry: str, idx: "np.ndarray", num_ply_verts: int) -> bytes:
+    """Subset EXPH/EXPR expression-basis rows to the given vertex indices."""
+    magic = data[:4]
+    if magic not in (b"EXPH", b"EXPR"):
+        msg = f"Unexpected magic {magic!r} in {entry}"
+        raise ValueError(msg)
+    dtype = "<f2" if magic == b"EXPH" else "<f4"
+    num_verts, num_expr = np.frombuffer(data, dtype="<u4", count=2, offset=4).tolist()
+    if num_verts != num_ply_verts:
+        msg = f"{entry}: {num_verts} basis rows but PLY has {num_ply_verts} vertices"
+        raise ValueError(msg)
+    basis = np.frombuffer(data, dtype=dtype, offset=12).reshape(num_verts, num_expr, 3)
+    return magic + np.asarray([len(idx), num_expr], dtype="<u4").tobytes() + basis[idx].tobytes()
+
+
+def downsample(
+    input_path: Path,
+    output: Path,
+    max_gaussians: int = 8000,
+    *,
+    keep_expression_basis: bool = False,
+) -> None:
+    """Create a reduced-gaussian head `.splattie` for low-bandwidth targets.
+
+    Subsets gaussians with even spacing and applies the same index subset to
+    the PLY vertices, the dense LBS weight rows, and the expression-basis rows,
+    preserving the splat-order correspondence FLAME rigging depends on. The
+    expression basis is dropped by default: it is by far the largest entry and
+    only drives autoBlink and editor sliders, which a small mobile widget can
+    live without.
+
+    Args:
+        input_path: Source `.splattie` head bundle (uncompressed PLY).
+        output: Where to write the downsampled bundle.
+        max_gaussians: Target gaussian count.
+        keep_expression_basis: Keep (and subset) `expression_basis.bin` instead
+            of dropping it.
+
+    """
+    from tempfile import TemporaryDirectory
+
+    from splattie.methods.object.bundle import read_binary_ply, write_binary_ply
+
+    if max_gaussians < 1:
+        msg = f"max_gaussians must be >= 1, got {max_gaussians}"
+        raise ValueError(msg)
+
+    with zipfile.ZipFile(str(input_path), "r") as zf:
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+        splat_entry, _ = find_splat_entry(zf)
+        payload = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
+
+    if manifest.get("assetType") != AssetType.head.value:
+        msg = f"downsample only supports head bundles, got assetType={manifest.get('assetType')!r}"
+        raise ValueError(msg)
+    if is_compressed_ply_bytes(payload[splat_entry]):
+        msg = "downsample requires an uncompressed PLY (compressed chunks cannot be subset)"
+        raise ValueError(msg)
+
+    with TemporaryDirectory() as tmp:
+        ply_path = Path(tmp) / splat_entry
+        ply_path.write_bytes(payload[splat_entry])
+        ply = read_binary_ply(ply_path)
+        n = len(ply.vertices)
+        idx = np.unique(np.round(np.linspace(0, n - 1, min(max_gaussians, n))).astype(np.int64))
+
+        subset = ply.vertices[idx]
+        write_binary_ply(ply_path, type(ply)(vertices=subset, properties=ply.properties))
+        payload[splat_entry] = ply_path.read_bytes()
+
+    weights_entry = manifest["animation"]["weights"]["file"]
+    weights = json.loads(payload[weights_entry].decode("utf-8"))
+    if not isinstance(weights, list) or len(weights) != n:
+        msg = f"{weights_entry}: expected a dense list of {n} weight rows"
+        raise ValueError(msg)
+    payload[weights_entry] = json.dumps([weights[i] for i in idx.tolist()]).encode("utf-8")
+
+    basis_entry = manifest["animation"].get("expression", {}).get("basis")
+    if basis_entry:
+        if keep_expression_basis:
+            payload[basis_entry] = _subset_expression_basis(payload[basis_entry], basis_entry, idx, n)
+        else:
+            del payload[basis_entry]
+            manifest["animation"]["expression"]["basis"] = None
+
+    manifest["avatar"]["splat"]["numGaussians"] = len(idx)
+
+    with zipfile.ZipFile(str(output), "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+        for name, data in payload.items():
+            if name != "manifest.json":
+                zf.writestr(name, data)
+
+    before, after = input_path.stat().st_size, output.stat().st_size
+    logger.info(
+        f"{output.name}: {n} -> {len(idx)} gaussians, "
+        f"{before // 1024} KB -> {after // 1024} KB"
+        f"{'' if keep_expression_basis or not basis_entry else ' (expression basis dropped)'}"
+    )
