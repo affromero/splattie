@@ -332,9 +332,8 @@ def _select_important(vertices: "np.ndarray", max_gaussians: int) -> "np.ndarray
     opaque, load-bearing splats as readily as tiny film-grain ones, and the
     survivors' scales are tuned for the dense cloud. Rank by rendered
     contribution instead — opacity x volume (the LightGaussian pruning
-    heuristic) — and keep the top scorers. Both opacity (sigmoid logit) and
-    scales (log) are monotonic transforms, so ranking on the raw fields is
-    equivalent and cheaper.
+    heuristic) — and keep the top scorers. Scored in log space:
+    log(sigmoid(opacity_logit)) + sum of log-scales = log(alpha * volume).
     """
     fields = set(vertices.dtype.names or ())
     required = {"opacity", "scale_0", "scale_1", "scale_2"}
@@ -349,6 +348,9 @@ def _select_important(vertices: "np.ndarray", max_gaussians: int) -> "np.ndarray
     )
     # log(sigmoid(o)) + log-volume: product of opacity and volume in log space.
     importance = -np.logaddexp(0.0, -vertices["opacity"].astype(np.float64)) + log_volume
+    if not np.isfinite(importance).all():
+        msg = "PLY has non-finite opacity/scale values; refusing to rank a corrupt splat"
+        raise ValueError(msg)
     keep = min(max_gaussians, len(vertices))
     top = np.argpartition(-importance, keep - 1)[:keep]
     return np.sort(top)
@@ -423,6 +425,9 @@ def downsample(
 
     if max_gaussians < 1:
         msg = f"max_gaussians must be >= 1, got {max_gaussians}"
+        raise ValueError(msg)
+    if not (np.isfinite(scale_compensation) and scale_compensation > 0):
+        msg = f"scale_compensation must be a finite positive factor, got {scale_compensation}"
         raise ValueError(msg)
 
     manifest, payload, splat_entry = _load_head_bundle(input_path)

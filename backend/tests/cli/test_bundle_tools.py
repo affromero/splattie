@@ -348,3 +348,37 @@ def test_downsample_scale_compensation_grows_survivors(tmp_path: Path) -> None:
     kept = np.frombuffer(ply[ply.index(b"end_header\n") + len(b"end_header\n") :], dtype=dtype)
     # Log-scales: a 2x linear factor is an additive ln(2) shift from the 0.0 baseline.
     assert np.allclose(kept["scale_0"], np.log(2.0), atol=1e-6)
+
+
+def test_downsample_rejects_invalid_scale_compensation(tmp_path: Path) -> None:
+    import pytest
+
+    from splattie.cli.bundle_tools import downsample
+
+    src = tmp_path / "head.splattie"
+    _make_head_bundle(src, 10)
+    for bad in (0.0, -1.0, float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="scale_compensation"):
+            downsample(src, tmp_path / "out.splattie", max_gaussians=5, scale_compensation=bad)
+
+
+def test_downsample_rejects_non_finite_ply_values(tmp_path: Path) -> None:
+    import numpy as np
+    import pytest
+
+    from splattie.cli.bundle_tools import downsample
+
+    src = tmp_path / "head.splattie"
+    _make_head_bundle(src, 10)
+    with zipfile.ZipFile(src) as zf:
+        payload = {n: zf.read(n) for n in zf.namelist()}
+    header_end = payload["head.ply"].index(b"end_header\n") + len(b"end_header\n")
+    dtype = np.dtype([(n, "<f4") for n in ("x", "y", "z", "opacity", "scale_0", "scale_1", "scale_2")])
+    verts = np.frombuffer(payload["head.ply"][header_end:], dtype=dtype).copy()
+    verts["scale_1"][4] = np.inf
+    with zipfile.ZipFile(src, "w") as zf:
+        for name, data in payload.items():
+            zf.writestr(name, data if name != "head.ply" else payload["head.ply"][:header_end] + verts.tobytes())
+
+    with pytest.raises(ValueError, match="non-finite"):
+        downsample(src, tmp_path / "out.splattie", max_gaussians=5)
