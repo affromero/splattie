@@ -11,7 +11,7 @@ LAM/LHM/ObjectRig methods — the same path `/generate-from-upload` uses.
 `google-genai` is pulled in on demand with `uv run --with` (the command re-execs itself),
 so it stays out of the project dependencies.
 
-    doppler run -p splattie -c dev -- splattie generate-demo-images --out-dir /tmp/demo-src
+    infisical run --projectId daa85a1a-5d47-45f0-bf90-1401d8275c30 --env dev -- splattie generate-demo-images --out-dir /tmp/demo-src
     splattie regen-demo-avatars --heads-dir /tmp/demo-heads --bodies-dir /tmp/demo-bodies \
         --output-dir /tmp/demo-out
 """
@@ -406,11 +406,13 @@ def generate_demo_images(
         )
 
     # Config comes from dotenv: backend/__init__ already loads backend/.env, and this
-    # refreshes from a local .env; `doppler run` injects the same vars into the env too.
+    # refreshes from a local .env; `infisical run` injects the same vars into the env too.
     load_dotenv()
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        logger.error("GEMINI_API_KEY missing (set it in .env, or `doppler run -p splattie -c dev -- ...`).")
+        logger.error(
+            "GEMINI_API_KEY missing (set it in .env, or `infisical run --projectId daa85a1a-5d47-45f0-bf90-1401d8275c30 --env dev -- ...`)."
+        )
         sys.exit(1)
 
     out_dir.mkdir(parents=True, exist_ok=True)

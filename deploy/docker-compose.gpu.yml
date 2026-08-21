@@ -7,7 +7,7 @@
 # see deploy/docker-compose.prod.yml for the CPU serving stack.
 #
 # Build the GPU image once (slow, multi-GB) then bring up:
-#   doppler run -p splattie -c prd -- docker compose -f deploy/docker-compose.gpu.yml up -d --build
+#   infisical run --projectId daa85a1a-5d47-45f0-bf90-1401d8275c30 --env prod -- docker compose -f deploy/docker-compose.gpu.yml up -d --build
 # Or supply ADMIN_* through a local .env file.
 services:
     web:
@@ -22,9 +22,9 @@ services:
             - 4001:4001
         environment:
             - BACKEND_INTERNAL_URL=http://gpu-backend:8000
-            - ADMIN_PASSWORD=${ADMIN_PASSWORD:?provide ADMIN_PASSWORD via Doppler or .env}
-            - SESSION_SECRET=${SESSION_SECRET:?provide SESSION_SECRET via Doppler or .env}
-            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Doppler or .env}
+            - ADMIN_PASSWORD=${ADMIN_PASSWORD:?provide ADMIN_PASSWORD via Infisical or .env}
+            - SESSION_SECRET=${SESSION_SECRET:?provide SESSION_SECRET via Infisical or .env}
+            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Infisical or .env}
             - GOOGLE_SITE_VERIFICATION=${GOOGLE_SITE_VERIFICATION:-}
         depends_on:
             gpu-backend:
@@ -40,7 +40,7 @@ services:
         environment:
             - NVIDIA_VISIBLE_DEVICES=all
             - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Doppler or .env}
+            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Infisical or .env}
             - STATS_SALT=${STATS_SALT:-}
         volumes:
             - gpu-backend-data:/app/backend/data

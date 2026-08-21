@@ -167,7 +167,7 @@ if [[ -n "${MPI_USERNAME:-}" && -n "${MPI_PASSWORD:-}" ]]; then
   uv run ${SPLATTIE_UV_RUN_FLAGS:-} python scripts/download_smal.py
 else
   echo "  Skipping SMAL download (MPI_USERNAME/MPI_PASSWORD unset). Fetch later via:"
-  echo "    doppler run -p splattie -c prd -- uv run python backend/scripts/download_smal.py"
+  echo "    infisical run --projectId daa85a1a-5d47-45f0-bf90-1401d8275c30 --env prod -- uv run python backend/scripts/download_smal.py"
 fi
 # SuperAnimal-Quadruped runs in an ISOLATED DeepLabCut venv: deeplabcut's deps conflict with
 # the backend's numpy<2 pin, so it cannot share this env. This is the one sanctioned uv-pip

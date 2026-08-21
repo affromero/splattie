@@ -3,11 +3,11 @@
 Verified flow (the simple POST-to-download.php that works for other MPI domains 403s/HTMLs
 for SMAL): authenticate on the SMAL *project* host first, THEN POST the same credentials to
 the *download* host (a different host, so its session is separate). Credentials come from
-``MPI_USERNAME`` / ``MPI_PASSWORD`` — inject via ``doppler run -p splattie -c prd -- ...``.
+``MPI_USERNAME`` / ``MPI_PASSWORD`` — inject via ``infisical run --projectId daa85a1a-5d47-45f0-bf90-1401d8275c30 --env prod -- ...``.
 Idempotent: skips if the model already exists.
 
 Usage:
-    doppler run -p splattie -c prd -- uv run python backend/scripts/download_smal.py
+    infisical run --projectId daa85a1a-5d47-45f0-bf90-1401d8275c30 --env prod -- uv run python backend/scripts/download_smal.py
 """
 
 from __future__ import annotations
@@ -36,7 +36,9 @@ def main() -> None:
     username = os.environ.get("MPI_USERNAME")
     password = os.environ.get("MPI_PASSWORD")
     if not (username and password):
-        sys.exit("MPI_USERNAME / MPI_PASSWORD missing — run under `doppler run -p splattie -c prd -- ...`")
+        sys.exit(
+            "MPI_USERNAME / MPI_PASSWORD missing — run under `infisical run --projectId daa85a1a-5d47-45f0-bf90-1401d8275c30 --env prod -- ...`"
+        )
 
     VENDOR_SMAL.mkdir(parents=True, exist_ok=True)
     session = requests.Session()

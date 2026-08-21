@@ -8,8 +8,8 @@
 # Head generation (/create) is for self-hosters only — see
 # deploy/docker-compose.gpu.yml for the GPU "processing" backend.
 #
-# Secrets are interpolated from a Doppler-fed environment
-# (doppler run … / a 0600 .env); none are committed.
+# Secrets are interpolated from an Infisical-fed environment
+# (a 0600 .env streamed from Infisical); none are committed.
 services:
     web:
         build:
@@ -25,10 +25,10 @@ services:
       # Server-side URL the admin dashboard uses to read analytics — the
       # serving backend over the internal compose network.
             - BACKEND_INTERNAL_URL=http://backend:8000
-      # Admin panel auth — provided by Doppler (doppler run) or a local .env.
-            - ADMIN_PASSWORD=${ADMIN_PASSWORD:?provide ADMIN_PASSWORD via Doppler or .env}
-            - SESSION_SECRET=${SESSION_SECRET:?provide SESSION_SECRET via Doppler or .env}
-            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Doppler or .env}
+      # Admin panel auth — provided by Infisical (streamed .env) or a local .env.
+            - ADMIN_PASSWORD=${ADMIN_PASSWORD:?provide ADMIN_PASSWORD via Infisical or .env}
+            - SESSION_SECRET=${SESSION_SECRET:?provide SESSION_SECRET via Infisical or .env}
+            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Infisical or .env}
       # Optional: Google Search Console verification token.
             - GOOGLE_SITE_VERIFICATION=${GOOGLE_SITE_VERIFICATION:-}
         depends_on:
@@ -44,7 +44,7 @@ services:
             - 8000:8000
         environment:
       # Must match the web service's ADMIN_API_TOKEN (guards GET /admin/stats).
-            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Doppler or .env}
+            - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:?provide ADMIN_API_TOKEN via Infisical or .env}
       # Optional salt for the anonymized daily visitor hash.
             - STATS_SALT=${STATS_SALT:-}
         volumes:
