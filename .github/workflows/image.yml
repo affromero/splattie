@@ -1,0 +1,64 @@
+---
+# Publishes the production serving images so the server never builds them.
+# A build on the box costs it a build cache plus a layer of every
+# intermediate image, on a disk it shares with every other project hosted
+# there.
+name: Image
+
+on:
+    workflow_dispatch:
+    push:
+        branches: [main]
+        paths:
+            - apps/**
+            - backend/**
+            - packages/**
+            - deploy/docker-compose.prod.yml
+            - package.json
+            - package-lock.json
+
+concurrency:
+    group: image-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+            # Built through compose rather than a bare `docker build`, so the
+            # web image's baked NEXT_PUBLIC_* args come from the same file the
+            # server runs; a second copy here would drift from it. The image
+            # names are set for the build itself, so what compose produces is
+            # already what gets pushed — no retagging step to get wrong. The
+            # runtime secrets compose insists on play no part in a build, so
+            # placeholders satisfy the interpolation.
+            - name: Build and publish the serving images
+              env:
+                  ADMIN_PASSWORD: build-time-placeholder
+                  SESSION_SECRET: build-time-placeholder
+                  ADMIN_API_TOKEN: build-time-placeholder
+                  GH_TOKEN: ${{ github.token }}
+                  OWNER: ${{ github.repository_owner }}
+                  ACTOR: ${{ github.actor }}
+              run: |
+                  SHA=$(git rev-parse --short HEAD)
+                  export SPLATTIE_WEB_IMAGE="ghcr.io/${OWNER}/splattie-web"
+                  export SPLATTIE_BACKEND_IMAGE="ghcr.io/${OWNER}/splattie-backend"
+                  export SPLATTIE_IMAGE_TAG="$SHA"
+                  docker compose -p splattie \
+                    -f deploy/docker-compose.prod.yml build web backend
+                  printf '%s' "$GH_TOKEN" |
+                    docker login ghcr.io -u "$ACTOR" --password-stdin
+                  for service in web backend; do
+                    image="ghcr.io/${OWNER}/splattie-${service}"
+                    docker push "${image}:${SHA}"
+                    # :main is the convenience pointer; deploys pin the sha.
+                    docker tag "${image}:${SHA}" "${image}:main"
+                    docker push "${image}:main"
+                  done
