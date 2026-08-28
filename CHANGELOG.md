@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.3.3] - 2026-08-14
+
+### Fixed
+- **Touch input on the widget** (widget v0.3.3): taps now register via `pointerdown`, drags are no longer stolen by page scroll (`touch-action: none`), a click grace period keeps quick taps from being dropped, and the iOS gyro permission request runs inside a user gesture. splattie.app demos are tap- and drag-interactive on phones.
+
+### Changed
+- Root, web app, and widget versions align on `0.3.3`; all 48 demo bundles are re-stamped to `formatVersion` 0.3.3 through the canonical rebundle tool (schema unchanged; pre-1.0 bundles stay version-locked to the runtime).
+
+## [0.3.2] - 2026-08-13
+
+### Added
+- Method landscape moved to `docs/METHODS.md` with a last-verified date, corrected venues, expanded coverage, and dead links fixed; README links to it and credits Puppeteer correctly.
+- Documentation of demo splat counts and compression.
+
+### Changed
+- Safari-compatible Spark renderer.
+- Rigged demo bundles compressed to PlayCanvas compressed PLY (~2.6x smaller downloads) with per-splat rig weights preserved; an earlier pass that broke per-splat rigging was reverted before this landed.
+- Widget submodule bumped: How It Works / Mobile sections cover all asset types, creation links point to the repo.
+- Backend tests reorganized into subfolders mirroring `src/`.
+
+### Fixed
+- Expression basis is preserved when rebundling.
+- Landing page attribution includes TripoSplat; landing copy includes Animals / `quadruped_mammal`.
+- Quadruped module imports on CPU-only installs (GPU deps loaded lazily); `scipy` included in the `cpu` extra.
+
 ## [0.3.1] - 2026-06-05
 
 ### Added
