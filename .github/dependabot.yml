@@ -1,0 +1,63 @@
+---
+version: 2
+updates:
+    - package-ecosystem: npm
+      directory: /
+      schedule:
+          interval: weekly
+      cooldown:
+          default-days: 7
+      open-pull-requests-limit: 1
+      groups:
+          npm-all:
+              applies-to: version-updates
+              patterns:
+                  - '*'
+          npm-security:
+              applies-to: security-updates
+              patterns:
+                  - '*'
+      ignore:
+          - dependency-name: typescript
+            update-types: [version-update:semver-major]
+    - package-ecosystem: uv
+      directory: /backend
+      schedule:
+          interval: weekly
+      cooldown:
+          default-days: 7
+      open-pull-requests-limit: 1
+      groups:
+          python-all:
+              applies-to: version-updates
+              patterns:
+                  - '*'
+          python-security:
+              applies-to: security-updates
+              patterns:
+                  - '*'
+    - package-ecosystem: docker
+      directories:
+          - /apps/web
+          - /backend
+      schedule:
+          interval: weekly
+      cooldown:
+          default-days: 7
+      open-pull-requests-limit: 1
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+          interval: weekly
+      cooldown:
+          default-days: 7
+      open-pull-requests-limit: 1
+      groups:
+          actions-all:
+              applies-to: version-updates
+              patterns:
+                  - '*'
+          actions-security:
+              applies-to: security-updates
+              patterns:
+                  - '*'
