@@ -66,3 +66,18 @@ jobs:
                     docker tag "${image}:${SHA}" "${image}:main"
                     docker push "${image}:main"
                   done
+
+            # An image per commit is what lets a deploy pin a sha and roll
+            # back to one; ten versions covers any rollback that would
+            # realistically happen, and stops the list growing without end.
+            - uses: actions/delete-package-versions@25ad4af5be03aef10e0b3376b248688b7a44c40b # v5
+              with:
+                  package-name: splattie-web
+                  package-type: container
+                  min-versions-to-keep: 10
+
+            - uses: actions/delete-package-versions@25ad4af5be03aef10e0b3376b248688b7a44c40b # v5
+              with:
+                  package-name: splattie-backend
+                  package-type: container
+                  min-versions-to-keep: 10
