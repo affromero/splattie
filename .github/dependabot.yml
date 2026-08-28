@@ -49,6 +49,10 @@ updates:
       cooldown:
           default-days: 7
       open-pull-requests-limit: 1
+      ignore:
+          # torch 2.3.0 and every CUDA extension are built against cu121; the
+          # base image moves only with a deliberate torch/CUDA migration.
+          - dependency-name: nvidia/cuda
     - package-ecosystem: github-actions
       directory: /
       schedule:
