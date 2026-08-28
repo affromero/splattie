@@ -1,0 +1,67 @@
+---
+name: Bug report
+description: Report something broken so it can be reproduced and fixed
+title: '[Bug]: '
+labels: [bug]
+body:
+    - type: textarea
+      id: what-happened
+      attributes:
+          label: What happened?
+          description: What went wrong, and what did you expect instead?
+      validations:
+          required: true
+    - type: textarea
+      id: steps
+      attributes:
+          label: Steps to reproduce
+          description: Include the source image or bundle URL if you can share it, and the exact page or embed.
+      validations:
+          required: true
+    - type: input
+      id: version
+      attributes:
+          label: Version or commit
+          placeholder: e.g. v0.3.3, 8d8b0c5
+      validations:
+          required: true
+    - type: dropdown
+      id: area
+      attributes:
+          label: Area
+          options:
+              - Head generation (LAM)
+              - Body generation (LHM)
+              - Object generation (TRELLIS, TripoSplat, Puppeteer)
+              - Animal generation (SMAL, SuperAnimal)
+              - Web app, editor, or landing page
+              - Backend API or GPU setup
+              - Admin panel
+              - Deploy or Docker
+              - Other
+      validations:
+          required: true
+    - type: input
+      id: browser
+      attributes:
+          label: Browser, OS, and device
+          placeholder: e.g. Safari 27 on iPhone 16, Chrome 130 on macOS 15 arm64
+      validations:
+          required: false
+    - type: textarea
+      id: logs
+      attributes:
+          label: Console output or logs
+          description: Only the failure window. Remove API keys, tokens, and personal data before posting.
+          render: shell
+      validations:
+          required: false
+    - type: checkboxes
+      id: checks
+      attributes:
+          label: Before submitting
+          options:
+              - label: I searched existing issues and did not find a duplicate
+                required: false
+              - label: I removed secrets and private content from logs and images
+                required: true
