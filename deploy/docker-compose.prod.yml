@@ -19,6 +19,10 @@ services:
         # Baked into the client bundle at build time. The beacon posts here.
                 NEXT_PUBLIC_API_URL: https://api.splattie.app
                 NEXT_PUBLIC_SELF_HOST: 'false'
+    # Built from this checkout unless an image is named. Production names one,
+    # so the server pulls what CI built instead of spending its disk on a build
+    # cache and a layer of every intermediate image.
+        image: ${SPLATTIE_WEB_IMAGE:-splattie-web}:${SPLATTIE_IMAGE_TAG:-local}
         ports:
             - 4001:4001
         environment:
@@ -40,6 +44,7 @@ services:
         build:
             context: ..
             dockerfile: backend/Dockerfile.cpu
+        image: ${SPLATTIE_BACKEND_IMAGE:-splattie-backend}:${SPLATTIE_IMAGE_TAG:-local}
         ports:
             - 8000:8000
         environment:
