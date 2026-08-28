@@ -75,7 +75,7 @@ repos:
     # src/ + tests/ to match CI (`ruff check src/ tests/`); backend/scripts/ is
     # operational glue the project deliberately leaves out of the lint gate.
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.14.9
+      rev: v0.16.5
       hooks:
           - id: ruff
             args: [--fix]
