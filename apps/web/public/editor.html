@@ -173,7 +173,7 @@
   <div class="main" id="main"></div>
   <div class="panel" id="panel"></div>
 
-  <script src="/splattie-widget.cdn.js?v=0.3.1"></script>
+  <script src="/splattie-widget.cdn.js?v=0.3.3"></script>
   <script type="module">
     import { inspectSplattie } from '/splattie-format.js';
 
@@ -238,6 +238,33 @@
       main.innerHTML = '';
     }
 
+    // Stream a response body so the stage can show download progress. Falls back
+    // to a single chunk when the body is not streamable (very old browsers).
+    async function readWithProgress(res, onProgress) {
+      const total = Number(res.headers.get('content-length')) || 0;
+      if (!res.body || !res.body.getReader) return res.arrayBuffer();
+      const reader = res.body.getReader();
+      const chunks = [];
+      let loaded = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.byteLength;
+        onProgress(loaded, total);
+      }
+      const out = new Uint8Array(loaded);
+      let offset = 0;
+      for (const c of chunks) { out.set(c, offset); offset += c.byteLength; }
+      return out.buffer;
+    }
+
+    function setStageText(text) {
+      const line = main.querySelector('.stage-text');
+      if (line) line.textContent = text;
+      panel.textContent = text;
+    }
+
     function showStageMessage(text, isError) {
       clearStage();
       const box = document.createElement('div');
@@ -267,13 +294,20 @@
         const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
         const res = await fetch(srcUrl);
         if (!res.ok) { showStageMessage(`Could not fetch the .splattie (HTTP ${res.status}).`, true); return; }
-        const zip = await JSZip.loadAsync(await res.arrayBuffer());
+        const zip = await JSZip.loadAsync(await readWithProgress(res, (loaded, total) => {
+          const pct = total ? Math.round((loaded / total) * 100) : null;
+          const label = pct === null
+            ? `Loading .splattie... ${(loaded / 1048576).toFixed(1)} MB`
+            : `Loading .splattie... ${pct}%`;
+          setStageText(label);
+        }));
         const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir);
         const manifestEntry = zip.file('manifest.json');
         const manifest = manifestEntry ? JSON.parse(await manifestEntry.async('text')) : null;
         const expected = (window.SplattieWidget && window.SplattieWidget.VERSION) || null;
         const result = inspectSplattie(manifest, names, expected);
         if (!result.ok) { showStageMessage(result.message, true); return; }
+        setStageText('Building scene...');
         mountWidget(srcUrl);
       } catch (err) {
         showStageMessage('Could not read .splattie: ' + (err && err.message ? err.message : String(err)), true);
@@ -290,6 +324,7 @@
       widget.style.flex = '1';
       widget.addEventListener('splatload', onSplatLoad);
       main.appendChild(widget);
+      panel.textContent = 'Building scene...';
 
       // Overlay for body-pose IK drag handles, layered over the widget canvas.
       // Lives inside `main` (position: relative) so its `inset: 0` covers the canvas.

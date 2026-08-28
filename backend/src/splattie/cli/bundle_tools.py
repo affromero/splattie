@@ -89,6 +89,18 @@ def _animation_manifest(names: set[str], asset_type: AssetType) -> Mapping[str, 
     return animation
 
 
+def _manifest_asset_type(asset_type: AssetType) -> str:
+    """Widget-facing ``assetType``.
+
+    The widget only knows head/body/object (FORMAT.md). Quadruped bundles are
+    object-format rigs; their identity rides on ``generator.method`` and
+    ``metadata.category``, never on ``assetType``.
+    """
+    if asset_type is AssetType.quadruped_mammal:
+        return AssetType.object.value
+    return asset_type.value
+
+
 def _topology(asset_type: AssetType) -> str:
     if asset_type is AssetType.body:
         return "smplx-voxel"
@@ -122,7 +134,7 @@ def build_legacy_manifest(
     manifest: MutableMapping[str, object] = {
         "format": "splattie",
         "formatVersion": widget_version,
-        "assetType": asset_type.value,
+        "assetType": _manifest_asset_type(asset_type),
         "generator": {
             "method": _generator_method(asset_type),
             "methodVersion": "20k-siggraph2025" if asset_type is AssetType.head else None,
@@ -186,11 +198,11 @@ def rebundle(
         already_current = (
             existing is not None
             and existing.get("formatVersion") == widget_version
-            and existing.get("assetType") == asset_type.value
+            and existing.get("assetType") == _manifest_asset_type(asset_type)
             and expression_basis_current
         )
         if already_current and not (compress and not already_compressed):
-            return f"skip (already v{widget_version}, {asset_type.value})"
+            return f"skip (already v{widget_version}, {_manifest_asset_type(asset_type)})"
         payload = {name: zf.read(name) for name in zf.namelist() if not name.endswith("/")}
 
     if compress and not already_compressed and asset_type is AssetType.head:

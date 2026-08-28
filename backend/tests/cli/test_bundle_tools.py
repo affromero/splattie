@@ -44,6 +44,25 @@ def test_head_manifest_references_bundled_expression_basis() -> None:
     }
 
 
+def test_quadruped_manifest_uses_object_asset_type_and_keeps_identity() -> None:
+    manifest = build_legacy_manifest(
+        stem="q1",
+        splat_entry="q1.ply",
+        splat_format="ply",
+        num_gaussians=3,
+        thumb_path=None,
+        widget_version="0.3.3",
+        asset_type=AssetType.quadruped_mammal,
+        names={"q1.ply", "skeleton.json", "lbs_weights.bin", "states.json"},
+    )
+
+    # The widget only implements head/body/object skinning paths (FORMAT.md);
+    # a quadruped bundle must load through the object path.
+    assert manifest["assetType"] == "object"
+    assert manifest["generator"]["method"] == "trellis-smal-quadruped"
+    assert manifest["animation"]["weights"] == {"file": "lbs_weights.bin", "format": "lbsw-v1"}
+
+
 def test_rebundle_repairs_current_manifest_missing_expression_basis(tmp_path: Path) -> None:
     bundle = tmp_path / "head.splattie"
     manifest = build_legacy_manifest(

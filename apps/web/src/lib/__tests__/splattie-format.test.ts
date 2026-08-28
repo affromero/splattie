@@ -41,6 +41,13 @@ describe('inspectSplattie', () => {
     expect(inspectSplattie({ ...validManifest, formatVersion: '0.0.9' }, validFiles, null)).toEqual({ ok: true });
   });
 
+  it('rejects an assetType the widget has no skinning path for', () => {
+    const result = inspectSplattie({ ...validManifest, assetType: 'quadruped_mammal' }, validFiles, '0.1.1');
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('unsupported-asset-type');
+    expect(result.message).toContain('quadruped_mammal');
+  });
+
   it('rejects a bundle missing a file its manifest references', () => {
     const result = inspectSplattie(validManifest, ['head.ply', 'states.json', 'manifest.json'], '0.1.1');
     expect(result.ok).toBe(false);

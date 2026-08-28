@@ -38,6 +38,17 @@ export function inspectSplattie(manifest, fileNames, expectedVersion) {
     };
   }
 
+  const assetType = manifest.assetType ?? 'head';
+  if (!['head', 'body', 'object'].includes(assetType)) {
+    return {
+      ok: false,
+      code: 'unsupported-asset-type',
+      message:
+        `Unsupported assetType "${assetType}"; the widget only loads head, body, or object bundles. ` +
+        'Re-export this .splattie with the current version.',
+    };
+  }
+
   const referenced = [
     manifest.avatar?.splat?.file,
     manifest.widget?.config,
