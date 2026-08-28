@@ -18,6 +18,10 @@ updates:
               patterns:
                   - '*'
       ignore:
+          # eslint 10 crashes eslint-plugin-react through eslint-config-next 16
+          # (context.getFilename removed). Drop when eslint-config-next supports it.
+          - dependency-name: eslint
+            update-types: [version-update:semver-major]
           - dependency-name: typescript
             update-types: [version-update:semver-major]
     - package-ecosystem: uv
