@@ -3,7 +3,7 @@
 #
 # CUDA 12.1 + Python 3.11 + uv + the full generation stack:
 # LAM heads, LHM bodies, TRELLIS reconstruction, and Puppeteer rigging.
-FROM nvidia/cuda:12.1.1-devel-ubuntu22.04 AS base
+FROM nvidia/cuda:13.3.1-devel-ubuntu22.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
