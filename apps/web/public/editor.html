@@ -175,11 +175,14 @@
 
   <script src="/splattie-widget.cdn.js?v=0.3.3"></script>
   <script type="module">
-    import { inspectSplattie } from '/splattie-format.js';
+    import { inspectSplattie } from '/splattie-format.js?v=0.3.3';
 
     const params = new URLSearchParams(location.search);
     const main = document.getElementById('main');
     const panel = document.getElementById('panel');
+    // ponytail: fixed budget; a 17 MB object bundle builds in well under this on a phone.
+    const BUILD_TIMEOUT_MS = 90000;
+    let buildWatchdog = null;
 
     let currentSrc = params.get('src');
     let widget = null;
@@ -325,6 +328,18 @@
       widget.addEventListener('splatload', onSplatLoad);
       main.appendChild(widget);
       panel.textContent = 'Building scene...';
+      // The widget logs init failures to the console and never fires splatload,
+      // so without a watchdog the stage would sit on "Building scene..." forever.
+      clearTimeout(buildWatchdog);
+      buildWatchdog = setTimeout(() => {
+        if (main.contains(widget)) {
+          showStageMessage(
+            'The scene did not finish building. Reload the page to clear cached assets; ' +
+            'if it keeps failing, check the browser console for the widget error.',
+            true,
+          );
+        }
+      }, BUILD_TIMEOUT_MS);
 
       // Overlay for body-pose IK drag handles, layered over the widget canvas.
       // Lives inside `main` (position: relative) so its `inset: 0` covers the canvas.
@@ -334,6 +349,7 @@
     }
 
     function onSplatLoad() {
+      clearTimeout(buildWatchdog);
       // Tell a same-origin embedder (the landing page) the splat is live so it
       // can drop its poster overlay. Harmless when opened standalone (posts to self).
       parent.postMessage({ type: 'splattie:loaded' }, location.origin);
