@@ -31,6 +31,13 @@ jobs:
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+            # The web image copies packages/splattie-widget/package.json, and
+            # that package is a submodule — absent from a default checkout,
+            # which is why the first run of this workflow failed. Only this
+            # one is initialised: backend/vendor/LAM and LHM belong to the GPU
+            # stack, which is not built here.
+            - run: git submodule update --init --depth 1 packages/splattie-widget
+
             # Built through compose rather than a bare `docker build`, so the
             # web image's baked NEXT_PUBLIC_* args come from the same file the
             # server runs; a second copy here would drift from it. The image
