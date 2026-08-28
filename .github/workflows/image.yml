@@ -7,15 +7,12 @@ name: Image
 
 on:
     workflow_dispatch:
+    # Every commit on main, deliberately unfiltered: a deploy pins the image
+    # to the commit it deploys, so a commit without an image is a deploy that
+    # cannot run. Paths filters made that failure depend on which files a
+    # commit happened to touch.
     push:
         branches: [main]
-        paths:
-            - apps/**
-            - backend/**
-            - packages/**
-            - deploy/docker-compose.prod.yml
-            - package.json
-            - package-lock.json
 
 concurrency:
     group: image-${{ github.ref }}
