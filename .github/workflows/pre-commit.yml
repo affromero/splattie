@@ -29,4 +29,4 @@ jobs:
                   # mandate, the no-dict-typing / no-stdlib-dataclass rule, the 1000-line file cap,
                   # the getattr/setattr ban, and the sys.path-manipulation ban — plus the standard
                   # whitespace / YAML / JSON / TOML hygiene hooks.
-                  SKIP: uv-lock,uv-sync,uv-export,eslint,tsc
+                  SKIP: uv-lock,uv-sync,eslint,tsc
