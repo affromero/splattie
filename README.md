@@ -13,6 +13,8 @@
 [![npm](https://img.shields.io/npm/v/@afromero/splattie-widget?color=blue)](https://www.npmjs.com/package/@afromero/splattie-widget)
 [![Release](https://img.shields.io/github/v/release/affromero/splattie?display_name=tag&sort=semver)](https://github.com/affromero/splattie/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/affromero/splattie/ci.yml?branch=main&label=CI)](https://github.com/affromero/splattie/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/affromero/splattie/codeql.yml?branch=main&label=CodeQL)](https://github.com/affromero/splattie/actions/workflows/codeql.yml)
+[![gitleaks](https://img.shields.io/github/actions/workflow/status/affromero/splattie/gitleaks.yml?branch=main&label=gitleaks)](https://github.com/affromero/splattie/actions/workflows/gitleaks.yml)
 [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025E8C?logo=dependabot&logoColor=white)](.github/dependabot.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript&logoColor=white)](https://typescriptlang.org)
