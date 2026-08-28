@@ -37,7 +37,7 @@ def main() -> None:
         create_labeled_video=False,
         plot_bboxes=False,
     )
-    frame_table = pd.read_hdf(sorted(out.glob("*.h5"))[0])
+    frame_table = pd.read_hdf(min(out.glob("*.h5")))
     columns = frame_table.columns
     levels = columns.names
     scorer = columns.levels[0][0]

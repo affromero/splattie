@@ -28,7 +28,7 @@ dependencies = [
   "uvicorn[standard]>=0.30.0"
 ]
 name = "splattie"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.12"
 version = "0.3.3"
 
 [project.optional-dependencies]
@@ -143,6 +143,7 @@ ignore = [
   "ARG002",
   "BLE001",
   "COM812",
+  "CPY001",
   "D100",
   "D102",
   "D104",
