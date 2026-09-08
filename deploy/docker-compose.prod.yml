@@ -10,8 +10,15 @@
 #
 # Secrets are interpolated from an Infisical-fed environment
 # (a 0600 .env streamed from Infisical); none are committed.
+x-logging: &bounded-logging
+    driver: json-file
+    options:
+        max-size: 20m
+        max-file: '3'
+
 services:
     web:
+        logging: *bounded-logging
         build:
             context: ..
             dockerfile: apps/web/Dockerfile
@@ -41,6 +48,7 @@ services:
 
   # Serving backend (CPU-only): analytics + health. No GPU, no torch.
     backend:
+        logging: *bounded-logging
         build:
             context: ..
             dockerfile: backend/Dockerfile.cpu
