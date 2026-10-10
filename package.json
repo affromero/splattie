@@ -15,5 +15,8 @@
     "build:renderer": "bash scripts/build-renderer.sh",
     "build:widget": "npm run build -w packages/splattie-widget && cp packages/splattie-widget/dist/splattie-widget.cdn.js apps/web/public/splattie-widget.cdn.js"
   },
-  "version": "0.3.3"
+  "version": "0.3.3",
+  "overrides": {
+    "braces": "https://github.com/affromero/braces/archive/ab55ec393269eeed9af90b2ae9a7c6faa41064df.tar.gz"
+  }
 }
