@@ -13,7 +13,7 @@ dev = [
 ]
 
 [project]
-authors = [{name = "Andrés Romero", email = "me@afromero.co"}]
+authors = [{ name = "Andrés Romero", email = "me@afromero.co" }]
 dependencies = [
   "beartype>=0.19.0",
   "fastapi>=0.115.0",
@@ -201,10 +201,10 @@ name = "pytorch-cu121"
 url = "https://download.pytorch.org/whl/cu121"
 
 [tool.uv.sources]
-pytorch3d = {git = "https://github.com/facebookresearch/pytorch3d.git"}
-nvdiffrast = {git = "https://github.com/ShenhanQian/nvdiffrast", branch = "backface-culling"}
-simple-knn = {git = "https://github.com/camenduru/simple-knn"}
-torch = {index = "pytorch-cu121"}
-torchvision = {index = "pytorch-cu121"}
-utils3d = {git = "https://github.com/EasternJournalist/utils3d.git", rev = "9a4eb15e4021b67b12c460c7057d642626897ec8"}
-xformers = {index = "pytorch-cu121"}
+pytorch3d = { git = "https://github.com/facebookresearch/pytorch3d.git" }
+nvdiffrast = { git = "https://github.com/ShenhanQian/nvdiffrast", branch = "backface-culling" }
+simple-knn = { git = "https://github.com/camenduru/simple-knn" }
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }
+utils3d = { git = "https://github.com/EasternJournalist/utils3d.git", rev = "9a4eb15e4021b67b12c460c7057d642626897ec8" }
+xformers = { index = "pytorch-cu121" }
