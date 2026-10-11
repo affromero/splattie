@@ -214,11 +214,14 @@ pillow = [
   { git = "https://github.com/affromero/Pillow.git", rev = "b5d22e61428bd4236e26dc072529826f1385ed3e", marker = "sys_platform != 'linux' or (platform_machine != 'x86_64' and platform_machine != 'aarch64')" }
 ]
 rembg = { git = "https://github.com/affromero/rembg.git", rev = "9845ce8ff9b3a63b8041ba62c3034d29c6650f5a" }
-transformers = { git = "https://github.com/affromero/transformers.git", rev = "c18cc8173668a6c8741a7e5514d33e025d2ad2a5" }
+transformers = { git = "https://github.com/affromero/transformers.git", rev = "3a2715cc85233d2477bc509df395f4b8791dc26f" }
 pytorch3d = { git = "https://github.com/facebookresearch/pytorch3d.git" }
 nvdiffrast = { git = "https://github.com/ShenhanQian/nvdiffrast", branch = "backface-culling" }
 simple-knn = { git = "https://github.com/camenduru/simple-knn" }
-torch = { index = "pytorch-cu121" }
+torch = [
+  { index = "pytorch-cu121", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
+  { git = "https://github.com/affromero/pytorch.git", rev = "1472255c78f9838aa30a8ee14296818bf2ba3687", marker = "sys_platform != 'linux' or platform_machine != 'x86_64'" }
+]
 torchvision = { index = "pytorch-cu121" }
 utils3d = { git = "https://github.com/EasternJournalist/utils3d.git", rev = "9a4eb15e4021b67b12c460c7057d642626897ec8" }
 xformers = { index = "pytorch-cu121" }
