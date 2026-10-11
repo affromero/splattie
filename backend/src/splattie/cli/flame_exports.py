@@ -18,6 +18,8 @@ from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 from klogr import get_logger
 
+from splattie.methods.lam.assets import load_flame_masks, verify_lam_assets
+
 logger = get_logger()
 
 VENDOR_LAM = Path(__file__).resolve().parents[3] / "vendor" / "LAM"
@@ -83,18 +85,8 @@ FloatVector = Float[npt.NDArray[np.float32], "vertices"]
 IntVector = Int[npt.NDArray[np.integer], "vertices"]
 
 
-def patch_torch_load() -> None:
-    """Patch torch.load to default weights_only=False so trusted FLAME pickles load."""
-    original = torch.load
-
-    def patched(*args: object, **kwargs: object) -> object:
-        kwargs.setdefault("weights_only", False)
-        return original(*args, **kwargs)
-
-    torch.load = patched
-
-
 def _ensure_lam_importable() -> None:
+    verify_lam_assets(VENDOR_LAM)
     if "lam" not in sys.modules:
         spec = importlib.machinery.PathFinder.find_spec("lam", [str(VENDOR_LAM)])
         if spec is None or spec.loader is None:
@@ -103,7 +95,6 @@ def _ensure_lam_importable() -> None:
         module = importlib.util.module_from_spec(spec)
         sys.modules["lam"] = module
         spec.loader.exec_module(module)
-    patch_torch_load()
     from splattie.methods.lam.method import _patch_chumpy_compat
 
     _patch_chumpy_compat()
@@ -158,9 +149,7 @@ def load_flame_arkit(device: str, arkit_bs_path: Path) -> object:
 
 def _load_region_map(flame: object, num_verts: int) -> Mapping[str, set[int]]:
     masks_path = Path(flame.flame_model_dir) / "FLAME_masks.pkl"
-    if not masks_path.exists():
-        return {}
-    masks = torch.load(masks_path, map_location="cpu", encoding="latin1")
+    masks = load_flame_masks(masks_path)
     region_map: MutableMapping[str, set[int]] = {}
     for name in REGION_NAMES:
         key = name if name in masks else next((k for k in masks if name in k.lower()), None)
@@ -260,7 +249,7 @@ def export_expression_basis(
     """
     shape = None
     if shape_param:
-        shape = torch.load(shape_param, map_location="cpu")
+        shape = torch.load(shape_param, map_location="cpu", weights_only=True)
         logger.info(f"Loaded shape param: {shape.shape}")
 
     flame = load_flame_head(device=device, num_expressions=num_expressions)
@@ -289,9 +278,7 @@ def export_expression_basis(
 
 @jaxtyped(typechecker=beartype)
 def _verify_arkit_order(basis_np: FloatBasis, masks_path: Path) -> None:
-    if not masks_path.exists():
-        return
-    masks = torch.load(masks_path, map_location="cpu", encoding="latin1")
+    masks = load_flame_masks(masks_path)
     region_map: MutableMapping[str, IntVector] = {}
     num_verts = basis_np.shape[0]
     for name in REGION_NAMES:
