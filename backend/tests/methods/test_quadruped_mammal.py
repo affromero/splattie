@@ -18,7 +18,11 @@ from jaxtyping import Float, jaxtyped
 if TYPE_CHECKING:
     from pathlib import Path
 
-pytest.importorskip("torch")  # the imported stage modules need torch/pytorch3d/gsplat
+# These modules require the complete extension stack, including when CPU Torch
+# happens to be installed for checkpoint security tests.
+pytest.importorskip("torch")
+pytest.importorskip("pytorch3d")
+pytest.importorskip("gsplat")
 
 from splattie.methods.quadruped_mammal import runtime
 from splattie.methods.quadruped_mammal.bind import (

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -366,6 +368,10 @@ def test_quadruped_generate_produces_bundle(
         mean_keypoint_confidence=0.53,
         shape_norm=3.2,
     )
+    smal_result = SimpleNamespace()
+    splat_result = SimpleNamespace()
+    keypoints_result = SimpleNamespace()
+    fit_result = SimpleNamespace(diagnostics=diagnostics)
 
     def _fake_reconstruct(*, image_path: Path, output_dir: Path, model_id: str, backend: ReconstructBackend) -> Path:
         assert image_path.exists()
@@ -375,36 +381,47 @@ def test_quadruped_generate_produces_bundle(
         return gaussian_ply
 
     def _fake_bind_and_bundle(
-        _smal: object,
-        _splat: object,
-        _fit: object,
+        smal: object,
+        splat: object,
+        fit: object,
         *,
         ply_path: Path,
         output_dir: Path,
         model_id: str,
         source_image_path: Path,
     ) -> tuple[Path, int]:
+        assert smal is smal_result
+        assert splat is splat_result
+        assert fit is fit_result
         assert ply_path == gaussian_ply
         assert source_image_path.exists()
         bundle = output_dir / f"{model_id}.splattie"
         bundle.write_bytes(b"bundle")
         return bundle, 169120
 
-    # reconstruct + GaussianSplat stay module-level in method.py; the rest are imported lazily inside
-    # _generate (so the method imports on CPU without torch), so patch those at their source module.
+    def _fake_fit(smal: object, splat: object, keypoints: object) -> SimpleNamespace:
+        for actual, expected in ((smal, smal_result), (splat, splat_result), (keypoints, keypoints_result)):
+            assert actual is expected
+        return fit_result
+
+    # Stub the GPU stage modules before lazy imports. Importing them to patch a
+    # function would require real native extensions even though inference is mocked.
     monkeypatch.setattr(quadruped_method, "reconstruct_gaussian_splat", _fake_reconstruct)
-    monkeypatch.setattr(quadruped_method, "GaussianSplat", lambda *_a, **_k: SimpleNamespace())
-    monkeypatch.setattr("splattie.methods.quadruped_mammal.smal.SMAL", lambda *_a, **_k: SimpleNamespace())
-    monkeypatch.setattr(
-        "splattie.methods.quadruped_mammal.keypoints.detect_keypoints_3d", lambda *_a, **_k: SimpleNamespace()
-    )
-    monkeypatch.setattr(
-        "splattie.methods.quadruped_mammal.fit.fit_smal", lambda *_a, **_k: SimpleNamespace(diagnostics=diagnostics)
-    )
-    monkeypatch.setattr("splattie.methods.quadruped_mammal.bind.bind_and_bundle", _fake_bind_and_bundle)
+    monkeypatch.setattr(quadruped_method, "GaussianSplat", Mock(return_value=splat_result))
+    smal_module = ModuleType("splattie.methods.quadruped_mammal.smal")
+    smal_module.SMAL = Mock(return_value=smal_result)
+    keypoints_module = ModuleType("splattie.methods.quadruped_mammal.keypoints")
+    keypoints_module.DEVICE = "cpu"
+    keypoints_module.detect_keypoints_3d = Mock(return_value=keypoints_result)
+    fit_module = ModuleType("splattie.methods.quadruped_mammal.fit")
+    fit_module.fit_smal = _fake_fit
+    bind_module = ModuleType("splattie.methods.quadruped_mammal.bind")
+    bind_module.bind_and_bundle = _fake_bind_and_bundle
+    for module in (smal_module, keypoints_module, fit_module, bind_module):
+        monkeypatch.setitem(sys.modules, module.__name__, module)
     monkeypatch.setattr(quadruped_method, "STORAGE_DIR", tmp_path)
-    monkeypatch.setattr(QuadrupedMammalMethod, "load", lambda *_a, **_k: None)
-    monkeypatch.setattr(quadruped_method.uuid, "uuid4", lambda: SimpleNamespace(hex=model_id))
+    monkeypatch.setattr(quadruped_method.runtime, "require_quadruped_runtime", Mock(return_value=None))
+    monkeypatch.setattr(quadruped_method.uuid, "uuid4", Mock(return_value=SimpleNamespace(hex=model_id)))
 
     method = QuadrupedMammalMethod(backend=backend_choice) if backend_choice else QuadrupedMammalMethod()
     result = method.generate(
@@ -415,6 +432,8 @@ def test_quadruped_generate_produces_bundle(
     assert result.method_id == "trellis-smal-quadruped"
     assert result.num_gaussians == 169120
     assert result.splattie_url == f"/storage/{model_id}/{model_id}.splattie"
+    assert result.splattie_size_bytes == len(b"bundle")
+    assert (tmp_path / model_id / f"{model_id}.splattie").read_bytes() == b"bundle"
 
 
 def test_batch_method_for_wires_every_asset_type() -> None:
