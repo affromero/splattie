@@ -35,34 +35,6 @@ cd "$BACKEND_DIR"
 
 echo "[4/7] Downloading LHM model weights..."
 uv run "${uv_run_flags[@]}" python src/splattie/methods/lhm/assets.py vendor/LHM
-uv run "${uv_run_flags[@]}" python <<'PY'
-import tarfile
-import urllib.request
-from pathlib import Path
-
-lhm_dir = Path("vendor/LHM")
-
-human_files = lhm_dir / "pretrained_models" / "human_model_files"
-if not human_files.exists():
-    prior_tar = lhm_dir / "LHM_prior_model.tar"
-    urllib.request.urlretrieve(
-        "https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM_prior_model.tar",
-        prior_tar,
-    )
-    with tarfile.open(prior_tar) as tf:
-        tf.extractall(lhm_dir, filter="data")
-    prior_tar.unlink()
-
-dense_points = lhm_dir / "pretrained_models" / "dense_sample_points" / "1_20000.ply"
-if not dense_points.exists():
-    dense_points.parent.mkdir(parents=True, exist_ok=True)
-    urllib.request.urlretrieve(
-        "https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LHM/1_20000.ply",
-        dense_points,
-    )
-
-print("LHM weights ready")
-PY
 
 echo "[5/7] Downloading LAM model weights..."
 # This tool pins both HF snapshots, verifies archive SHA256 values, and restores

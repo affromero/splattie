@@ -24,7 +24,7 @@ from pathlib import Path
 
 from klogr import get_logger
 
-from splattie.methods.lhm.assets import model_snapshot
+from splattie.methods.lhm.assets import model_snapshot, verify_lhm_assets
 
 logger = get_logger()
 
@@ -85,6 +85,7 @@ def load_inferrer():  # noqa: ANN201 - LHM's HumanLRMInferrer is untyped (vendor
     if _inferrer is not None:
         return _inferrer
 
+    verify_lhm_assets(VENDOR_LHM)
     snapshot = model_snapshot(VENDOR_LHM)
 
     if str(VENDOR_LHM) not in sys.path:

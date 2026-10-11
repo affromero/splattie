@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from splattie.methods.lhm import runtime
+from splattie.methods.lhm import assets, runtime
 from splattie.methods.lhm.assets import MODEL_REVISION, model_snapshot
 
 
@@ -26,6 +27,18 @@ def mutable_main(vendor: Path) -> Path:
     refs.mkdir()
     (refs / "main").write_text("0" * 40)
     return snapshot
+
+
+def authenticated_priors(vendor: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    content = b"authenticated test prior"
+    digest = hashlib.sha256(content).hexdigest()
+    monkeypatch.setattr(assets, "REQUIRED_PRIOR_DIGESTS", {"prior.pkl": digest})
+    monkeypatch.setattr(assets, "OPTIONAL_PRIOR_DIGESTS", {"optional.pt": digest})
+    monkeypatch.setattr(assets, "DENSE_POINTS_DIGEST", digest)
+    (vendor / "prior.pkl").write_bytes(content)
+    points = vendor / assets.DENSE_POINTS_PATH
+    points.parent.mkdir(parents=True, exist_ok=True)
+    points.write_bytes(content)
 
 
 def test_pinned_snapshot_ignores_a_different_cached_main(tmp_path: Path) -> None:
@@ -50,6 +63,7 @@ def test_inferrer_receives_pinned_path_and_restores_process_state(
 ) -> None:
     pinned = cached_snapshot(tmp_path, MODEL_REVISION)
     mutable_main(tmp_path)
+    authenticated_priors(tmp_path, monkeypatch)
     monkeypatch.setattr(runtime, "VENDOR_LHM", tmp_path)
     monkeypatch.setattr(sys, "path", sys.path.copy())
     vendor_module = ModuleType("LHM.runners.infer.human_lrm")
@@ -88,3 +102,23 @@ def test_inferrer_receives_pinned_path_and_restores_process_state(
         assert Path.cwd() == original_cwd
     finally:
         runtime.unload_model()
+
+
+@pytest.mark.parametrize("relative_path", ["prior.pkl", "optional.pt", assets.DENSE_POINTS_PATH])
+def test_changed_assets_fail_before_vendor_initialization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    relative_path: str,
+) -> None:
+    cached_snapshot(tmp_path, MODEL_REVISION)
+    authenticated_priors(tmp_path, monkeypatch)
+    (tmp_path / relative_path).write_bytes(b"changed executable asset")
+    monkeypatch.setattr(runtime, "VENDOR_LHM", tmp_path)
+    original_argv = sys.argv
+    original_path = sys.path.copy()
+    original_cwd = Path.cwd()
+    with pytest.raises(ValueError, match="LHM asset integrity"):
+        runtime.load_inferrer()
+    assert sys.argv is original_argv
+    assert list(sys.path) == original_path
+    assert Path.cwd() == original_cwd

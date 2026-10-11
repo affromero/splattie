@@ -16,6 +16,6 @@ url = "https://download.pytorch.org/whl/cu121"
 [tool.uv.sources]
 torch = [
   { index = "pytorch-cu121", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
-  { git = "https://github.com/affromero/pytorch.git", rev = "1472255c78f9838aa30a8ee14296818bf2ba3687", marker = "sys_platform != 'linux' or platform_machine != 'x86_64'" }
+  { git = "https://github.com/affromero/pytorch.git", rev = "1bb7c43f24b73280de6e3734cd3a51d3c35c6216", marker = "sys_platform != 'linux' or platform_machine != 'x86_64'" }
 ]
 torchvision = { index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" }
