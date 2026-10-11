@@ -24,10 +24,12 @@ from pathlib import Path
 
 from klogr import get_logger
 
+from splattie.methods.lhm.assets import model_snapshot
+
 logger = get_logger()
 
 VENDOR_LHM = Path(__file__).resolve().parents[4] / "vendor" / "LHM"
-# AutoModelQuery resolves this name to the downloaded snapshot (download_weights.sh).
+# Keep the canonical configuration identifier separate from the pinned directory.
 _MODEL_NAME = "LHM-500M"
 
 _inferrer = None
@@ -83,6 +85,8 @@ def load_inferrer():  # noqa: ANN201 - LHM's HumanLRMInferrer is untyped (vendor
     if _inferrer is not None:
         return _inferrer
 
+    snapshot = model_snapshot(VENDOR_LHM)
+
     if str(VENDOR_LHM) not in sys.path:
         sys.path.insert(0, str(VENDOR_LHM))
     patch_chumpy_compat()
@@ -91,6 +95,7 @@ def load_inferrer():  # noqa: ANN201 - LHM's HumanLRMInferrer is untyped (vendor
     sys.argv = [
         "splattie-lhm",
         f"model_name={_MODEL_NAME}",
+        f"model_path={snapshot}",
         "image_input=./train_data/example_imgs/",
         "export_mesh=True",
         "motion_seqs_dir=None",

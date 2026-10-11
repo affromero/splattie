@@ -12,7 +12,7 @@ ENV PYTHONUNBUFFERED=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      curl ca-certificates && \
+      curl ca-certificates libfribidi0 && \
     rm -rf /var/lib/apt/lists/*
 
 # uv
@@ -38,7 +38,7 @@ RUN uv sync --extra cpu --frozen --no-install-project
 # build backend (hatchling); the GPU image pins it differently, but here the
 # slim base has no build deps preinstalled.
 COPY backend/src/ ./src/
-RUN uv pip install -e .
+RUN uv sync --extra cpu --frozen --inexact
 
 RUN mkdir -p data/uploads data/generations
 

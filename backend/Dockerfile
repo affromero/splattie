@@ -22,6 +22,7 @@ RUN apt-get update && \
       curl \
       git \
       libegl1 \
+      libfribidi0 \
       libgl1 \
       libglib2.0-0 \
       libgomp1 \
@@ -50,9 +51,13 @@ WORKDIR /app
 # so the slow CUDA/weight layer is cacheable.
 COPY backend/pyproject.toml backend/uv.lock backend/.python-version backend/
 COPY backend/scripts/setup-gpu.sh backend/scripts/setup-gpu.sh
+COPY backend/tools/deeplabcut/ backend/tools/deeplabcut/
+COPY backend/src/splattie/methods/lam/assets.py backend/src/splattie/methods/lam/assets.py
+COPY backend/src/splattie/methods/lhm/assets.py backend/src/splattie/methods/lhm/assets.py
 COPY backend/vendor/ backend/vendor/
 
 WORKDIR /app/backend
+ENV SPLATTIE_DLC_PYTHON=/root/dlc-venv/bin/python
 
 RUN uv venv --python 3.11 .venv
 ENV PATH=/app/backend/.venv/bin:${PATH}
@@ -79,7 +84,7 @@ new_session("u2net")
 PY
 
 COPY backend/src/ /app/backend/src/
-RUN uv pip install -e /app/backend
+RUN uv sync --frozen --extra gpu --extra cuda --inexact
 
 RUN mkdir -p /app/backend/data/uploads /app/backend/data/generations
 
