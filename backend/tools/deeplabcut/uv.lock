@@ -12,6 +12,7 @@ resolution-markers = [
 [manifest]
 overrides = [{ name = "filelock", specifier = "==3.20.3" }]
 
+
 [[package]]
 name = "albumentations"
 version = "1.4.3"
@@ -199,7 +200,7 @@ dependencies = [
     { name = "statsmodels" },
     { name = "tables" },
     { name = "timm" },
-    { name = "torch", version = "2.3.0+cu121", source = { registry = "https://download.pytorch.org/whl/cu121" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
     { name = "torchvision", version = "0.18.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
     { name = "torchvision", version = "0.18.0+cu121", source = { registry = "https://download.pytorch.org/whl/cu121" }, marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -1249,7 +1250,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "deeplabcut" },
     { name = "numpy" },
-    { name = "torch", version = "2.3.0+cu121", source = { registry = "https://download.pytorch.org/whl/cu121" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
     { name = "torchvision", version = "0.18.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
     { name = "torchvision", version = "0.18.0+cu121", source = { registry = "https://download.pytorch.org/whl/cu121" }, marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -1260,7 +1261,7 @@ requires-dist = [
     { name = "deeplabcut", specifier = ">=3.0" },
     { name = "numpy", specifier = ">=1.23,<2" },
     { name = "torch", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'", git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216" },
-    { name = "torch", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'", specifier = "==2.3.0", index = "https://download.pytorch.org/whl/cu121" },
+    { name = "torch", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'", url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" },
     { name = "torchvision", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = "==0.18.0" },
     { name = "torchvision", marker = "sys_platform == 'linux' or sys_platform == 'win32'", specifier = "==0.18.0", index = "https://download.pytorch.org/whl/cu121" },
 ]
@@ -1357,7 +1358,7 @@ dependencies = [
     { name = "huggingface-hub" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch", version = "2.3.0+cu121", source = { registry = "https://download.pytorch.org/whl/cu121" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
     { name = "torchvision", version = "0.18.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
     { name = "torchvision", version = "0.18.0+cu121", source = { registry = "https://download.pytorch.org/whl/cu121" }, marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -1369,8 +1370,8 @@ wheels = [
 
 [[package]]
 name = "torch"
-version = "2.3.0+cu121"
-source = { registry = "https://download.pytorch.org/whl/cu121" }
+version = "2.3.0+cu121.security1"
+source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }
 resolution-markers = [
     "platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
@@ -1395,8 +1396,34 @@ dependencies = [
     { name = "typing-extensions", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
-    { url = "https://download-r2.pytorch.org/whl/cu121/torch-2.3.0%2Bcu121-cp311-cp311-linux_x86_64.whl", hash = "sha256:5df7e3cb3961018a891e4edef1e0bc1f3304a8d943f81b24a8c6bf687ca49a67", upload-time = "2024-04-24T17:16:01Z" },
+    { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl", hash = "sha256:b9a6cd7c7c532a6c66c4f6ef38516d1516fcf40a772098c84ae029b22e63100c" },
 ]
+
+[package.metadata]
+requires-dist = [
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "mkl", marker = "sys_platform == 'win32'", specifier = ">=2021.1.1,<=2021.4.0" },
+    { name = "networkx" },
+    { name = "nvidia-cublas-cu12", specifier = "==12.1.3.1" },
+    { name = "nvidia-cuda-cupti-cu12", specifier = "==12.1.105" },
+    { name = "nvidia-cuda-nvrtc-cu12", specifier = "==12.1.105" },
+    { name = "nvidia-cuda-runtime-cu12", specifier = "==12.1.105" },
+    { name = "nvidia-cudnn-cu12", specifier = "==8.9.2.26" },
+    { name = "nvidia-cufft-cu12", specifier = "==11.0.2.54" },
+    { name = "nvidia-curand-cu12", specifier = "==10.3.2.106" },
+    { name = "nvidia-cusolver-cu12", specifier = "==11.4.5.107" },
+    { name = "nvidia-cusparse-cu12", specifier = "==12.1.0.106" },
+    { name = "nvidia-nccl-cu12", specifier = "==2.20.5" },
+    { name = "nvidia-nvtx-cu12", specifier = "==12.1.105" },
+    { name = "opt-einsum", marker = "extra == 'opt-einsum'", specifier = ">=3.3" },
+    { name = "optree", marker = "extra == 'optree'", specifier = ">=0.9.1" },
+    { name = "sympy" },
+    { name = "triton", specifier = "==2.3.0" },
+    { name = "typing-extensions", specifier = ">=4.8.0" },
+]
+provides-extras = ["optree", "opt-einsum"]
 
 [[package]]
 name = "torch"
@@ -1447,7 +1474,7 @@ resolution-markers = [
 dependencies = [
     { name = "numpy", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "pillow", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { name = "torch", version = "2.3.0+cu121", source = { registry = "https://download.pytorch.org/whl/cu121" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "(platform_machine != 'x86_64' and sys_platform == 'linux') or sys_platform == 'win32'" },
 ]
 wheels = [
