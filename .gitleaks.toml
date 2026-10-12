@@ -1,2 +1,12 @@
 [extend]
 useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Published SHA256 of the pinned LAM 68_keypoints_model.pkl asset"
+condition = "AND"
+paths = ['''^backend/src/splattie/methods/lam/assets\.py$''']
+regexTarget = "secret"
+regexes = ['''^0f8a1532772f3baaba042117ca1399bad8d4e3c959bed6a991eaaae246352b86$''']

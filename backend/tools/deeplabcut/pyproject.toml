@@ -1,0 +1,21 @@
+[project]
+name = "splattie-deeplabcut-runtime"
+version = "0.0.0"
+requires-python = ">=3.11,<3.12"
+dependencies = ["deeplabcut>=3.0", "numpy>=1.23,<2", "torch==2.3.0", "torchvision==0.18.0"]
+
+[tool.uv]
+# DeepLabCut's filelock<3.16 constraint predates both symlink security fixes.
+override-dependencies = ["filelock==3.20.3"]
+
+[[tool.uv.index]]
+explicit = true
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+
+[tool.uv.sources]
+torch = [
+  { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
+  { git = "https://github.com/affromero/pytorch.git", rev = "1bb7c43f24b73280de6e3734cd3a51d3c35c6216", marker = "sys_platform != 'linux' or platform_machine != 'x86_64'" }
+]
+torchvision = { index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" }

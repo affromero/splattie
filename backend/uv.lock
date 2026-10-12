@@ -6,8 +6,10 @@ resolution-markers = [
     "platform_machine == 'aarch64' and sys_platform == 'linux'",
     "sys_platform == 'win32'",
     "sys_platform == 'emscripten'",
-    "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "platform_machine == 'x86_64' and sys_platform == 'linux'",
+    "(platform_machine != 'aarch64' and platform_machine != 'x86_64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
+
 
 [[package]]
 name = "absl-py"
@@ -20,8 +22,8 @@ wheels = [
 
 [[package]]
 name = "accelerate"
-version = "1.14.0"
-source = { registry = "https://pypi.org/simple" }
+version = "1.14.0+security.1"
+source = { git = "https://github.com/affromero/accelerate.git?rev=5084e3bb086b06e80896a0af1f24dbc227abc961#5084e3bb086b06e80896a0af1f24dbc227abc961" }
 dependencies = [
     { name = "huggingface-hub" },
     { name = "numpy" },
@@ -29,11 +31,8 @@ dependencies = [
     { name = "psutil" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/75/94cd5d389649578aca399e5aa822637eec18319a1dadc400ffe2f9a7493f/accelerate-1.14.0.tar.gz", hash = "sha256:41b9c4377a54e0b460a959b0defa1b736e4ca0a2373252d9a539964c2afe3c8d", size = 412167, upload-time = "2026-06-11T13:45:52.326Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/db/253133d7e7cb40d3af384bb2f5c0b4a2b7fdcffbc95c688cc67a20a3c103/accelerate-1.14.0-py3-none-any.whl", hash = "sha256:e94390c2863b873be18f623f9df48a0d8fe5eff13ea7f1a00092b0a7904888c6", size = 389246, upload-time = "2026-06-11T13:45:50.477Z" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
 
 [[package]]
@@ -187,7 +186,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", marker = "sys_platform != 'darwin'" },
     { name = "packaging", marker = "sys_platform != 'darwin'" },
-    { name = "torch", marker = "sys_platform != 'darwin'" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "(platform_machine != 'x86_64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/29/71/acff7af06c818664aa87ff73e17a52c7788ad746b72aea09d3cb8e424348/bitsandbytes-0.49.2-py3-none-manylinux_2_24_aarch64.whl", hash = "sha256:2fc0830c5f7169be36e60e11f2be067c8f812dfcb829801a8703735842450750", size = 31442815, upload-time = "2026-02-16T21:26:06.783Z" },
@@ -260,7 +260,7 @@ name = "cffi"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser", marker = "(implementation_name != 'PyPy' and platform_machine != 'aarch64' and sys_platform == 'linux') or (implementation_name != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "pycparser", marker = "implementation_name != 'PyPy' and platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/ef/008a1939e372c06329a3fce4279c02f328488f3526744906eeec3da7ad5f/cffi-2.1.1.tar.gz", hash = "sha256:dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be", size = 530807, upload-time = "2026-08-03T21:21:18.939Z" }
 wheels = [
@@ -486,8 +486,8 @@ name = "dataclasses-json"
 version = "0.6.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "marshmallow", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "typing-inspect", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "marshmallow", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "typing-inspect", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/64/a4/f71d9cf3a5ac257c993b5ca3f93df5f7fb395c725e7f1e6479d2514173c3/dataclasses_json-0.6.7.tar.gz", hash = "sha256:b6b3e528266ea45b9535223bc53ca645f5208833c29229e847b3f26a1cc55fc0", size = 32227, upload-time = "2024-06-09T16:20:19.103Z" }
 wheels = [
@@ -520,7 +520,7 @@ name = "deprecated"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "wrapt", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "wrapt", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/49/85/12f0a49a7c4ffb70572b6c2ef13c90c88fd190debda93b23f026b25f9634/deprecated-1.3.1.tar.gz", hash = "sha256:b1b50e0ff0c1fddaa5708a2c6b0a6588bb09b892825ab2b214ac9ea9d92a5223", size = 2932523, upload-time = "2025-10-30T08:19:02.757Z" }
 wheels = [
@@ -529,21 +529,19 @@ wheels = [
 
 [[package]]
 name = "diffusers"
-version = "0.32.2"
-source = { registry = "https://pypi.org/simple" }
+version = "0.32.2+security.1"
+source = { git = "https://github.com/affromero/diffusers.git?rev=fd7d786285e0b6dadbec12ca7d524d3cfc84cdb6#fd7d786285e0b6dadbec12ca7d524d3cfc84cdb6" }
 dependencies = [
     { name = "filelock" },
     { name = "huggingface-hub" },
     { name = "importlib-metadata" },
     { name = "numpy" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "regex" },
     { name = "requests" },
     { name = "safetensors" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ee/72/d3f715e71a77f14a48f1ac081cea5bb6c6e6cd41c55b1291f401b1504679/diffusers-0.32.2.tar.gz", hash = "sha256:eb1e36b326aabb0675729af7c626caf7a76ce7ced3a126e879331790b1eaa230", size = 2614622, upload-time = "2025-01-15T15:45:22.383Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/c9/2b2e822d871b06605363e52555be5d7ff0996f4eeaf0f7e5fda15adedfbe/diffusers-0.32.2-py3-none-any.whl", hash = "sha256:d7f182b49c7f428737ee3bf6397d463ec03b85f4f3b2c9470bd1d73292b609ff", size = 3226075, upload-time = "2025-01-15T15:45:20.188Z" },
 ]
 
 [[package]]
@@ -605,7 +603,9 @@ name = "face-detection-tflite"
 version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "tensorflow" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/90/b7/ea63b3707e23591c95ff050835acf34538ea888a3d85d04466828e8654ad/face-detection-tflite-0.6.0.tar.gz", hash = "sha256:7cb9ce9994b8353fffc963e12a155af6c6c6187ae5b7312fddf33fe7c6e48f11", size = 7344756, upload-time = "2024-05-13T21:28:57.283Z" }
@@ -677,13 +677,40 @@ wheels = [
 
 [[package]]
 name = "flash-attn"
-version = "2.5.9.post1"
-source = { registry = "https://pypi.org/simple" }
+version = "2.5.9.post1+security.1"
+source = { git = "https://github.com/affromero/flash-attention.git?rev=db2807cc1be6040b001c344b0d542d23e45a515e#db2807cc1be6040b001c344b0d542d23e45a515e" }
+resolution-markers = [
+    "sys_platform == 'darwin'",
+    "platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "sys_platform == 'win32'",
+    "sys_platform == 'emscripten'",
+    "(platform_machine != 'aarch64' and platform_machine != 'x86_64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')",
+]
 dependencies = [
+    { name = "einops", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
+]
+
+[[package]]
+name = "flash-attn"
+version = "2.5.9.post1+security.1"
+source = { url = "https://github.com/affromero/flash-attention/releases/download/security-2.5.9.post1-1/flash_attn-2.5.9.post1%2Bsecurity.1-cp311-cp311-linux_x86_64.whl" }
+resolution-markers = [
+    "platform_machine == 'x86_64' and sys_platform == 'linux'",
+]
+dependencies = [
+    { name = "einops", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+]
+wheels = [
+    { url = "https://github.com/affromero/flash-attention/releases/download/security-2.5.9.post1-1/flash_attn-2.5.9.post1%2Bsecurity.1-cp311-cp311-linux_x86_64.whl", hash = "sha256:97625b217797cd912eca287040141af4db00b6698637cac295f2d99b6be58dc7" },
+]
+
+[package.metadata]
+requires-dist = [
     { name = "einops" },
     { name = "torch" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/14/cd/53cbd9bd45e9bf1002f0c4de488e549501d085f4318c906807a0e50164cd/flash_attn-2.5.9.post1.tar.gz", hash = "sha256:a92db1683a5b141a0f4371d251ae9f73e9aef629b3a58a50d0ef430266c68782", size = 2605976, upload-time = "2024-05-27T05:19:16.046Z" }
 
 [[package]]
 name = "flask"
@@ -787,7 +814,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "iopath" },
     { name = "numpy" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "pyyaml" },
     { name = "tabulate" },
     { name = "termcolor" },
@@ -863,7 +892,8 @@ dependencies = [
     { name = "ninja" },
     { name = "numpy" },
     { name = "rich" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6d/94/a0963873708223385ac926112dc3e40ab08297784ac53d95309b4cb5a801/gsplat-1.5.3.tar.gz", hash = "sha256:343f080c470e891ba3c697c03bdf0952cb982d1d535fdc24adb23c2cb4fba906", size = 4743603, upload-time = "2025-07-04T16:50:42.899Z" }
 wheels = [
@@ -1022,7 +1052,9 @@ version = "2.37.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/48/62/aa770a9307508d2a2a2c62d536a49347bffe9e55322db27838d3c93d0b07/imageio-2.37.4.tar.gz", hash = "sha256:e45cbc5e83502047fb138f7f585f7f105a136a57eea5f4b3cfc6ce1b52720bd3", size = 390173, upload-time = "2026-07-20T05:26:11.369Z" }
 wheels = [
@@ -1089,9 +1121,9 @@ name = "ipycanvas"
 version = "0.14.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ipywidgets", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "numpy", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "pillow", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "ipywidgets", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "numpy", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/56/484c8979bbcaa3e3f2da4eac6a1eb41e998e353e4c6ef89e9612889813c8/ipycanvas-0.14.3.tar.gz", hash = "sha256:c6a53a22eebf4d611b168b8f4434145883f27a7575509bd99a4bfc48c5385a39", size = 4150499, upload-time = "2025-12-11T09:12:59.916Z" }
 wheels = [
@@ -1103,7 +1135,7 @@ name = "ipyevents"
 version = "2.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ipywidgets", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "ipywidgets", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/82/e5/ac7e199dd22ce3f7e0d43c6433fef5450197fa81994393e3381893b12d61/ipyevents-2.0.4.tar.gz", hash = "sha256:bd8c66a9ff26f481494cda1ec1d979722ca9eba19f8ef52538c7cc2db2a1a139", size = 210601, upload-time = "2025-09-15T14:02:34.29Z" }
 wheels = [
@@ -1115,16 +1147,16 @@ name = "ipython"
 version = "9.17.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ipython-pygments-lexers", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "jedi", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "matplotlib-inline", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "pexpect", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "prompt-toolkit", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "psutil", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "pygments", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "stack-data", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "traitlets", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "typing-extensions", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "ipython-pygments-lexers", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "jedi", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "matplotlib-inline", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "pexpect", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "prompt-toolkit", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "psutil", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "pygments", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "stack-data", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "traitlets", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "typing-extensions", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c4/bc/e05ae123712ce4e1fde4408eedca1791fc1ff832684565132ea1dc646092/ipython-9.17.0.tar.gz", hash = "sha256:1dc69e6966b270fb259f676c71a21450e63607729b14a672b942914a54e8b730", size = 4538547, upload-time = "2026-08-28T09:00:58.233Z" }
 wheels = [
@@ -1136,7 +1168,7 @@ name = "ipython-pygments-lexers"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pygments", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "pygments", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ef/4c/5dd1d8af08107f88c7f741ead7a40854b8ac24ddf9ae850afbcf698aa552/ipython_pygments_lexers-1.1.1.tar.gz", hash = "sha256:09c0138009e56b6854f9535736f4171d855c8c08a563a0dcd8022f78355c7e81", size = 8393, upload-time = "2025-01-17T11:24:34.505Z" }
 wheels = [
@@ -1148,11 +1180,11 @@ name = "ipywidgets"
 version = "8.1.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "comm", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "ipython", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "jupyterlab-widgets", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "traitlets", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "widgetsnbextension", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "comm", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "ipython", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "jupyterlab-widgets", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "traitlets", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "widgetsnbextension", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c9/7c/6db60eddf38547353b06d57941f5eee22a990640ce30479fd71a810507f2/ipywidgets-8.1.9.tar.gz", hash = "sha256:bcccba38a6ec3253f7a39c943cea5b9ad01999ce071396171adbc51c6a6a8613", size = 117252, upload-time = "2026-08-18T08:54:24.123Z" }
 wheels = [
@@ -1194,7 +1226,7 @@ name = "jedi"
 version = "0.20.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "parso", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "parso", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/46/b7/a3635f6a2d7cf5b5dd98064fc1d5fbbafcb25477bcea204a3a92145d158b/jedi-0.20.0.tar.gz", hash = "sha256:c3f4ccbd276696f4b19c54618d4fb18f9fc24b0aef02acf704b23f487daa1011", size = 3119416, upload-time = "2026-05-01T23:38:47.814Z" }
 wheels = [
@@ -1296,13 +1328,13 @@ name = "jupyter-client"
 version = "7.4.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "entrypoints", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "jupyter-core", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "nest-asyncio", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "python-dateutil", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "pyzmq", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "tornado", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "traitlets", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "entrypoints", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "jupyter-core", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nest-asyncio", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "python-dateutil", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "pyzmq", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "tornado", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "traitlets", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1e/33/71778cdd2c69445bcd3bb6029da2e43cc9b5cbbeef4f4982ef3aaf396650/jupyter_client-7.4.9.tar.gz", hash = "sha256:52be28e04171f07aed8f20e1616a5a552ab9fee9cbbe6c1896ae170c3880d392", size = 329115, upload-time = "2023-01-12T20:05:10.58Z" }
 wheels = [
@@ -1352,21 +1384,21 @@ name = "kaolin"
 version = "0.18.0"
 source = { url = "https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.3.0_cu121/kaolin-0.18.0-cp311-cp311-linux_x86_64.whl" }
 dependencies = [
-    { name = "comm", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "flask", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "ipycanvas", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "ipyevents", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "ipython", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "jupyter-client", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "numpy", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "pillow", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "pybind11", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "pygltflib", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "scipy", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "tornado", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "tqdm", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "usd-core", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "warp-lang", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "comm", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "flask", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "ipycanvas", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "ipyevents", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "ipython", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "jupyter-client", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "numpy", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "pybind11", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "pygltflib", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "scipy", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "tornado", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "tqdm", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "usd-core", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "warp-lang", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.3.0_cu121/kaolin-0.18.0-cp311-cp311-linux_x86_64.whl", hash = "sha256:a90c586bd4420ac322730740e01947078c79a40e58ea348a8ca605dae35cb59a" },
@@ -1464,7 +1496,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kornia-rs" },
     { name = "packaging" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1a/80/460e9dad0c1b68f3e83f198f3983638d62f910a88542b492290010d25f50/kornia-0.8.3.tar.gz", hash = "sha256:c06887374eaf39fb614a77ca054383e6cc2092cb7225e45437111b4984d0f866", size = 727384, upload-time = "2026-05-19T20:23:35.048Z" }
 wheels = [
@@ -1548,7 +1581,8 @@ dependencies = [
     { name = "packaging" },
     { name = "pytorch-lightning" },
     { name = "pyyaml" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
     { name = "torchmetrics" },
     { name = "tqdm" },
     { name = "typing-extensions" },
@@ -1661,7 +1695,7 @@ name = "marshmallow"
 version = "3.26.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "packaging", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "packaging", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/55/79/de6c16cc902f4fc372236926b0ce2ab7845268dcc30fb2fbb7f71b418631/marshmallow-3.26.2.tar.gz", hash = "sha256:bbe2adb5a03e6e3571b573f42527c6fe926e17467833660bebd11593ab8dfd57", size = 222095, upload-time = "2025-12-22T06:53:53.309Z" }
 wheels = [
@@ -1679,7 +1713,9 @@ dependencies = [
     { name = "kiwisolver" },
     { name = "numpy" },
     { name = "packaging" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "pyparsing" },
     { name = "python-dateutil" },
 ]
@@ -1702,7 +1738,7 @@ name = "matplotlib-inline"
 version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "traitlets", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "traitlets", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/bd/c0/9f7c9a46090390368a4d7bcb76bb87a4a36c421e4c0792cdb53486ffac7a/matplotlib_inline-0.2.2.tar.gz", hash = "sha256:72f3fe8fce36b70d4a5b612f899090cd0401deddc4ea90e1572b9f4bfb058c79", size = 8150, upload-time = "2026-05-08T17:33:33.49Z" }
 wheels = [
@@ -1786,7 +1822,9 @@ dependencies = [
     { name = "imageio" },
     { name = "imageio-ffmpeg" },
     { name = "numpy" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "proglog" },
     { name = "python-dotenv" },
 ]
@@ -2014,7 +2052,7 @@ name = "nvidia-cudnn-cu12"
 version = "8.9.2.26"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ff/74/a2e2be7fb83aaedec84f391f082cf765dfb635e7caa9b49065f73e4835d8/nvidia_cudnn_cu12-8.9.2.26-py3-none-manylinux1_x86_64.whl", hash = "sha256:5ccb288774fdfb07a7e7025ffec286971c06d8d7b4fb162525334616d7629ff9", size = 731725872, upload-time = "2023-06-01T19:24:57.328Z" },
@@ -2041,9 +2079,9 @@ name = "nvidia-cusolver-cu12"
 version = "11.4.5.107"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "nvidia-cusparse-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/1d/8de1e5c67099015c834315e333911273a8c6aaba78923dd1d1e25fc5f217/nvidia_cusolver_cu12-11.4.5.107-py3-none-manylinux1_x86_64.whl", hash = "sha256:8a7ec542f0412294b15072fa7dab71d31334014a69f953004ea7a118206fe0dd", size = 124161928, upload-time = "2023-04-19T15:51:25.781Z" },
@@ -2054,7 +2092,7 @@ name = "nvidia-cusparse-cu12"
 version = "12.1.0.106"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/65/5b/cfaeebf25cd9fdec14338ccb16f6b2c4c7fa9163aefcf057d86b9cc248bb/nvidia_cusparse_cu12-12.1.0.106-py3-none-manylinux1_x86_64.whl", hash = "sha256:f3b50f42cf363f86ab21f720998517a659a48131e8d538dc02f8768237bd884c", size = 195958278, upload-time = "2023-04-19T15:51:49.939Z" },
@@ -2128,7 +2166,9 @@ dependencies = [
     { name = "nbformat" },
     { name = "numpy" },
     { name = "pandas" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "pyquaternion" },
     { name = "pyyaml" },
     { name = "scikit-learn" },
@@ -2290,7 +2330,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "ptyprocess", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -2299,29 +2339,94 @@ wheels = [
 
 [[package]]
 name = "pillow"
-version = "11.3.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f3/0d/d0d6dea55cd152ce3d6767bb38a8fc10e33796ba4ba210cbab9354b6d238/pillow-11.3.0.tar.gz", hash = "sha256:3828ee7586cd0b2091b6209e5ad53e20d0649bbe87164a459d0676e035e8f523", size = 47113069, upload-time = "2025-07-01T09:16:30.666Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/26/77f8ed17ca4ffd60e1dcd220a6ec6d71210ba398cfa33a13a1cd614c5613/pillow-11.3.0-cp311-cp311-macosx_10_10_x86_64.whl", hash = "sha256:1cd110edf822773368b396281a2293aeb91c90a2db00d78ea43e7e861631b722", size = 5316531, upload-time = "2025-07-01T09:13:59.203Z" },
-    { url = "https://files.pythonhosted.org/packages/cb/39/ee475903197ce709322a17a866892efb560f57900d9af2e55f86db51b0a5/pillow-11.3.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:9c412fddd1b77a75aa904615ebaa6001f169b26fd467b4be93aded278266b288", size = 4686560, upload-time = "2025-07-01T09:14:01.101Z" },
-    { url = "https://files.pythonhosted.org/packages/d5/90/442068a160fd179938ba55ec8c97050a612426fae5ec0a764e345839f76d/pillow-11.3.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:7d1aa4de119a0ecac0a34a9c8bde33f34022e2e8f99104e47a3ca392fd60e37d", size = 5870978, upload-time = "2025-07-03T13:09:55.638Z" },
-    { url = "https://files.pythonhosted.org/packages/13/92/dcdd147ab02daf405387f0218dcf792dc6dd5b14d2573d40b4caeef01059/pillow-11.3.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:91da1d88226663594e3f6b4b8c3c8d85bd504117d043740a8e0ec449087cc494", size = 7641168, upload-time = "2025-07-03T13:10:00.37Z" },
-    { url = "https://files.pythonhosted.org/packages/6e/db/839d6ba7fd38b51af641aa904e2960e7a5644d60ec754c046b7d2aee00e5/pillow-11.3.0-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:643f189248837533073c405ec2f0bb250ba54598cf80e8c1e043381a60632f58", size = 5973053, upload-time = "2025-07-01T09:14:04.491Z" },
-    { url = "https://files.pythonhosted.org/packages/f2/2f/d7675ecae6c43e9f12aa8d58b6012683b20b6edfbdac7abcb4e6af7a3784/pillow-11.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:106064daa23a745510dabce1d84f29137a37224831d88eb4ce94bb187b1d7e5f", size = 6640273, upload-time = "2025-07-01T09:14:06.235Z" },
-    { url = "https://files.pythonhosted.org/packages/45/ad/931694675ede172e15b2ff03c8144a0ddaea1d87adb72bb07655eaffb654/pillow-11.3.0-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:cd8ff254faf15591e724dc7c4ddb6bf4793efcbe13802a4ae3e863cd300b493e", size = 6082043, upload-time = "2025-07-01T09:14:07.978Z" },
-    { url = "https://files.pythonhosted.org/packages/3a/04/ba8f2b11fc80d2dd462d7abec16351b45ec99cbbaea4387648a44190351a/pillow-11.3.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:932c754c2d51ad2b2271fd01c3d121daaa35e27efae2a616f77bf164bc0b3e94", size = 6715516, upload-time = "2025-07-01T09:14:10.233Z" },
-    { url = "https://files.pythonhosted.org/packages/48/59/8cd06d7f3944cc7d892e8533c56b0acb68399f640786313275faec1e3b6f/pillow-11.3.0-cp311-cp311-win32.whl", hash = "sha256:b4b8f3efc8d530a1544e5962bd6b403d5f7fe8b9e08227c6b255f98ad82b4ba0", size = 6274768, upload-time = "2025-07-01T09:14:11.921Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/cc/29c0f5d64ab8eae20f3232da8f8571660aa0ab4b8f1331da5c2f5f9a938e/pillow-11.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:1a992e86b0dd7aeb1f053cd506508c0999d710a8f07b4c791c63843fc6a807ac", size = 6986055, upload-time = "2025-07-01T09:14:13.623Z" },
-    { url = "https://files.pythonhosted.org/packages/c6/df/90bd886fabd544c25addd63e5ca6932c86f2b701d5da6c7839387a076b4a/pillow-11.3.0-cp311-cp311-win_arm64.whl", hash = "sha256:30807c931ff7c095620fe04448e2c2fc673fcbb1ffe2a7da3fb39613489b1ddd", size = 2423079, upload-time = "2025-07-01T09:14:15.268Z" },
-    { url = "https://files.pythonhosted.org/packages/9e/e3/6fa84033758276fb31da12e5fb66ad747ae83b93c67af17f8c6ff4cc8f34/pillow-11.3.0-pp311-pypy311_pp73-macosx_10_15_x86_64.whl", hash = "sha256:7c8ec7a017ad1bd562f93dbd8505763e688d388cde6e4a010ae1486916e713e6", size = 5270566, upload-time = "2025-07-01T09:16:19.801Z" },
-    { url = "https://files.pythonhosted.org/packages/5b/ee/e8d2e1ab4892970b561e1ba96cbd59c0d28cf66737fc44abb2aec3795a4e/pillow-11.3.0-pp311-pypy311_pp73-macosx_11_0_arm64.whl", hash = "sha256:9ab6ae226de48019caa8074894544af5b53a117ccb9d3b3dcb2871464c829438", size = 4654618, upload-time = "2025-07-01T09:16:21.818Z" },
-    { url = "https://files.pythonhosted.org/packages/f2/6d/17f80f4e1f0761f02160fc433abd4109fa1548dcfdca46cfdadaf9efa565/pillow-11.3.0-pp311-pypy311_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:fe27fb049cdcca11f11a7bfda64043c37b30e6b91f10cb5bab275806c32f6ab3", size = 4874248, upload-time = "2025-07-03T13:11:20.738Z" },
-    { url = "https://files.pythonhosted.org/packages/de/5f/c22340acd61cef960130585bbe2120e2fd8434c214802f07e8c03596b17e/pillow-11.3.0-pp311-pypy311_pp73-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:465b9e8844e3c3519a983d58b80be3f668e2a7a5db97f2784e7079fbc9f9822c", size = 6583963, upload-time = "2025-07-03T13:11:26.283Z" },
-    { url = "https://files.pythonhosted.org/packages/31/5e/03966aedfbfcbb4d5f8aa042452d3361f325b963ebbadddac05b122e47dd/pillow-11.3.0-pp311-pypy311_pp73-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:5418b53c0d59b3824d05e029669efa023bbef0f3e92e75ec8428f3799487f361", size = 4957170, upload-time = "2025-07-01T09:16:23.762Z" },
-    { url = "https://files.pythonhosted.org/packages/cc/2d/e082982aacc927fc2cab48e1e731bdb1643a1406acace8bed0900a61464e/pillow-11.3.0-pp311-pypy311_pp73-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:504b6f59505f08ae014f724b6207ff6222662aab5cc9542577fb084ed0676ac7", size = 5581505, upload-time = "2025-07-01T09:16:25.593Z" },
-    { url = "https://files.pythonhosted.org/packages/34/e7/ae39f538fd6844e982063c3a5e4598b8ced43b9633baa3a85ef33af8c05c/pillow-11.3.0-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:c84d689db21a1c397d001aa08241044aa2069e7587b398c8cc63020390b1c1b8", size = 6984598, upload-time = "2025-07-01T09:16:27.732Z" },
+version = "11.3.0+security.1"
+source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }
+resolution-markers = [
+    "sys_platform == 'darwin'",
+    "sys_platform == 'win32'",
+    "sys_platform == 'emscripten'",
+    "(platform_machine != 'aarch64' and platform_machine != 'x86_64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
+
+[[package]]
+name = "pillow"
+version = "11.3.0+security.1"
+source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }
+resolution-markers = [
+    "platform_machine == 'aarch64' and sys_platform == 'linux'",
+]
+wheels = [
+    { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:dfef004296e9c8d30fe18d7ea99acdc6810dee941f40b3f305f5971aaea825f6" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "check-manifest", marker = "extra == 'tests'" },
+    { name = "coverage", marker = "extra == 'tests'", specifier = ">=7.4.2" },
+    { name = "defusedxml", marker = "extra == 'tests'" },
+    { name = "defusedxml", marker = "extra == 'xmp'" },
+    { name = "furo", marker = "extra == 'docs'" },
+    { name = "markdown2", marker = "extra == 'tests'" },
+    { name = "olefile", marker = "extra == 'docs'" },
+    { name = "olefile", marker = "extra == 'fpx'" },
+    { name = "olefile", marker = "extra == 'mic'" },
+    { name = "olefile", marker = "extra == 'tests'" },
+    { name = "packaging", marker = "extra == 'tests'" },
+    { name = "pyarrow", marker = "extra == 'test-arrow'" },
+    { name = "pyroma", marker = "extra == 'tests'", specifier = ">=5,<6" },
+    { name = "pytest", marker = "extra == 'tests'" },
+    { name = "pytest-cov", marker = "extra == 'tests'" },
+    { name = "pytest-timeout", marker = "extra == 'tests'" },
+    { name = "pytest-xdist", marker = "extra == 'tests'" },
+    { name = "sphinx", marker = "extra == 'docs'", specifier = ">=8.2" },
+    { name = "sphinx-autobuild", marker = "extra == 'docs'" },
+    { name = "sphinx-copybutton", marker = "extra == 'docs'" },
+    { name = "sphinx-inline-tabs", marker = "extra == 'docs'" },
+    { name = "sphinxext-opengraph", marker = "extra == 'docs'" },
+    { name = "trove-classifiers", marker = "extra == 'tests'", specifier = ">=2024.10.12" },
+    { name = "typing-extensions", marker = "python_full_version < '3.10' and extra == 'typing'" },
+]
+provides-extras = ["docs", "fpx", "mic", "test-arrow", "tests", "typing", "xmp"]
+
+[[package]]
+name = "pillow"
+version = "11.3.0+security.1"
+source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }
+resolution-markers = [
+    "platform_machine == 'x86_64' and sys_platform == 'linux'",
+]
+wheels = [
+    { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:89e7e74ec4a44f8bd94346d0342c231188f10317496df829d6e09d767a0db676" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "check-manifest", marker = "extra == 'tests'" },
+    { name = "coverage", marker = "extra == 'tests'", specifier = ">=7.4.2" },
+    { name = "defusedxml", marker = "extra == 'tests'" },
+    { name = "defusedxml", marker = "extra == 'xmp'" },
+    { name = "furo", marker = "extra == 'docs'" },
+    { name = "markdown2", marker = "extra == 'tests'" },
+    { name = "olefile", marker = "extra == 'docs'" },
+    { name = "olefile", marker = "extra == 'fpx'" },
+    { name = "olefile", marker = "extra == 'mic'" },
+    { name = "olefile", marker = "extra == 'tests'" },
+    { name = "packaging", marker = "extra == 'tests'" },
+    { name = "pyarrow", marker = "extra == 'test-arrow'" },
+    { name = "pyroma", marker = "extra == 'tests'", specifier = ">=5,<6" },
+    { name = "pytest", marker = "extra == 'tests'" },
+    { name = "pytest-cov", marker = "extra == 'tests'" },
+    { name = "pytest-timeout", marker = "extra == 'tests'" },
+    { name = "pytest-xdist", marker = "extra == 'tests'" },
+    { name = "sphinx", marker = "extra == 'docs'", specifier = ">=8.2" },
+    { name = "sphinx-autobuild", marker = "extra == 'docs'" },
+    { name = "sphinx-copybutton", marker = "extra == 'docs'" },
+    { name = "sphinx-inline-tabs", marker = "extra == 'docs'" },
+    { name = "sphinxext-opengraph", marker = "extra == 'docs'" },
+    { name = "trove-classifiers", marker = "extra == 'tests'", specifier = ">=2024.10.12" },
+    { name = "typing-extensions", marker = "python_full_version < '3.10' and extra == 'typing'" },
+]
+provides-extras = ["docs", "fpx", "mic", "test-arrow", "tests", "typing", "xmp"]
 
 [[package]]
 name = "platformdirs"
@@ -2422,7 +2527,7 @@ name = "prompt-toolkit"
 version = "3.0.53"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "wcwidth", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "wcwidth", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7d/ea/39b988c938f75cb75d7045b5c69f8bfed47ee2152c8837fb403de29d6fb8/prompt_toolkit-3.0.53.tar.gz", hash = "sha256:9ec8a0ad96d5c56148b3f914aa79c1564c3fde5d2e6b876e7bc327e353cf8fa6", size = 435492, upload-time = "2026-07-26T20:56:14.758Z" }
 wheels = [
@@ -2614,8 +2719,8 @@ name = "pygltflib"
 version = "1.16.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "dataclasses-json", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "deprecated", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "dataclasses-json", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "deprecated", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/22/e8/f8232abdf9c085333689b0a428dcd1d0f83edd1ecafa6ed878a633d8c9d5/pygltflib-1.16.5.tar.gz", hash = "sha256:1f15740d5a7aaf71a5083e285af6b361184958e255659132f4ba8fe4f3d21ea9", size = 43272, upload-time = "2025-07-24T06:35:38.611Z" }
 wheels = [
@@ -2638,7 +2743,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numba" },
     { name = "numpy" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "scipy" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9a/f5/83955aa915ea5e04cecb32612d419e8341604d0b898c2ebe4277adbc4c6b/pymatting-1.1.15.tar.gz", hash = "sha256:67cbadd68d04696357461ad1861bcb3c2adc9ec5fcd38d524db606addabe745a", size = 44424, upload-time = "2026-01-26T09:27:22.395Z" }
@@ -2743,7 +2850,9 @@ dependencies = [
     { name = "imageio" },
     { name = "networkx" },
     { name = "numpy" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "pyglet" },
     { name = "pyopengl" },
     { name = "scipy" },
@@ -2840,21 +2949,22 @@ wheels = [
 
 [[package]]
 name = "pytorch-lightning"
-version = "2.6.5"
+version = "2.6.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec", extra = ["http"] },
     { name = "lightning-utilities" },
     { name = "packaging" },
     { name = "pyyaml" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
     { name = "torchmetrics" },
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/52/2c/8e73a3929b4c4bd600cafd38a97aaf7242a8cf518fb9f33d27c274ec898f/pytorch_lightning-2.6.5.tar.gz", hash = "sha256:1c32cefa76a1a9c4c5250338272d961d1e48b180e68396849efe128538ddb28e", size = 661673, upload-time = "2026-05-27T14:33:41.961Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/97/e4/5025cb42311b4f8cc6d1b12cd81399ca433159f8e3831ab229c5a6c5177e/pytorch_lightning-2.6.6.tar.gz", hash = "sha256:52c52b20522dd3d3feb3bb3aae2dbe3f291e8e836d4111a74cfd72e9df018834", size = 662507, upload-time = "2026-09-10T09:41:16.684Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/4d/5740c27110b83634d8491c3b5facf0111b3e554c3164f4fb953be9bddaf6/pytorch_lightning-2.6.5-py3-none-any.whl", hash = "sha256:62d9c8549b2278fedc3364f0a5607a56c6063d18635008f8cf3fae8d802b0d76", size = 852407, upload-time = "2026-05-27T14:33:39.856Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/cf/ba8e4cc1b982ff6dc6f9fdef0e4074605438b82640f6270888a10e7e42c3/pytorch_lightning-2.6.6-py3-none-any.whl", hash = "sha256:71f95c7b22f25c4f91cc659e1734bcdc6c69c8b66543f2ed2d78dbe29ce2f167", size = 853045, upload-time = "2026-09-10T09:41:14.923Z" },
 ]
 
 [[package]]
@@ -2882,7 +2992,9 @@ dependencies = [
     { name = "cyclopts" },
     { name = "matplotlib" },
     { name = "numpy" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "pooch" },
     { name = "scooby" },
     { name = "typing-extensions" },
@@ -2934,7 +3046,7 @@ name = "pyzmq"
 version = "27.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "(implementation_name == 'pypy' and platform_machine != 'aarch64' and sys_platform == 'linux') or (implementation_name == 'pypy' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "cffi", marker = "implementation_name == 'pypy' and platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e7/8d/5b3d5631c2f4b4b8862f64cd0c9eb777b5710eeb5125b4be8dd0a200a4c0/pyzmq-27.2.0.tar.gz", hash = "sha256:54d4259d1bfae24ecdb5ca79f7acc2eac6c286a02d6a0ae617797cb45f0726d3", size = 292316, upload-time = "2026-08-20T19:08:21.19Z" }
 wheels = [
@@ -2985,22 +3097,20 @@ wheels = [
 
 [[package]]
 name = "rembg"
-version = "2.0.69"
-source = { registry = "https://pypi.org/simple" }
+version = "2.0.69+security.1"
+source = { git = "https://github.com/affromero/rembg.git?rev=9845ce8ff9b3a63b8041ba62c3034d29c6650f5a#9845ce8ff9b3a63b8041ba62c3034d29c6650f5a" }
 dependencies = [
     { name = "jsonschema" },
     { name = "numpy" },
     { name = "opencv-python-headless" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "pooch" },
     { name = "pymatting" },
     { name = "scikit-image" },
     { name = "scipy" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/21/9c6e6c4fc3e524644a74f1c9981000559a8609fb95850b124a886c1c28b7/rembg-2.0.69.tar.gz", hash = "sha256:0e4c4ff573c825ff163ceb170aefd6b5884f1366f5073d42653b0509a995f981", size = 49973, upload-time = "2025-12-04T21:07:27.773Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/ac/bade7f6ef1694c82c424129f0e35262b1578984ac1f716780fbf4930c9c3/rembg-2.0.69-py3-none-any.whl", hash = "sha256:39521967e4d2d6fa304ddd1a5df06d523501e6617cc5874f6cbf1256b6696080", size = 43670, upload-time = "2025-12-04T21:07:26.818Z" },
 ]
 
 [[package]]
@@ -3059,7 +3169,8 @@ version = "1.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4e/79/bbe3ba78a479f0b6623105480e49de053751e146b97c1e638347ad95a0ee/roma-1.6.1.tar.gz", hash = "sha256:869e534ffd1f5184dd3d03802e546eda6de704ec50c0b19b685f0bea6f2f9904", size = 318338, upload-time = "2026-08-20T13:31:55.581Z" }
 wheels = [
@@ -3172,7 +3283,9 @@ dependencies = [
     { name = "networkx" },
     { name = "numpy" },
     { name = "packaging" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "pywavelets" },
     { name = "scipy" },
     { name = "tifffile" },
@@ -3291,7 +3404,8 @@ version = "0.1.28"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/69/eb/51da17b291fb1221317a1ff65a301fb2cf9c6c0dd87a0caec4cbcd06c1da/smplx-0.1.28.tar.gz", hash = "sha256:c3a1e2c3069cdf7a4b34fd250c2484c8bb1a4fd9c14490da9359af5fbc64fbe6", size = 28500, upload-time = "2021-05-26T12:14:10.194Z" }
 wheels = [
@@ -3325,7 +3439,9 @@ dependencies = [
     { name = "jaxtyping" },
     { name = "klogr" },
     { name = "numpy" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
@@ -3356,7 +3472,8 @@ gpu = [
     { name = "einops" },
     { name = "face-detection-tflite" },
     { name = "fast-simplification" },
-    { name = "flash-attn" },
+    { name = "flash-attn", version = "2.5.9.post1+security.1", source = { git = "https://github.com/affromero/flash-attention.git?rev=db2807cc1be6040b001c344b0d542d23e45a515e#db2807cc1be6040b001c344b0d542d23e45a515e" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
+    { name = "flash-attn", version = "2.5.9.post1+security.1", source = { url = "https://github.com/affromero/flash-attention/releases/download/security-2.5.9.post1-1/flash_attn-2.5.9.post1%2Bsecurity.1-cp311-cp311-linux_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "fvcore" },
     { name = "gsplat" },
     { name = "h5py" },
@@ -3398,7 +3515,8 @@ gpu = [
     { name = "tensorboard" },
     { name = "tetgen" },
     { name = "timm" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
     { name = "torch-scatter", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "torchvision" },
     { name = "transformers" },
@@ -3414,6 +3532,7 @@ gpu = [
 [package.dev-dependencies]
 dev = [
     { name = "httpx" },
+    { name = "huggingface-hub" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -3423,20 +3542,21 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "accelerate", marker = "extra == 'gpu'" },
+    { name = "accelerate", marker = "extra == 'gpu'", git = "https://github.com/affromero/accelerate.git?rev=5084e3bb086b06e80896a0af1f24dbc227abc961" },
     { name = "beartype", specifier = ">=0.19.0" },
     { name = "boto3", marker = "extra == 'gpu'" },
     { name = "chumpy", marker = "extra == 'cuda'" },
     { name = "cython", marker = "extra == 'gpu'", specifier = "<3" },
     { name = "decord", marker = "extra == 'gpu'" },
-    { name = "diffusers", marker = "extra == 'gpu'", specifier = ">=0.32" },
+    { name = "diffusers", marker = "extra == 'gpu'", git = "https://github.com/affromero/diffusers.git?rev=fd7d786285e0b6dadbec12ca7d524d3cfc84cdb6" },
     { name = "easydict", marker = "extra == 'gpu'" },
     { name = "einops", marker = "extra == 'gpu'" },
     { name = "face-detection-tflite", marker = "extra == 'gpu'" },
     { name = "fast-simplification", marker = "extra == 'cpu'" },
     { name = "fast-simplification", marker = "extra == 'gpu'" },
     { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "flash-attn", marker = "extra == 'gpu'", specifier = "==2.5.9.post1" },
+    { name = "flash-attn", marker = "platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'gpu'", url = "https://github.com/affromero/flash-attention/releases/download/security-2.5.9.post1-1/flash_attn-2.5.9.post1%2Bsecurity.1-cp311-cp311-linux_x86_64.whl" },
+    { name = "flash-attn", marker = "(platform_machine != 'x86_64' and extra == 'gpu') or (sys_platform != 'linux' and extra == 'gpu')", git = "https://github.com/affromero/flash-attention.git?rev=db2807cc1be6040b001c344b0d542d23e45a515e" },
     { name = "fvcore", marker = "extra == 'gpu'" },
     { name = "gsplat", marker = "extra == 'gpu'" },
     { name = "h5py", marker = "extra == 'gpu'" },
@@ -3450,7 +3570,7 @@ requires-dist = [
     { name = "klogr", specifier = ">=0.2" },
     { name = "kornia", marker = "extra == 'gpu'" },
     { name = "libigl", marker = "extra == 'gpu'", specifier = "==2.5.1" },
-    { name = "lightning", marker = "extra == 'gpu'" },
+    { name = "lightning", marker = "extra == 'gpu'", specifier = ">=2.6.6" },
     { name = "loguru", marker = "extra == 'gpu'" },
     { name = "matplotlib", marker = "extra == 'gpu'" },
     { name = "mesh2sdf", marker = "extra == 'gpu'" },
@@ -3463,7 +3583,9 @@ requires-dist = [
     { name = "open3d", marker = "extra == 'gpu'" },
     { name = "opencv-python-headless", marker = "extra == 'gpu'", specifier = ">=4.10" },
     { name = "pandas", marker = "extra == 'gpu'" },
-    { name = "pillow", specifier = ">=10.0" },
+    { name = "pillow", marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'", git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e" },
+    { name = "pillow", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" },
+    { name = "pillow", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'", url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" },
     { name = "plyfile", marker = "extra == 'cpu'" },
     { name = "plyfile", marker = "extra == 'gpu'" },
     { name = "ptlflow", marker = "extra == 'gpu'" },
@@ -3477,7 +3599,7 @@ requires-dist = [
     { name = "pytorch3d", marker = "extra == 'cuda'", git = "https://github.com/facebookresearch/pytorch3d.git" },
     { name = "pytz", marker = "extra == 'gpu'" },
     { name = "pyvista", marker = "extra == 'gpu'" },
-    { name = "rembg", marker = "extra == 'gpu'" },
+    { name = "rembg", marker = "extra == 'gpu'", git = "https://github.com/affromero/rembg.git?rev=9845ce8ff9b3a63b8041ba62c3034d29c6650f5a" },
     { name = "roma", marker = "extra == 'gpu'" },
     { name = "safetensors", marker = "extra == 'gpu'" },
     { name = "scikit-image", marker = "extra == 'gpu'", specifier = "==0.20.0" },
@@ -3490,10 +3612,11 @@ requires-dist = [
     { name = "tensorboard", marker = "extra == 'gpu'" },
     { name = "tetgen", marker = "extra == 'gpu'", specifier = "==0.5.2" },
     { name = "timm", marker = "extra == 'gpu'" },
-    { name = "torch", marker = "extra == 'gpu'", specifier = "==2.3.0", index = "https://download.pytorch.org/whl/cu121" },
+    { name = "torch", marker = "platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'gpu'", url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" },
+    { name = "torch", marker = "(platform_machine != 'x86_64' and extra == 'gpu') or (sys_platform != 'linux' and extra == 'gpu')", git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216" },
     { name = "torch-scatter", marker = "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'gpu'", url = "https://data.pyg.org/whl/torch-2.3.0%2Bcu121/torch_scatter-2.1.2%2Bpt23cu121-cp311-cp311-linux_x86_64.whl" },
     { name = "torchvision", marker = "extra == 'gpu'", specifier = "==0.18.0", index = "https://download.pytorch.org/whl/cu121" },
-    { name = "transformers", marker = "extra == 'gpu'", specifier = ">=4.41" },
+    { name = "transformers", marker = "extra == 'gpu'", git = "https://github.com/affromero/transformers.git?rev=3a2715cc85233d2477bc509df395f4b8791dc26f" },
     { name = "trimesh", marker = "extra == 'cpu'", specifier = ">=4.0" },
     { name = "trimesh", marker = "extra == 'gpu'", specifier = ">=4.0" },
     { name = "typeguard", marker = "extra == 'gpu'" },
@@ -3510,6 +3633,7 @@ provides-extras = ["cpu", "gpu", "cuda"]
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx", specifier = ">=0.28.0" },
+    { name = "huggingface-hub", specifier = "==0.23.2" },
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-asyncio", specifier = ">=0.25.0" },
@@ -3522,9 +3646,9 @@ name = "stack-data"
 version = "0.6.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "asttokens", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "executing", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "pure-eval", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "asttokens", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "executing", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "pure-eval", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/28/e3/55dcc2cfbc3ca9c29519eb6884dd1415ecb53b0e934862d3559ddcb7e20b/stack_data-0.6.3.tar.gz", hash = "sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9", size = 44707, upload-time = "2023-09-30T13:58:05.479Z" }
 wheels = [
@@ -3584,7 +3708,9 @@ dependencies = [
     { name = "markdown" },
     { name = "numpy" },
     { name = "packaging" },
-    { name = "pillow" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "protobuf" },
     { name = "setuptools" },
     { name = "tensorboard-data-server" },
@@ -3709,7 +3835,8 @@ dependencies = [
     { name = "huggingface-hub" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
     { name = "torchvision" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cf/72/58b8363e22508418d5fac897ac68e2c33f01f84d9d471edc38cbb6523dc6/timm-1.0.29.tar.gz", hash = "sha256:1af8d12bb7e15c5f96e98d60b7b8319cd7f31730778bf1af58e912a7ce171576", size = 2497559, upload-time = "2026-08-28T15:07:31.007Z" }
@@ -3742,35 +3869,40 @@ wheels = [
 
 [[package]]
 name = "toml-sort"
-version = "0.24.4"
+version = "0.25.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tomlkit" },
+    { name = "tomlrt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/47/c5/d6f650fdcf8e1f83096815fa67fb13a9a345b99da6015c60c4b7e4a8ea2b/toml_sort-0.24.4.tar.gz", hash = "sha256:429b69f5b98b7047a11380c80ecf0838556bdea1a8902d0be564961c48841423", size = 17793, upload-time = "2026-03-24T14:05:53.637Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/f4/7221164c2984af53c18dd9f1d267ca7da660b40bc6b9a436b67ae17fc3ff/toml_sort-0.25.0.tar.gz", hash = "sha256:08ffe893feba7dc1773c61046b76f63561a6204e0162cd067c4a0d681d9198c7", size = 13197, upload-time = "2026-09-12T21:58:05.097Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0f/5a/1f0e54df4eacf0f4d8f94ba50cf72be33d2a3f04babdfb1931bead48a0ab/toml_sort-0.24.4-py3-none-any.whl", hash = "sha256:125aa5fb94f33c542c6901040456145dd38f79bbb310b56b436a93057d30a739", size = 16577, upload-time = "2026-03-24T14:05:54.757Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/b8/dc28651955aa2fdb24ef6f7ac7bcc6784f60d31630a0af1bd6d3626e4db8/toml_sort-0.25.0-py3-none-any.whl", hash = "sha256:96de33d49795a730297a1a5cba75ad9f251a7b07e75002f8a2fcc127fa7d43bd", size = 12561, upload-time = "2026-09-12T21:58:05.916Z" },
 ]
 
 [[package]]
-name = "tomlkit"
-version = "0.15.1"
+name = "tomlrt"
+version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/96/e07752635b98536177fa1f37671c8f3cdde2e724c6bcf6034b2cfb571565/tomlkit-0.15.1.tar.gz", hash = "sha256:e25bbf38843005246210a12982776f27f99cb9be67160e14434d0c0d21ee1e97", size = 180129, upload-time = "2026-07-17T01:48:04.562Z" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/04/d8176d5bfe26d616819b215e3ed835f4539c50d96ed72616da0189b1dfd2/tomlrt-2.3.0.tar.gz", hash = "sha256:c2443a8d7aeb26a04474ffc04a6eeb17b16d7e0a37b9d801261d58d4bc82037c", size = 473530, upload-time = "2026-10-09T22:28:19.564Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/bc/8c13eb66537dce1d2bd3a57132902f38d0e7f5bb46fa9f4daed9fe9d76ee/tomlkit-0.15.1-py3-none-any.whl", hash = "sha256:177a05aece5a8ca5266fd3c448abb47b8d352f09d477d3ca8332db4d89b24304", size = 49449, upload-time = "2026-07-17T01:48:05.728Z" },
+    { url = "https://files.pythonhosted.org/packages/3a/f8/a91b010c52ea67888b90b562931b1ec29609d37a665351a2e146dbad872a/tomlrt-2.3.0-py3-none-any.whl", hash = "sha256:72382e49ee3e8797a1ffbc4d971539226fa7da809186062362b1fc1f5cc565b0", size = 149893, upload-time = "2026-10-09T22:28:17.659Z" },
 ]
 
 [[package]]
 name = "torch"
-version = "2.3.0+cu121"
-source = { registry = "https://download.pytorch.org/whl/cu121" }
+version = "2.3.0+cu121.security1"
+source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }
+resolution-markers = [
+    "platform_machine == 'x86_64' and sys_platform == 'linux'",
+]
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "jinja2" },
-    { name = "mkl", marker = "sys_platform == 'win32'" },
-    { name = "networkx" },
+    { name = "filelock", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "fsspec", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "jinja2", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "networkx", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
@@ -3782,13 +3914,59 @@ dependencies = [
     { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-nccl-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-nvtx-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "sympy" },
+    { name = "sympy", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "triton", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
-    { url = "https://download-r2.pytorch.org/whl/cu121/torch-2.3.0%2Bcu121-cp311-cp311-linux_x86_64.whl", hash = "sha256:5df7e3cb3961018a891e4edef1e0bc1f3304a8d943f81b24a8c6bf687ca49a67", upload-time = "2024-04-24T17:16:01Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu121/torch-2.3.0%2Bcu121-cp311-cp311-win_amd64.whl", hash = "sha256:f7876ec20b42dd569e7a11c5af36febccc03830f63dfdedbd4026506e086cab6", upload-time = "2024-04-24T17:16:34Z" },
+    { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl", hash = "sha256:b9a6cd7c7c532a6c66c4f6ef38516d1516fcf40a772098c84ae029b22e63100c" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "mkl", marker = "sys_platform == 'win32'", specifier = ">=2021.1.1,<=2021.4.0" },
+    { name = "networkx" },
+    { name = "nvidia-cublas-cu12", specifier = "==12.1.3.1" },
+    { name = "nvidia-cuda-cupti-cu12", specifier = "==12.1.105" },
+    { name = "nvidia-cuda-nvrtc-cu12", specifier = "==12.1.105" },
+    { name = "nvidia-cuda-runtime-cu12", specifier = "==12.1.105" },
+    { name = "nvidia-cudnn-cu12", specifier = "==8.9.2.26" },
+    { name = "nvidia-cufft-cu12", specifier = "==11.0.2.54" },
+    { name = "nvidia-curand-cu12", specifier = "==10.3.2.106" },
+    { name = "nvidia-cusolver-cu12", specifier = "==11.4.5.107" },
+    { name = "nvidia-cusparse-cu12", specifier = "==12.1.0.106" },
+    { name = "nvidia-nccl-cu12", specifier = "==2.20.5" },
+    { name = "nvidia-nvtx-cu12", specifier = "==12.1.105" },
+    { name = "opt-einsum", marker = "extra == 'opt-einsum'", specifier = ">=3.3" },
+    { name = "optree", marker = "extra == 'optree'", specifier = ">=0.9.1" },
+    { name = "sympy" },
+    { name = "triton", specifier = "==2.3.0" },
+    { name = "typing-extensions", specifier = ">=4.8.0" },
+]
+provides-extras = ["optree", "opt-einsum"]
+
+[[package]]
+name = "torch"
+version = "2.3.0+security.1"
+source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }
+resolution-markers = [
+    "sys_platform == 'darwin'",
+    "platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "sys_platform == 'win32'",
+    "sys_platform == 'emscripten'",
+    "(platform_machine != 'aarch64' and platform_machine != 'x86_64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')",
+]
+dependencies = [
+    { name = "filelock", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
+    { name = "fsspec", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
+    { name = "jinja2", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
+    { name = "mkl", marker = "sys_platform == 'win32'" },
+    { name = "networkx", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
+    { name = "sympy", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
 
 [[package]]
@@ -3814,7 +3992,8 @@ dependencies = [
     { name = "lightning-utilities" },
     { name = "numpy" },
     { name = "packaging" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/81/34/39b8b749333db56c0585d7a11fa62a283c087bb1dfc897d69fb8cedbefb1/torchmetrics-1.9.0.tar.gz", hash = "sha256:a488609948600df52d3db4fcdab02e62aab2a85ef34da67037dc3e65b8512faa", size = 581765, upload-time = "2026-03-09T17:41:22.443Z" }
 wheels = [
@@ -3827,8 +4006,11 @@ version = "0.18.0+cu121"
 source = { registry = "https://download.pytorch.org/whl/cu121" }
 dependencies = [
     { name = "numpy" },
-    { name = "pillow" },
-    { name = "torch" },
+    { name = "pillow", version = "11.3.0+security.1", source = { git = "https://github.com/affromero/Pillow.git?rev=b5d22e61428bd4236e26dc072529826f1385ed3e#b5d22e61428bd4236e26dc072529826f1385ed3e" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'x86_64') or sys_platform != 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pillow", version = "11.3.0+security.1", source = { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cu121/torchvision-0.18.0%2Bcu121-cp311-cp311-linux_x86_64.whl", hash = "sha256:1e516779520fc92157d6cb245ac0fd3f79872fe81c84b8593a8f2e998106f5b1", upload-time = "2024-04-24T17:25:18Z" },
@@ -3868,8 +4050,8 @@ wheels = [
 
 [[package]]
 name = "transformers"
-version = "4.46.3"
-source = { registry = "https://pypi.org/simple" }
+version = "4.46.3+security.1"
+source = { git = "https://github.com/affromero/transformers.git?rev=3a2715cc85233d2477bc509df395f4b8791dc26f#3a2715cc85233d2477bc509df395f4b8791dc26f" }
 dependencies = [
     { name = "filelock" },
     { name = "huggingface-hub" },
@@ -3881,10 +4063,6 @@ dependencies = [
     { name = "safetensors" },
     { name = "tokenizers" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/37/5a/58f96c83e566f907ae39f16d4401bbefd8bb85c60bd1e6a95c419752ab90/transformers-4.46.3.tar.gz", hash = "sha256:8ee4b3ae943fe33e82afff8e837f4b052058b07ca9be3cb5b729ed31295f72cc", size = 8627944, upload-time = "2024-11-18T22:13:01.012Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/51/b87caa939fedf307496e4dbf412f4b909af3d9ca8b189fc3b65c1faa456f/transformers-4.46.3-py3-none-any.whl", hash = "sha256:a12ef6f52841fd190a3e5602145b542d03507222f2c64ebb7ee92e8788093aef", size = 10034536, upload-time = "2024-11-18T22:12:57.024Z" },
 ]
 
 [[package]]
@@ -3904,7 +4082,7 @@ name = "triton"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "filelock", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3c/00/84e0006f2025260fa111ddfc66194bd1af731b3ee18e2fd611a00f290b5e/triton-2.3.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3c3d9607f85103afdb279938fc1dd2a66e4f5999a58eb48a346bd42738f986dd", size = 168079300, upload-time = "2024-04-05T02:47:52.164Z" },
@@ -3948,8 +4126,8 @@ name = "typing-inspect"
 version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "mypy-extensions", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
-    { name = "typing-extensions", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "mypy-extensions", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "typing-extensions", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/dc/74/1789779d91f1961fa9438e9a8710cdae6bd138c80d7303996933d117264a/typing_inspect-0.9.0.tar.gz", hash = "sha256:b23fc42ff6f6ef6954e4852c1fb512cdd18dbea03134f91f856a95ccc9461f78", size = 13825, upload-time = "2023-05-24T20:25:47.612Z" }
 wheels = [
@@ -4101,7 +4279,7 @@ name = "warp-lang"
 version = "1.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "numpy", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1d/3d/47feef2eee4739437e19d6949ea231ca4181c9eacbaa39144761e6130d94/warp_lang-1.16.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:96449fc1e3b354185e2f09434fb794b5953ab2e8673b104d7e7f48d5d418bb35", size = 163074225, upload-time = "2026-08-03T02:27:03.632Z" },
@@ -4269,7 +4447,8 @@ version = "0.0.26.post1"
 source = { registry = "https://download.pytorch.org/whl/cu121" }
 dependencies = [
     { name = "numpy" },
-    { name = "torch" },
+    { name = "torch", version = "2.3.0+cu121.security1", source = { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.3.0+security.1", source = { git = "https://github.com/affromero/pytorch.git?rev=1bb7c43f24b73280de6e3734cd3a51d3c35c6216#1bb7c43f24b73280de6e3734cd3a51d3c35c6216" }, marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
 wheels = [
     { url = "https://download.pytorch.org/whl/cu121/xformers-0.0.26.post1-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:0d35615870b9237077aec51802a5a821f9e9d2708730c8914d5cff301fb29558", upload-time = "2024-06-05T21:38:53Z" },

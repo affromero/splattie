@@ -28,6 +28,7 @@ from splattie.methods.bundle_common import (
     count_ply_vertices,
     read_widget_version,
 )
+from splattie.methods.lam.assets import verify_lam_assets
 from splattie.methods.registry import registry
 from splattie.types import AssetType, GenerationResult, MethodCapabilities, MethodInfo
 
@@ -65,7 +66,7 @@ def _load_flame_tracker():
     lam_path = str(VENDOR_LAM)
     if lam_path not in sys.path:
         sys.path.insert(0, lam_path)
-    _patch_torch_load()
+    verify_lam_assets(VENDOR_LAM, tracker=True)
     _patch_chumpy_compat()
 
     from tools.flame_tracking_single_image import FlameTrackingSingleImage
@@ -92,19 +93,6 @@ def _load_flame_tracker():
         sys.argv = saved_argv
     logger.info("FLAME tracker loaded")
     return _flame_tracker
-
-
-def _patch_torch_load() -> None:
-    """Patch torch.load to use weights_only=False for LAM compatibility."""
-    import torch
-
-    _original = torch.load
-
-    def _patched(*args: object, **kwargs: object) -> object:
-        kwargs.setdefault("weights_only", False)
-        return _original(*args, **kwargs)
-
-    torch.load = _patched
 
 
 def _patch_chumpy_compat() -> None:
@@ -146,7 +134,7 @@ def _load_model():
     if lam_path not in sys.path:
         sys.path.insert(0, lam_path)
 
-    _patch_torch_load()
+    verify_lam_assets(VENDOR_LAM)
     _patch_chumpy_compat()
 
     from lam.models.modeling_lam import ModelLAM

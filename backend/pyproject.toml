@@ -4,6 +4,7 @@ requires = ["hatchling"]
 
 [dependency-groups]
 dev = [
+  "huggingface-hub==0.23.2",
   "httpx>=0.28.0",
   "pre-commit>=4.0",
   "pytest-asyncio>=0.25.0",
@@ -66,7 +67,7 @@ gpu = [
   "kaolin @ https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.3.0_cu121/kaolin-0.18.0-cp311-cp311-linux_x86_64.whl ; python_version == '3.11' and platform_system == 'Linux' and platform_machine == 'x86_64'",
   "kornia",
   "libigl==2.5.1",
-  "lightning",
+  "lightning>=2.6.6",
   "loguru",
   "matplotlib",
   "mesh2sdf",
@@ -108,10 +109,10 @@ gpu = [
   "xformers==0.0.26.post1",
   "yacs"
 ]
-# CUDA-from-source + chumpy: built from git/sdist with build isolation OFF so
-# they compile against the torch already in the env. uv builds these on
-# `uv sync --extra gpu --extra cuda` via no-build-isolation-package +
-# extra-build-dependencies below. (chumpy also needs the lam/method.py shim.)
+# CUDA extensions compile against the torch already installed in the environment.
+# `uv sync --extra gpu --extra cuda` uses no-build-isolation-package below for
+# those extensions. Chumpy uses an isolated build with its declared tooling
+# and still needs the lam/method.py runtime shim.
 cuda = [
   "chumpy",
   "nvdiffrast",
@@ -183,15 +184,15 @@ extend-immutable-calls = ["fastapi.Body", "fastapi.Depends", "fastapi.Path", "fa
 
 [tool.uv]
 # Build these against the already-installed torch (they import torch at build
-# time). uv installs their extra-build-dependencies first, then builds them
-# without isolation — so they live in pyproject, not an ad-hoc pip step.
-no-build-isolation-package = ["pytorch3d", "nvdiffrast", "simple-knn", "chumpy", "tetgen", "flash-attn"]
+# time). uv builds them after their dependencies are installed. Chumpy uses an
+# isolated build with its declared tooling, since it does not compile against torch.
+no-build-isolation-package = ["pytorch3d", "nvdiffrast", "simple-knn", "tetgen", "flash-attn"]
 
 [tool.uv.extra-build-dependencies]
 pytorch3d = ["torch", "ninja", "setuptools"]
 nvdiffrast = ["torch", "setuptools"]
 simple-knn = ["torch", "setuptools"]
-chumpy = ["pip", "setuptools"]
+chumpy = ["pip", "setuptools", "wheel"]
 tetgen = ["cython<3", "numpy", "setuptools"]
 flash-attn = ["torch", "ninja", "packaging", "setuptools"]
 
@@ -201,10 +202,26 @@ name = "pytorch-cu121"
 url = "https://download.pytorch.org/whl/cu121"
 
 [tool.uv.sources]
+accelerate = { git = "https://github.com/affromero/accelerate.git", rev = "5084e3bb086b06e80896a0af1f24dbc227abc961" }
+diffusers = { git = "https://github.com/affromero/diffusers.git", rev = "fd7d786285e0b6dadbec12ca7d524d3cfc84cdb6" }
+flash-attn = [
+  { url = "https://github.com/affromero/flash-attention/releases/download/security-2.5.9.post1-1/flash_attn-2.5.9.post1%2Bsecurity.1-cp311-cp311-linux_x86_64.whl", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
+  { git = "https://github.com/affromero/flash-attention.git", rev = "db2807cc1be6040b001c344b0d542d23e45a515e", marker = "sys_platform != 'linux' or platform_machine != 'x86_64'" }
+]
+pillow = [
+  { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
+  { url = "https://github.com/affromero/Pillow/releases/download/security-11.3.0-1/pillow-11.3.0%2Bsecurity.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", marker = "sys_platform == 'linux' and platform_machine == 'aarch64'" },
+  { git = "https://github.com/affromero/Pillow.git", rev = "b5d22e61428bd4236e26dc072529826f1385ed3e", marker = "sys_platform != 'linux' or (platform_machine != 'x86_64' and platform_machine != 'aarch64')" }
+]
+rembg = { git = "https://github.com/affromero/rembg.git", rev = "9845ce8ff9b3a63b8041ba62c3034d29c6650f5a" }
+transformers = { git = "https://github.com/affromero/transformers.git", rev = "3a2715cc85233d2477bc509df395f4b8791dc26f" }
 pytorch3d = { git = "https://github.com/facebookresearch/pytorch3d.git" }
 nvdiffrast = { git = "https://github.com/ShenhanQian/nvdiffrast", branch = "backface-culling" }
 simple-knn = { git = "https://github.com/camenduru/simple-knn" }
-torch = { index = "pytorch-cu121" }
+torch = [
+  { url = "https://github.com/affromero/pytorch/releases/download/security-2.3.0-cu121-1/torch-2.3.0%2Bcu121.security1-cp311-cp311-manylinux_2_35_x86_64.whl", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
+  { git = "https://github.com/affromero/pytorch.git", rev = "1bb7c43f24b73280de6e3734cd3a51d3c35c6216", marker = "sys_platform != 'linux' or platform_machine != 'x86_64'" }
+]
 torchvision = { index = "pytorch-cu121" }
 utils3d = { git = "https://github.com/EasternJournalist/utils3d.git", rev = "9a4eb15e4021b67b12c460c7057d642626897ec8" }
 xformers = { index = "pytorch-cu121" }
