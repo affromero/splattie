@@ -6,7 +6,7 @@
 # (backend/Dockerfile, see deploy/docker-compose.gpu.yml). Torch/CUDA are never
 # installed, so this image is small enough for a normal CPU VPS.
 # ──────────────────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS base
+FROM python:3.14-slim AS base
 
 ENV PYTHONUNBUFFERED=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
