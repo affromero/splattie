@@ -43,8 +43,24 @@ async def test_models(client: AsyncClient) -> None:
     assert by_id["lhm"]["assetType"] == "body"
 
 
-async def test_segment(client: AsyncClient) -> None:
-    img = Image.new("RGB", (200, 200), (128, 128, 128))
+@pytest.mark.parametrize(
+    ("mode", "color", "expected_rgb"),
+    [
+        ("RGB", (120, 80, 40), (120, 80, 40)),
+        ("RGBA", (120, 80, 40, 100), (120, 80, 40)),
+        ("L", 100, (100, 100, 100)),
+        ("P", 1, (120, 80, 40)),
+    ],
+)
+async def test_segmentation_preserves_colors_and_returns_masked_pngs(
+    client: AsyncClient,
+    mode: str,
+    color: int | tuple[int, ...],
+    expected_rgb: tuple[int, int, int],
+) -> None:
+    img = Image.new(mode, (200, 200), color)
+    if mode == "P":
+        img.putpalette([0, 0, 0, 120, 80, 40] + [0] * 762)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
@@ -55,9 +71,24 @@ async def test_segment(client: AsyncClient) -> None:
     )
     assert response.status_code == 200
     data = response.json()
-    assert "maskUrl" in data
-    assert "previewUrl" in data
-    assert len(data["bbox"]) == 4
+    assert data["bbox"] == [50, 50, 100, 100]
+
+    mask_response = await client.get(data["maskUrl"])
+    preview_response = await client.get(data["previewUrl"])
+    assert mask_response.status_code == 200
+    assert preview_response.status_code == 200
+
+    with Image.open(io.BytesIO(mask_response.content)) as mask:
+        assert mask.format == "PNG"
+        assert mask.size == (200, 200)
+        assert mask.getpixel((100, 100)) == 255
+        assert mask.getpixel((0, 0)) == 0
+
+    with Image.open(io.BytesIO(preview_response.content)) as preview:
+        assert preview.format == "PNG"
+        assert preview.size == (200, 200)
+        assert preview.getpixel((100, 100)) == expected_rgb
+        assert preview.getpixel((0, 0)) == tuple(int(value * 0.3) for value in expected_rgb)
 
 
 async def test_generate_from_upload_propagates_load_failure(

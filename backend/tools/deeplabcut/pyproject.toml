@@ -2,7 +2,7 @@
 name = "splattie-deeplabcut-runtime"
 version = "0.0.0"
 requires-python = ">=3.11,<3.12"
-dependencies = ["deeplabcut>=3.0", "numpy>=1.23,<2", "torch==2.3.0", "torchvision==0.18.0"]
+dependencies = ["deeplabcut>=3.0", "numpy>=1.23,<2", "pillow>=13.0.0", "torch==2.3.0", "torchvision==0.18.0"]
 
 [tool.uv]
 # DeepLabCut's filelock<3.16 constraint predates both symlink security fixes.
