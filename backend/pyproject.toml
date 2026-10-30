@@ -208,7 +208,7 @@ flash-attn = [
   { url = "https://github.com/affromero/flash-attention/releases/download/security-2.5.9.post1-1/flash_attn-2.5.9.post1%2Bsecurity.1-cp311-cp311-linux_x86_64.whl", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
   { git = "https://github.com/affromero/flash-attention.git", rev = "db2807cc1be6040b001c344b0d542d23e45a515e", marker = "sys_platform != 'linux' or platform_machine != 'x86_64'" }
 ]
-rembg = { git = "https://github.com/affromero/rembg.git", rev = "9845ce8ff9b3a63b8041ba62c3034d29c6650f5a" }
+rembg = { git = "https://github.com/affromero/rembg.git", rev = "f56c058f39d7d17813e3b9059e77858fb3e14447" }
 transformers = { git = "https://github.com/affromero/transformers.git", rev = "3a2715cc85233d2477bc509df395f4b8791dc26f" }
 pytorch3d = { git = "https://github.com/facebookresearch/pytorch3d.git" }
 nvdiffrast = { git = "https://github.com/ShenhanQian/nvdiffrast", branch = "backface-culling" }
