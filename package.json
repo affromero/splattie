@@ -17,6 +17,7 @@
   },
   "version": "0.3.3",
   "overrides": {
+    "minimatch@^10.0.0": "11.0.3",
     "braces": "https://github.com/affromero/braces/archive/ab55ec393269eeed9af90b2ae9a7c6faa41064df.tar.gz"
   }
 }
